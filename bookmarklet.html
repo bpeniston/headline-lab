@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bookmarklet · Headline Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="headline-lab.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header>
+  <h1><a href="index.php">Headline Lab</a></h1>
+  <span class="kicker">SEO & Social-Media Tool</span>
+  <nav>
+    <a href="index.php">The Tool</a>
+    <a href="about.html">About</a>
+    <a href="bookmarklet.html" class="active">Bookmarklet</a>
+    <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab">Contact</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <div class="section-label">One-Click Setup</div>
+  <h2>The Headline Lab Bookmarklet</h2>
+  <p>Drag the button below to your bookmarks bar. After that, one click on any Athena post — or any live article on Defense One, GovExec, Nextgov/FCW, Route Fifty, or Washington Technology — grabs the text and sends it straight to Headline Lab. No copying, no tab-switching, no pasting.</p>
+
+  <!-- THE DRAG TARGET -->
+  <div class="drag-zone">
+    <p>↓ Drag this to your bookmarks bar ↓</p>
+    <a class="bookmarklet-btn" id="bookmarklet" href="#PLACEHOLDER">📰 Headline Lab</a>
+    <p class="sub">or right-click → Bookmark this link</p>
+  </div>
+
+  <div class="section-label">How To Install</div>
+  <ol class="steps">
+    <li><div><strong>Show your bookmarks bar</strong> if it's hidden — in Chrome: <kbd>Ctrl+Shift+B</kbd> (Win) or <kbd>⌘+Shift+B</kbd> (Mac). In Firefox: View → Toolbars → Bookmarks Toolbar.</div></li>
+    <li><div><strong>Drag the red button</strong> above into your bookmarks bar. You'll see it appear as "📰 Headline Lab".</div></li>
+    <li><div><strong>That's it.</strong> Click the bookmark on any Athena post editing page <em>or</em> any live article on one of the five supported sites — the tool opens in a new tab with the content already loaded.</div></li>
+  </ol>
+
+  <hr class="rule" />
+
+  <div class="section-label">What It Does</div>
+  <p>The bookmarklet detects which kind of page you're on and reads accordingly:</p>
+  <ol class="steps">
+    <li><div><strong>Athena CMS post editor</strong> — Reads the <strong>Content field via the CKEditor API</strong>, stripping HTML tags to give the AI clean plain text. Also grabs the <strong>Title</strong> and <strong>Subhed</strong> fields for extra context. Falls back to reading the raw textarea if CKEditor hasn't initialized yet.</div></li>
+    <li><div><strong>Live article pages</strong> on <strong>defenseone.com, govexec.com, nextgov.com, route-fifty.com,</strong> or <strong>washingtontechnology.com</strong> — Reads the headline (<code>h1</code>), deck (<code>h2</code>), and all body paragraphs from the article. Caption and photo credit text is automatically excluded. Useful for re-optimizing a published headline, generating social posts for an older story, or working on a colleague's piece.</div></li>
+    <li><div>Everything is POSTed directly to the server — no URL length limits, full articles supported. If nothing readable is found, the tool opens with an alert so you can paste manually.</div></li>
+  </ol>
+
+  <hr class="rule" />
+
+  <div class="section-label">Troubleshooting</div>
+  <ul class="qa-list">
+    <li>
+      <div class="qa-q">The bookmarklet opens Headline Lab but the text field is empty.</div>
+      <div class="qa-a">Make sure you're on an Athena <em>post editing</em> page (URL contains <code>/athena/post_manager/post/</code>) or a live article page on one of the five supported sites. On Athena, also make sure the post has some body text already entered — the bookmarklet can't read a blank Content field.</div>
+    </li>
+    <li>
+      <div class="qa-q">It only grabbed the title, not the article body.</div>
+      <div class="qa-a">On Athena, the CKEditor instance may not have loaded yet. Wait a second after the page finishes loading, then try again. If it still fails, <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab%20bookmarklet">let me know</a> — I can tune the selector.</div>
+    </li>
+    <li>
+      <div class="qa-q">It grabbed the wrong text (navigation, sidebar, etc.).</div>
+      <div class="qa-a">The auto-detection isn't perfect for every page layout. <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab%20bookmarklet">Send me a note</a> with which page you were on and I can tune the selector.</div>
+    </li>
+    <li>
+      <div class="qa-q">Can I see the bookmarklet code?</div>
+      <div class="qa-a">Yes — right-click the bookmark in your bar → Edit, and the full JavaScript is visible. It's self-contained, runs only in your browser, and sends text only to prefill.php on this server, which immediately hands it to the tool and discards it.</div>
+    </li>
+  </ul>
+
+</div>
+
+<script>
+(function() {
+  const relayURL = window.location.origin + window.location.pathname.replace('bookmarklet.html','') + 'prefill.php';
+
+  const code = 'javascript:(function(){'
+    + 'var relay=\'' + relayURL + '\';'
+    + 'var title=\'\',subhed=\'\',body=\'\',combined=\'\';'
+    + 'var SITES=[\'defenseone.com\',\'govexec.com\',\'nextgov.com\',\'route-fifty.com\',\'washingtontechnology.com\'];'
+    + 'if(window.location.href.indexOf(\'/athena/\')!==-1||!!document.getElementById(\'id_content\')){'
+    +   'try{if(window.CKEDITOR){var ci=CKEDITOR.instances[\'id_content\'];if(ci){var cd=ci.getData();var ct=document.createElement(\'div\');ct.innerHTML=cd;body=(ct.innerText||ct.textContent||\'\').trim()}}}catch(e){}'
+    +   'if(!body){var ta=document.getElementById(\'id_content\');if(ta&&ta.value){var td=document.createElement(\'div\');td.innerHTML=ta.value;body=(td.innerText||td.textContent||\'\').trim()}}'
+    +   'try{var te=document.getElementById(\'id_title\');if(te)title=te.value.trim();var se=document.getElementById(\'id_subheader\');if(se)subhed=se.value.trim()}catch(e){}'
+    +   'combined=[title,subhed,body].filter(Boolean).join(\'\\n\\n\');'
+    +   'if(!combined||combined.length<50){alert(\'Headline Lab: Could not read the Content field.\\nMake sure you are on an Athena post editing page.\');return;}'
+    + '}'
+    + 'else if(SITES.some(function(d){return window.location.hostname.indexOf(d)!==-1;})){'
+    +   'var h1=document.querySelector(\'h1\');if(h1)title=h1.innerText.trim();'
+    +   'var h2=document.querySelector(\'h2\');if(h2)subhed=h2.innerText.trim();'
+    +   'var be=document.querySelector(\'article\')||document.querySelector(\'[itemprop="articleBody"]\')||document.querySelector(\'.article-body\')||document.querySelector(\'main\');'
+    +   'if(be){'
+    +     'var strip=be.querySelectorAll(\'figcaption,[class*="caption"],[class*="credit"],[class*="photo-credit"]\');'
+    +     'for(var k=0;k<strip.length;k++){strip[k].parentNode.removeChild(strip[k]);}'
+    +     'var pp=be.querySelectorAll(\'p\');var pts=[];for(var j=0;j<pp.length;j++){var pt=(pp[j].innerText||pp[j].textContent||\'\').trim();if(pt.length>40)pts.push(pt);}body=pts.join(\'\\n\\n\');}'
+    +   'combined=[title,subhed,body].filter(Boolean).join(\'\\n\\n\');'
+    +   'if(!combined||combined.length<50){alert(\'Headline Lab: Could not read this page.\\nMake sure you are on a live article page.\');return;}'
+    + '}'
+    + 'else{alert(\'Headline Lab: Page not recognised.\\nWorks on: Athena post editor, defenseone.com, govexec.com, nextgov.com, route-fifty.com, washingtontechnology.com\');return;}'
+    + 'var f=document.createElement(\'form\');f.method=\'POST\';f.action=relay;f.target=\'_blank\';'
+    + 'var inp=document.createElement(\'input\');inp.type=\'hidden\';inp.name=\'text\';inp.value=combined;'
+    + 'f.appendChild(inp);document.body.appendChild(f);f.submit();document.body.removeChild(f);'
+    + '})();';
+
+  document.getElementById('bookmarklet').href = code;
+})();
+</script>
+</body>
+</html>
