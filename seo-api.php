@@ -105,10 +105,10 @@ $article
 ---
 PROMPT;
 
-    $facts_raw  = call_claude($facts_prompt, 300, 0.2);
-    $facts_raw  = preg_replace('/^```(?:json)?\s*/m', '', $facts_raw);
-    $facts_raw  = preg_replace('/```\s*$/m', '', $facts_raw);
-    $key_facts  = json_decode(trim($facts_raw), true);
+    $facts_raw = call_claude($facts_prompt, 300, 0.2);
+    $facts_raw = preg_replace('/^```(?:json)?\s*/m', '', $facts_raw);
+    $facts_raw = preg_replace('/```\s*$/m', '', $facts_raw);
+    $key_facts = json_decode(trim($facts_raw), true);
     if (!is_array($key_facts)) $key_facts = [];
 
     $facts_block = '';
@@ -162,6 +162,10 @@ PROMPT;
         echo json_encode(['error' => 'Could not parse social media response', 'raw' => $raw_text]);
         return;
     }
+
+    log_usage('social', [
+        'article_chars' => strlen($article),
+    ]);
 
     echo json_encode(['social' => $social]);
 }
@@ -364,6 +368,13 @@ PROMPT;
         return;
     }
 
+    log_usage('headlines', [
+        'tone'              => $tone,
+        'focus_kw'          => $focus_kw !== '' ? 'yes' : 'no',
+        'article_chars'     => strlen($article),
+        'competition_found' => $competition_found,
+    ]);
+
     // STEP 5: Return everything
     echo json_encode([
         'headlines'         => $headlines,
@@ -448,4 +459,15 @@ function brave_search(string $query): ?array {
     if ($status !== 200 || !$response) return null;
 
     return json_decode($response, true);
+}
+
+function log_usage(string $action, array $data = []): void {
+    $log_file = '/home/bradwu/headline-lab-usage.log';
+    $entry = implode("\t", [
+        date('Y-m-d H:i:s'),
+        $action,
+        $_SERVER['REMOTE_ADDR'] ?? '-',
+        json_encode($data),
+    ]) . "\n";
+    file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
 }
