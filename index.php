@@ -221,15 +221,17 @@ if (!empty($_SESSION['prefill'])) {
       <strong style="color:var(--ink)">Front-load keywords</strong> — search engines weight the first few words more heavily.<br>
       <strong style="color:var(--ink)">Paste full text</strong> — more context = more accurate keyword extraction.<br>
       <strong style="color:var(--ink)">Nothing is stored</strong> — requests go directly to Anthropic's API and are not retained.
-    </div>
-  </div>
-  <hr class="divider" />
+</div>
+
+    <hr class="divider" />
 
     <div class="section-label">Generated</div>
     <div id="usageStats" style="font-size:0.78rem;color:#888;line-height:1.7;font-family:var(--sans)">
       <strong style="color:var(--ink)">Headlines:</strong> <span id="statHedToday">–</span> today, <span id="statHedAll">–</span> all-time<br>
       <strong style="color:var(--ink)">Social posts:</strong> <span id="statSocToday">–</span> today, <span id="statSocAll">–</span> all-time
     </div>
+
+  </div><!-- end left panel -->
 
   <!-- RIGHT: Results -->
   <div class="panel">
