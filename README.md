@@ -1,6 +1,87 @@
 # SEO Headline Generator — Setup Guide
 Internal newsroom tool · Hosted on DreamHost
 
+# Headline Lab — deploy cheatsheet
+
+## Every time you make changes
+
+**Step 1 — Edit files on your laptop**
+Make your changes in whatever editor you're using.
+
+**Step 2 — Open Terminal and go to the project folder**
+```
+cd ~/Documents/devstuff/headline-lab
+```
+
+**Step 3 — Commit and push to GitHub**
+```
+git add .
+git commit -m "describe what you changed"
+git push
+```
+
+**Step 4 — Deploy to the live server**
+```
+deploy
+```
+
+That's it. The site is live.
+
+---
+
+## If you need to SSH into the server manually
+```
+ssh bradwu@pdx1-shared-a1-08.dreamhost.com
+cd navybook.com/D1/seo
+```
+
+## Project locations
+- **Laptop:** `~/Documents/devstuff/headline-lab`
+- **GitHub:** `https://github.com/bpeniston/headline-lab`
+- **Server:** `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo`
+
+## TELL CLAUDE THIS BEFORE EACH NEW SESSION:
+My development setup:
+
+Project: Headline Lab — HTML/CSS/JS/PHP static-ish site
+Laptop path: ~/Documents/devstuff/headline-lab
+GitHub: https://github.com/bpeniston/headline-lab
+Server: DreamHost shared hosting, pdx1-shared-a1-08.dreamhost.com
+Server path: bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo
+Deploy command: git add . && git commit -m "..." && git push && deploy
+(The "deploy" alias runs: ssh bradwu@pdx1-shared-a1-08.dreamhost.com "cd navybook.com/D1/seo && git pull")
+
+Files: about.html, bookmarklet.html, favicon.svg, headline-lab.css, index.php, prefill.php, seo-api.php
+
+When helping me with this project:
+- Give me edited file contents or specific diffs I can apply locally
+- I'll handle the git add/commit/push/deploy myself
+- Don't give me full file rewrites unless I ask — targeted edits are better
+
+## Checking usage logs
+
+SSH into the server, then:
+```bash
+# Show the last 50 entries
+tail -50 ~/headline-lab-usage.log
+
+# Live-tail as requests come in
+tail -f ~/headline-lab-usage.log
+
+# Count uses by action type
+cut -f2 ~/headline-lab-usage.log | sort | uniq -c
+
+# Show all entries from a specific date
+grep "^2026-03-15" ~/headline-lab-usage.log
+
+# Count total requests
+wc -l ~/headline-lab-usage.log
+```
+
+Log location: `/home/bradwu/headline-lab-usage.log` (outside web root, not publicly accessible).
+
+Each line is tab-separated: `timestamp`, `action`, `ip_address`, `json_data`.
+
 ## How it works
 
 ```

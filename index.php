@@ -10,7 +10,7 @@ if (!empty($_SESSION['prefill'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- test3 -->
+<!-- test4 -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SEO Headline Generator · Newsroom</title>
@@ -223,6 +223,13 @@ if (!empty($_SESSION['prefill'])) {
       <strong style="color:var(--ink)">Nothing is stored</strong> — requests go directly to Anthropic's API and are not retained.
     </div>
   </div>
+  <hr class="divider" />
+
+    <div class="section-label">Generated</div>
+    <div id="usageStats" style="font-size:0.78rem;color:#888;line-height:1.7;font-family:var(--sans)">
+      <strong style="color:var(--ink)">Headlines:</strong> <span id="statHedToday">–</span> today, <span id="statHedAll">–</span> all-time<br>
+      <strong style="color:var(--ink)">Social posts:</strong> <span id="statSocToday">–</span> today, <span id="statSocAll">–</span> all-time
+    </div>
 
   <!-- RIGHT: Results -->
   <div class="panel">
@@ -249,6 +256,19 @@ if (!empty($_SESSION['prefill'])) {
   const socialBtnLabel = document.getElementById('socialBtnLabel');
   const resultsEl      = document.getElementById('results');
   const resultsLabel   = document.getElementById('resultsLabel');
+  
+  // ── Load usage stats ────────────────────────────────────────
+  fetch('stats.php')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('statHedToday').textContent = d.headlines_today.toLocaleString();
+      document.getElementById('statHedAll').textContent   = d.headlines_alltime.toLocaleString();
+      document.getElementById('statSocToday').textContent = d.social_today.toLocaleString();
+      document.getElementById('statSocAll').textContent   = d.social_alltime.toLocaleString();
+    })
+    .catch(() => {
+      document.getElementById('usageStats').style.display = 'none';
+    });
 
   // Read text pre-filled by bookmarklet via PHP session
   (function() {
