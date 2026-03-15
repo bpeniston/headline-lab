@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About · Headline Lab · Newsroom SEO &amp; Social Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="headline-lab.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<!-- Masthead -->
+<header>
+  <h1><a href="index.php">Headline Lab</a></h1>
+  <span class="kicker">SEO & Social-Media Tool</span>
+  <nav>
+    <a href="index.php">The Tool</a>
+    <a href="about.html" class="active">About</a>
+    <a href="bookmarklet.html">Bookmarklet</a>
+    <a href="/cdn-cgi/l/email-protection#2e4c5e4b40475d5a41406e4a4b484b405d4b41404b004d4143115d5b4c444b4d5a13664b4f4a4247404b0b1c1e624f4c">Contact</a>
+  </nav>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-eyebrow">Huh?</div>
+ <p>Paste your story in. Get six SEO headlines and nine social posts back. Maybe&nbsp;they're&nbsp;useful. At least they're&nbsp;fast.</p>
+</div>
+
+<!-- Page body -->
+<div class="page">
+
+  <!-- What it does -->
+  <div class="section-label">The Basics</div>
+  <div class="two-col-prose">
+    <div class="prose">
+      <h3>How to use it</h3>
+      <p>Paste an article — or even just a detailed summary — and choose what you need. Hit <strong>Generate Heds</strong> for six SEO headline options, or <strong>Generate SM Posts</strong> for nine ready-to-post social captions across Facebook, X, and LinkedIn. Both buttons work independently; run either one first, or run both on the same article.</p>
+      <p>For headlines, you can specify a target keyword and a tone — straight news, urgent/breaking, analytical, conversational, or authoritative. The tool applies SEO rules automatically: front-loaded keywords, 50–60 character targets, active voice. Formats like listicles or question-framing are only used when the article actually supports them — accuracy beats structure.</p>
+      <p>For social posts, the tool writes to each platform's conventions: punchy for X, conversational for Facebook, analytical and professional for LinkedIn. Both headline and social generation start with a fact-extraction step, so suggestions stay grounded in what the article actually says rather than drifting into inference or hype.</p>
+    </div>
+    <div class="prose">
+      <h3>What this is</h3>
+      <p>Clicks from Google are down (no doubt, partly because of AI-generated "summaries") so I—that is, <a href="https://www.defenseone.com/voices/bradley-peniston/10609/">D1 editor Brad Peniston</a>—asked Claude to whip up a tool that could help us with SEO without exposing/giving away our prepublication work. Which it did, in just a few minutes. Then I asked it to add social post generation. Then I asked it to write almost all of the text on this page.</p>
+      <p>Now the tool lives on <a href="http://navybook.com">my private domain</a> and it swears it's not sending anything that might be captured and stored.</p>
+      <p>Please <a href="/cdn-cgi/l/email-protection#fd9f8d9893948e899293bd99989b98938e98929398d39e9290c28e889f97989e89c0b5989c9991949398d8cfcdb19c9f">let me know</a> what you think, and how this might be made more useful and easier to use.</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <!-- How it works / Privacy -->
+  <div class="section-label">How It Works &amp; Privacy</div>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-icon">🖊️</span>
+      <strong>You</strong>
+      <span>Paste article; choose Headlines or Social Posts</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">🖥️</span>
+      <strong>Navybook.com</strong>
+      <span>Receives your text; sends it to the AI API</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">🤖</span>
+      <strong>Anthropic API</strong>
+      <span>Extracts key facts, then generates headlines or nine social posts; returns them instantly</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">✅</span>
+      <strong>You</strong>
+      <span>Review suggestions; pick, adapt, and publish</span>
+    </div>
+  </div>
+
+  <div class="privacy-callout">
+    <strong>🔒 Your content stays private</strong>
+    <p>This tool uses Anthropic's API — a different product from the public Claude.ai chatbot. Under Anthropic's API terms, content sent through the API is <b>not used to train AI models</b> and is not retained after your request is processed. Your unpublished article text is never stored on our server either. Think of it like a fax: the text travels to get processed, the answer comes back, and nothing is kept.</p>
+  </div>
+
+  <hr class="rule" />
+
+  <!-- FAQ -->
+  <div class="section-label">Frequently Asked Questions</div>
+  <ul class="qa-list">
+    <li>
+      <div class="qa-q">Is my article safe to paste in before publication?</div>
+      <div class="qa-a">Yes. The tool sends your text to Anthropic's API (not to the public Claude.ai product). Anthropic's API does not use inputs for model training and does not store your content after the request completes. Our server also does not log or save article text. The only thing that persists is the output — headlines or social posts — displayed in your browser until you close or refresh the tab.</div>
+    </li>
+    <li>
+      <div class="qa-q">How is this different from just using ChatGPT or Claude.ai?</div>
+      <div class="qa-a">Public AI chatbots (ChatGPT, Claude.ai, Gemini, etc.) may use conversations to improve their models, and anything entered is processed on shared infrastructure with looser data handling guarantees. Our tool calls the AI via a private API with different, stricter data terms — specifically designed for business use. It also runs through our own server, so your API key and configuration are never exposed to your browser.</div>
+    </li>
+    <li>
+      <div class="qa-q">Do I have to paste the whole article?</div>
+      <div class="qa-a">No — a detailed summary works well too. The tool needs enough context to identify the story's main angle, key people or places, and what readers will learn. A paragraph or two is usually sufficient. The more specific you are, the better the output quality for both headlines and social posts.</div>
+    </li>
+    <li>
+      <div class="qa-q">Should I use these headlines as-is?</div>
+      <div class="qa-a">Treat them as a strong first draft, not a finished product. The tool now runs a fact-extraction pass before generating, which keeps suggestions grounded in what the article actually says — but it still doesn't know your publication's style guide, your editor's preferences, or the subtle judgment that makes a headline really sing. Use the suggestions as a starting point; they're good at surfacing keyword opportunities and structural options you might not have considered. The final call is always yours.</div>
+    </li>
+    <li>
+      <div class="qa-q">What do the colored badges on headlines mean?</div>
+      <div class="qa-a">The character-count badge turns <strong style="color:var(--green)">green</strong> when a headline falls in the 50–60 character sweet spot that Google typically displays in full. It turns <strong style="color:var(--accent)">red</strong> for headlines over 60 characters (they'll be truncated in search results) and stays yellow for headlines under 50 (still valid, but leaving value on the table). The keyword badge shows which search term the AI targeted in that particular headline.</div>
+    </li>
+    <li>
+      <div class="qa-q">What do the colored badges on social posts mean?</div>
+      <div class="qa-a">On X posts, the badge shows the character count against the 280-character limit — <strong style="color:var(--green)">green</strong> means you're within limit, <strong style="color:var(--accent)">red</strong> means the post is too long to publish as-is and needs trimming. Facebook and LinkedIn don't have hard limits, so their badges just show length for reference.</div>
+    </li>
+    <li>
+      <div class="qa-q">Should I use social posts as-is?</div>
+      <div class="qa-a">Same principle as headlines: treat them as a first draft. The tool extracts key facts before writing posts, so suggestions stay grounded in what the article actually says — no embellishment, no superlatives the article doesn't use. That said, it still doesn't know your account's voice or audience. A quick edit to add a specific detail or your own phrasing will usually improve them. The copy button makes it easy to grab a post and paste it into your scheduling tool.</div>
+    </li>
+    <li>
+      <div class="qa-q">Can I generate both headlines and social posts for the same article?</div>
+      <div class="qa-a">Yes — the two buttons are fully independent. Run Generate Heds first, review the options, then hit Generate SM Posts whenever you're ready. Or skip headlines entirely and go straight to social. Each run is a fresh API call; results from one don't affect the other.</div>
+    </li>
+    <li>
+      <div class="qa-q">Does it cost anything to use?</div>
+      <div class="qa-a">Each request costs a small fraction of a cent in Anthropic API fees (roughly $0.003 for headlines, $0.008 for social posts). At typical newsroom usage this amounts to a few dollars a month — negligible compared to the time savings. There's no per-seat cost or subscription for the tool itself.</div>
+    </li>
+    <li>
+      <div class="qa-q">What if I already have a headline in mind?</div>
+      <div class="qa-a">Still worth a quick run. Even experienced editors find it useful to see AI-generated alternatives — sometimes one surfaces a keyword angle or structure they hadn't considered. You can always ignore all six suggestions, but they take about ten seconds to generate and often prompt useful second thoughts.</div>
+    </li>
+  </ul>
+
+  <hr class="rule" />
+
+  <div class="section-label">Tips for Best Headline Results</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-icon">📋</span>
+      <h4>Paste full body text</h4>
+      <p>The tool reads your full text to extract key facts before writing. A longer paste means more accurate fact extraction, better keyword identification, and suggestions that actually reflect what your story says.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🎯</span>
+      <h4>Set a target keyword</h4>
+      <p>If you've already done keyword research or know what readers are searching, enter it. The tool will prioritize fitting that phrase naturally into at least some options.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🎚️</span>
+      <h4>Match the tone</h4>
+      <p>Breaking news needs urgency; a policy explainer needs authority; a features piece might work conversationally. Selecting the right tone produces more usable suggestions.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔄</span>
+      <h4>Run it twice</h4>
+      <p>Each generation is independent. If the first batch feels off — wrong angle, wrong tone — hit Generate Heds again. The fact-extraction step re-runs too, so you may get a different set of grounded options.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">✂️</span>
+      <h4>Adapt, don't just copy</h4>
+      <p>Hybrid headlines often outperform pure AI output. Take the keyword placement from one suggestion, the structure from another, and add your own editorial voice.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">📏</span>
+      <h4>Aim for the green zone</h4>
+      <p>The 50–60 character window is not a hard rule, but headlines in this range are statistically less likely to be truncated in Google Search and news aggregators.</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="section-label">Tips for Best Social Post Results</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-icon">📐</span>
+      <h4>Watch the X character badge</h4>
+      <p>X posts over 280 characters can't be published as-is. If a badge turns red, trim the post before copying — usually cutting a phrase or dropping a hashtag is enough.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔀</span>
+      <h4>Use different posts for different days</h4>
+      <p>You get six posts per platform. Spread them out. Each one leads with a different angle, so staggering publication keeps your feed from feeling repetitive.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔗</span>
+      <h4>Add the URL before posting</h4>
+      <p>The tool writes copy only — it doesn't know your published URL. Paste the article link into each post before scheduling. On X, the URL counts toward your 280 characters.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🏷️</span>
+      <h4>Customize the hashtags</h4>
+      <p>AI-generated hashtags are a reasonable starting point, but you know which tags your audience actually follows. Swap generic ones for the specific communities Defense One reaches.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">💼</span>
+      <h4>LinkedIn rewards specificity</h4>
+      <p>LinkedIn posts get more engagement when they speak to a professional outcome — what does this mean for procurement, policy, or readiness? The AI tries, but you can sharpen it.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔄</span>
+      <h4>Check the facts, then add color</h4>
+      <p>The tool avoids claims not in the article and won't use superlatives the story doesn't earn. That makes posts safer to publish quickly — but you can still add context, a reaction quote, or a sharper angle that the AI missed.</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <!-- SEO basics reference -->
+  <div class="section-label">Quick SEO Reference</div>
+
+  <blockquote>
+    "Search engines index headlines within minutes of publication. Getting the keyword right at launch matters more than any later correction."
+    <cite>General principle, search optimization practice</cite>
+  </blockquote>
+
+  <table class="tips-table">
+    <thead>
+      <tr>
+        <th>Element</th>
+        <th>Best Practice</th>
+        <th>Why It Matters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Length</td>
+        <td>50–60 characters</td>
+        <td>Google Search typically shows ~60 chars; staying under prevents truncation with an ellipsis, which reduces click-through.</td>
+      </tr>
+      <tr>
+        <td>Keyword placement</td>
+        <td>As close to the start as natural</td>
+        <td>Search engines weight words earlier in the headline more heavily. Readers also scan-read left to right and need the hook fast.</td>
+      </tr>
+      <tr>
+        <td>Numbers</td>
+        <td>Use digits, not words ("5" not "five")</td>
+        <td>Numerals are visually distinct in a list of search results and signal specificity, which improves click-through rates.</td>
+      </tr>
+      <tr>
+        <td>Voice</td>
+        <td>Active preferred</td>
+        <td>Active constructions are shorter and more direct, which helps both SEO and reader comprehension.</td>
+      </tr>
+      <tr>
+        <td>Accuracy</td>
+        <td>Headline must reflect article content exactly</td>
+        <td>Clickbait headlines that don't deliver trigger high bounce rates, a negative ranking signal. This tool extracts explicit facts first and requires every headline to trace back to something in the article.</td>
+      </tr>
+      <tr>
+        <td>Freshness signals</td>
+        <td>Include year or timeframe for evergreen topics</td>
+        <td>"Best mortgage rates 2025" outperforms "Best mortgage rates" for date-sensitive searches.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr class="rule" />
+
+  <!-- Social reference -->
+  <div class="section-label">Quick Social Reference</div>
+
+  <blockquote>
+    "Each platform is a different conversation. The same story needs a different opening line on LinkedIn than it does on X."
+    <cite>General principle, social media practice</cite>
+  </blockquote>
+
+  <table class="tips-table">
+    <thead>
+      <tr>
+        <th>Platform</th>
+        <th>Best Practice</th>
+        <th>What the Tool Does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Facebook</td>
+        <td>1–3 sentences; conversational; no hashtags; invite discussion</td>
+        <td>Writes in an accessible, engaged tone aimed at a general but news-literate audience. Focuses on why the story matters to readers' lives or interests.</td>
+      </tr>
+      <tr>
+        <td>X</td>
+        <td>Under 280 chars; front-loaded hook; 1–2 hashtags</td>
+        <td>Writes punchy, compressed copy with the news value in the first few words. Includes relevant hashtags — check and swap these before posting. Badge turns red if a post needs trimming.</td>
+      </tr>
+      <tr>
+        <td>LinkedIn</td>
+        <td>2–4 sentences; professional tone; explain implications</td>
+        <td>Writes for defense professionals, policy analysts, and government audiences. Frames the story's significance for the industry or policy landscape rather than just summarizing the news.</td>
+      </tr>
+      <tr>
+        <td>All platforms</td>
+        <td>Vary the angle across the 6 posts</td>
+        <td>The tool deliberately varies opening hooks, framing, and emphasis across the six posts per platform so you have options — and so your feed doesn't look repetitive if you post multiple times.</td>
+      </tr>
+      <tr>
+        <td>All platforms</td>
+        <td>Add your URL manually</td>
+        <td>The tool generates copy only. Paste each post, then add the published article link. On X, the link counts toward your 280-character limit.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- CTA -->
+  <div class="cta-bar">
+    <p>Ready to write headlines and social posts that get found?</p>
+    <a href="index.php" class="cta-link">Open Headline Lab →</a>
+  </div>
+
+</div><!-- /page -->
+
+</body>
+</html>
