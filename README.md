@@ -40,23 +40,25 @@ cd navybook.com/D1/seo
 - **GitHub:** `https://github.com/bpeniston/headline-lab`
 - **Server:** `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo`
 
-## TELL CLAUDE THIS BEFORE EACH NEW SESSION:
-My development setup:
+## Working with Claude on this project
 
-Project: Headline Lab — HTML/CSS/JS/PHP static-ish site
-Laptop path: ~/Documents/devstuff/headline-lab
-GitHub: https://github.com/bpeniston/headline-lab
-Server: DreamHost shared hosting, pdx1-shared-a1-08.dreamhost.com
-Server path: bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo
-Deploy command: git add . && git commit -m "..." && git push && deploy
-(The "deploy" alias runs: ssh bradwu@pdx1-shared-a1-08.dreamhost.com "cd navybook.com/D1/seo && git pull")
+At the start of each session, tell Claude:
 
-Files: about.html, bookmarklet.html, favicon.svg, headline-lab.css, index.php, prefill.php, seo-api.php
+- **Project:** Headline Lab — HTML/CSS/JS/PHP static-ish site
+- **Repo:** https://github.com/bpeniston/headline-lab (public)
+- **Server:** DreamHost shared hosting, pdx1-shared-a1-08.dreamhost.com
+- **Server path:** bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo
+- **Local path:** ~/Documents/devstuff/headline-lab
+- **Deploy:** git push to main, then run `deploy` alias in Terminal
+  (alias runs: ssh bradwu@pdx1-shared-a1-08.dreamhost.com "cd navybook.com/D1/seo && git pull")
+- **Editor:** vscode.dev/github/bpeniston/headline-lab open in Chrome
+  (Claude can read files, make edits, and commit directly — you just run `deploy`)
 
-When helping me with this project:
-- Give me edited file contents or specific diffs I can apply locally
-- I'll handle the git add/commit/push/deploy myself
-- Don't give me full file rewrites unless I ask — targeted edits are better
+**Ask Claude to:**
+- Read files from vscode.dev before making changes
+- Give targeted diffs, not full rewrites (unless asked)
+- Write commit messages
+- Not give you the deploy command — just say "deploy when ready"
 
 ## Checking usage logs
 
