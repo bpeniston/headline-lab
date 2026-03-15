@@ -1,1 +1,4 @@
 .DS_Store
+.headline-lab-config.ini
+*.ini
+.DS_Store
