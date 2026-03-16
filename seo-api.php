@@ -32,13 +32,12 @@ define('COMPETITION_THRESHOLD', 3);
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
 
-if (ALLOWED_ORIGIN !== '' && isset($_SERVER['HTTP_ORIGIN'])) {
-    if ($_SERVER['HTTP_ORIGIN'] !== ALLOWED_ORIGIN) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Forbidden origin']);
-        exit;
-    }
-    header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
+header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
