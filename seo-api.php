@@ -9,7 +9,7 @@
 $config = parse_ini_file('/home/bradwu/.headline-lab-config.ini');
 define('ANTHROPIC_API_KEY', $config['anthropic_key']);
 define('BRAVE_API_KEY',     $config['brave_key']);
-define('ALLOWED_ORIGIN',    '');                          // optional: e.g. 'https://www.navybook.com'
+define('ALLOWED_ORIGIN', 'https://admin.govexec.com'); // optional: e.g. 'https://www.navybook.com'
 
 // Major outlets to flag as competition
 define('COMPETITOR_DOMAINS', [
@@ -39,6 +39,13 @@ if (ALLOWED_ORIGIN !== '' && isset($_SERVER['HTTP_ORIGIN'])) {
         exit;
     }
     header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+    http_response_code(204);
+    exit;
 }
 
 if (defined('BASIC_AUTH_USER')) {
