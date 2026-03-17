@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 240px;
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      font-size: 0.72rem;
+      background: #f5f0e8;
+      color: #1a1208;
+    }
+    .header {
+      background: #1a1208;
+      color: #f5f0e8;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .header span {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .header .badge {
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      border: 1px solid #c0392b;
+      color: #c0392b;
+      padding: 0.1rem 0.3rem;
+      border-radius: 2px;
+    }
+    .section { padding: 0.85rem 1rem; border-bottom: 1px solid #c8b89a; }
+    .section:last-child { border-bottom: none; }
+    .section-title {
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #aaa;
+      margin-bottom: 0.6rem;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .toggle-row:last-child { margin-bottom: 0; }
+    .toggle-label { color: #555; font-size: 0.68rem; }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #c8b89a;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 12px; height: 12px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: #2c6e49; }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(14px); }
+
+    .footer {
+      padding: 0.6rem 1rem;
+      font-size: 0.55rem;
+      color: #bbb;
+      text-align: center;
+    }
+    .footer a { color: #c0392b; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span>Athena Tools</span>
+    <span class="badge">v1.0</span>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Features</div>
+    <div class="toggle-row">
+      <span class="toggle-label">UI tweaks &amp; label cleanup</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-uiTweaks" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Headline Lab panel</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-headlineLab" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="footer">
+    Only active on admin.govexec.com ·
+    <a href="mailto:bpeniston@defenseone.com">feedback</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

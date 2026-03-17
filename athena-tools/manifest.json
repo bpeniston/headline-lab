@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Athena Tools",
+  "version": "1.0.0",
+  "description": "UI polish and Headline Lab integration for the Athena CMS.",
+
+  "permissions": ["storage"],
+
+  "host_permissions": [
+    "*://admin.govexec.com/*",
+    "*://www.navybook.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["*://admin.govexec.com/*"],
+      "js": ["content/main.js"],
+      "css": ["styles/tweaks.css"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Athena Tools"
+  },
+
+  "web_accessible_resources": [{
+    "resources": ["icons/*"],
+    "matches": ["*://admin.govexec.com/*"]
+  }]
+}

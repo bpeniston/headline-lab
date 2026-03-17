@@ -6,27 +6,27 @@
   <title>About · Headline Lab · Newsroom SEO &amp; Social Tool</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="headline-lab.css">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="headline-lab.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
 
 <!-- Masthead -->
 <header>
   <h1><a href="index.php">Headline Lab</a></h1>
-  <span class="kicker">SEO & Social-Media Tool</span>
+  <span class="kicker">SEO &amp; Social-Media Tool</span>
   <nav>
     <a href="index.php">The Tool</a>
     <a href="about.html" class="active">About</a>
     <a href="bookmarklet.html">Bookmarklet</a>
-    <a href="/cdn-cgi/l/email-protection#2e4c5e4b40475d5a41406e4a4b484b405d4b41404b004d4143115d5b4c444b4d5a13664b4f4a4247404b0b1c1e624f4c">Contact</a>
+    <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab">Contact</a>
   </nav>
 </header>
 
 <!-- Hero -->
 <div class="hero">
   <div class="hero-eyebrow">Huh?</div>
- <p>Paste your story in. Get six SEO headlines and nine social posts back. Maybe&nbsp;they're&nbsp;useful. At least they're&nbsp;fast.</p>
+  <p>Point it at your story. Get six SEO headlines and nine social posts back. Maybe&nbsp;they're&nbsp;useful.</p>
 </div>
 
 <!-- Page body -->
@@ -45,7 +45,30 @@
       <h3>What this is</h3>
       <p>Clicks from Google are down (no doubt, partly because of AI-generated "summaries") so I—that is, <a href="https://www.defenseone.com/voices/bradley-peniston/10609/">D1 editor Brad Peniston</a>—asked Claude to whip up a tool that could help us with SEO without exposing/giving away our prepublication work. Which it did, in just a few minutes. Then I asked it to add social post generation. Then I asked it to write almost all of the text on this page.</p>
       <p>Now the tool lives on <a href="http://navybook.com">my private domain</a> and it swears it's not sending anything that might be captured and stored.</p>
-      <p>Please <a href="/cdn-cgi/l/email-protection#fd9f8d9893948e899293bd99989b98938e98929398d39e9290c28e889f97989e89c0b5989c9991949398d8cfcdb19c9f">let me know</a> what you think, and how this might be made more useful and easier to use.</p>
+      <p>Please <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab">let me know</a> what you think, and how this might be made more useful and easier to use.</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <!-- Three ways to use it -->
+  <div class="section-label">Three Ways to Use It</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-icon">🌐</span>
+      <h4>Web tool</h4>
+      <p>Go to <a href="https://navybook.com/D1/seo/index.php">navybook.com/D1/seo/</a>, paste your article, and generate. Works in any browser, no installation needed. Good for occasional use or if you're on a machine without the extension.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔖</span>
+      <h4>Bookmarklet</h4>
+      <p>Drag the <a href="bookmarklet.html">Athena bookmarklet</a> to your browser toolbar. When you're editing a post in Athena, one click grabs the article text and sends it to Headline Lab — no copying, no switching tabs, no pasting.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🧩</span>
+      <h4>Chrome extension</h4>
+      <p>The most integrated option. The extension lives inside Athena's post editor — a <strong>Headline Lab</strong> button appears next to the Title field. Click it to open a slide-in panel, generate headlines and subheds, and paste them directly into the post with one click. No tab-switching required.</p>
     </div>
   </div>
 
@@ -95,6 +118,10 @@
       <div class="qa-a">Yes. The tool sends your text to Anthropic's API (not to the public Claude.ai product). Anthropic's API does not use inputs for model training and does not store your content after the request completes. Our server also does not log or save article text. The only thing that persists is the output — headlines or social posts — displayed in your browser until you close or refresh the tab.</div>
     </li>
     <li>
+      <div class="qa-q">Which version should I use — web, bookmarklet, or extension?</div>
+      <div class="qa-a">The Chrome extension is the most convenient if you're working in Athena regularly — it puts the tool inside the editor so you never leave the page. The bookmarklet is a good middle ground: one click grabs the article from Athena and opens Headline Lab with the text pre-filled. The web tool is the fallback — it works anywhere and requires nothing installed, but you have to copy and paste manually.</div>
+    </li>
+    <li>
       <div class="qa-q">How is this different from just using ChatGPT or Claude.ai?</div>
       <div class="qa-a">Public AI chatbots (ChatGPT, Claude.ai, Gemini, etc.) may use conversations to improve their models, and anything entered is processed on shared infrastructure with looser data handling guarantees. Our tool calls the AI via a private API with different, stricter data terms — specifically designed for business use. It also runs through our own server, so your API key and configuration are never exposed to your browser.</div>
     </li>
@@ -107,6 +134,10 @@
       <div class="qa-a">Treat them as a strong first draft, not a finished product. The tool now runs a fact-extraction pass before generating, which keeps suggestions grounded in what the article actually says — but it still doesn't know your publication's style guide, your editor's preferences, or the subtle judgment that makes a headline really sing. Use the suggestions as a starting point; they're good at surfacing keyword opportunities and structural options you might not have considered. The final call is always yours.</div>
     </li>
     <li>
+      <div class="qa-q">How does the Chrome extension work inside Athena?</div>
+      <div class="qa-a">Once installed, the extension injects a <strong>Headline Lab</strong> button next to the Title field on every Athena post editing page. The button is grayed out until the Content field has body copy. Once it activates, clicking it opens a slide-in panel on the right side of the screen. You can set a target keyword and tone, then generate six headline + subhed pairs. Clicking any headline pastes it into the Title field; clicking a subhed pastes it into the Subhed field — without leaving the editor or switching tabs.</div>
+    </li>
+    <li>
       <div class="qa-q">What do the colored badges on headlines mean?</div>
       <div class="qa-a">The character-count badge turns <strong style="color:var(--green)">green</strong> when a headline falls in the 50–60 character sweet spot that Google typically displays in full. It turns <strong style="color:var(--accent)">red</strong> for headlines over 60 characters (they'll be truncated in search results) and stays yellow for headlines under 50 (still valid, but leaving value on the table). The keyword badge shows which search term the AI targeted in that particular headline.</div>
     </li>
@@ -116,7 +147,7 @@
     </li>
     <li>
       <div class="qa-q">Should I use social posts as-is?</div>
-      <div class="qa-a">Same principle as headlines: treat them as a first draft. The tool extracts key facts before writing posts, so suggestions stay grounded in what the article actually says — no embellishment, no superlatives the article doesn't use. That said, it still doesn't know your account's voice or audience. A quick edit to add a specific detail or your own phrasing will usually improve them. The copy button makes it easy to grab a post and paste it into your scheduling tool.</div>
+      <div class="qa-a">Same principle as headlines: treat them as a first draft. The tool extracts key facts before writing posts, so suggestions stay grounded in what the article actually says — no embellishment, no superlatives the article doesn't use. That said, it still doesn't know your account's voice or audience. A quick edit to add a specific detail or your own phrasing will usually improve them.</div>
     </li>
     <li>
       <div class="qa-q">Can I generate both headlines and social posts for the same article?</div>
@@ -182,12 +213,12 @@
     <div class="feature-card">
       <span class="fc-icon">🔀</span>
       <h4>Use different posts for different days</h4>
-      <p>You get six posts per platform. Spread them out. Each one leads with a different angle, so staggering publication keeps your feed from feeling repetitive.</p>
+      <p>You get three posts per platform. Spread them out. Each one leads with a different angle, so staggering publication keeps your feed from feeling repetitive.</p>
     </div>
     <div class="feature-card">
       <span class="fc-icon">🔗</span>
       <h4>Add the URL before posting</h4>
-      <p>The tool writes copy only — it doesn't know your published URL. Paste the article link into each post before scheduling. On X, the URL counts toward your 280 characters.</p>
+      <p>The tool writes copy only — it doesn't know your published URL. Paste the article link into each post before scheduling. On X, the URL counts toward your 280-character limit.</p>
     </div>
     <div class="feature-card">
       <span class="fc-icon">🏷️</span>
@@ -294,8 +325,8 @@
       </tr>
       <tr>
         <td>All platforms</td>
-        <td>Vary the angle across the 6 posts</td>
-        <td>The tool deliberately varies opening hooks, framing, and emphasis across the six posts per platform so you have options — and so your feed doesn't look repetitive if you post multiple times.</td>
+        <td>Vary the angle across posts</td>
+        <td>The tool deliberately varies opening hooks, framing, and emphasis across the three posts per platform so you have options — and so your feed doesn't look repetitive if you post multiple times.</td>
       </tr>
       <tr>
         <td>All platforms</td>
