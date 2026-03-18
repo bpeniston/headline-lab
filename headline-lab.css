@@ -245,8 +245,7 @@ button {
 
 /* Hide meta/rationale until hover; show "Details" hint */
 .headline-card .headline-meta,
-.headline-card .headline-rationale {
-  display: none !important;}
+.headline-card .headline-rationale { display: none !important; }
 .headline-card:hover .headline-meta     { display: flex !important; }
 .headline-card:hover .headline-rationale { display: block !important; }
 .headline-card::after {
@@ -446,8 +445,9 @@ p { font-size: 0.92rem; color: #444; margin-bottom: 0.85rem; line-height: 1.7; }
 .headline-subhed a,
 .headline-slug a {
   color: var(--ink) !important;
-  text-decoration: none;
+  text-decoration: none !important;
 }
+
 .headline-text a:hover,
 .headline-subhed a:hover,
 .headline-slug a:hover { color: var(--green) !important; }
