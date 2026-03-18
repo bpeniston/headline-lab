@@ -69,61 +69,37 @@
 
 <script>
 (function() {
-  const relayURL = window.location.origin + window.location.pathname.replace('bookmarklet.html','') + 'prefill.php';
+  var relayURL = window.location.origin + window.location.pathname.replace('bookmarklet.html','') + 'prefill.php';
 
-  const allowedDomains = [
-    'admin.govexec.com',
-    'govexec.com',
-    'defenseone.com',
-    'nextgov.com',
-    'washingtontechnology.com',
-    'route-fifty.com'
-  ];
+  var code = 'javascript:(function(){' +
+    'var allowed=["admin.govexec.com","govexec.com","defenseone.com","nextgov.com","washingtontechnology.com","route-fifty.com"];' +
+    'var host=window.location.hostname;' +
+    'var isAllowed=allowed.some(function(d){return host===d||host.endsWith("."+d);});' +
+    'var isAthena=host==="admin.govexec.com"||host.endsWith(".admin.govexec.com");' +
+    'if(!isAllowed){window.open("http://www.navybook.com/D1/seo","_blank");return;}' +
+    'var relayURL="' + relayURL + '";' +
+    'var combined="";' +
+    'if(isAthena){' +
+      'var text="";' +
+      'try{if(window.CKEDITOR){var inst=CKEDITOR.instances["id_content"];if(inst){var html=inst.getData();var tmp=document.createElement("div");tmp.innerHTML=html;text=(tmp.innerText||tmp.textContent||"").trim()}}}catch(e){}' +
+      'if(!text){var ta=document.getElementById("id_content");if(ta&&ta.value){var tmp2=document.createElement("div");tmp2.innerHTML=ta.value;text=(tmp2.innerText||tmp2.textContent||"").trim()}}' +
+      'var title="";var subhed="";' +
+      'try{var te=document.getElementById("id_title");if(te)title=te.value.trim();var se=document.getElementById("id_subheader");if(se)subhed=se.value.trim()}catch(e){}' +
+      'combined=[title,subhed,text].filter(Boolean).join("\\n\\n");' +
+    '}else{' +
+      'var h1=document.querySelector("h1")?document.querySelector("h1").textContent.trim():"";' +
+      'var meta=document.querySelector("meta[name=\\"description\\"]")?document.querySelector("meta[name=\\"description\\"]").getAttribute("content").trim():"";' +
+      'var paras=[].slice.call(document.querySelectorAll("article p")).map(function(p){return p.textContent.trim();}).filter(Boolean).join("\\n\\n");' +
+      'combined=[h1,meta,paras].filter(Boolean).join("\\n\\n");' +
+    '}' +
+    'if(!combined||combined.length<50){alert("Headline Lab: Could not read article text from this page.");return;}' +
+    'var f=document.createElement("form");f.method="POST";f.action=relayURL;f.target="_blank";' +
+    'var i=document.createElement("input");i.type="hidden";i.name="text";i.value=combined;' +
+    'f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);' +
+  '})();';
 
-  const athenaDomain = 'admin.govexec.com';
-
-  const code = `javascript:(function(){
-var allowed=${JSON.stringify(allowedDomains)};
-var athenaDomain='${athenaDomain}';
-var host=window.location.hostname;
-var isAllowed=allowed.some(function(d){return host===d||host.endsWith('.'+d);});
-var isAthena=host===athenaDomain||host.endsWith('.'+athenaDomain);
-var relayURL='${relayURL}';
-
-if(!isAllowed){
-  window.open('http://www.navybook.com/D1/seo','_blank');
-  return;
-}
-
-var combined='';
-
-if(isAthena){
-  // Athena: read from CKEditor + form fields
-  var text='';
-  try{if(window.CKEDITOR){var inst=CKEDITOR.instances['id_content'];if(inst){var html=inst.getData();var tmp=document.createElement('div');tmp.innerHTML=html;text=(tmp.innerText||tmp.textContent||'').trim()}}}catch(e){}
-  if(!text){var ta=document.getElementById('id_content');if(ta&&ta.value){var tmp2=document.createElement('div');tmp2.innerHTML=ta.value;text=(tmp2.innerText||tmp2.textContent||'').trim()}}
-  var title='';var subhed='';
-  try{var titleEl=document.getElementById('id_title');if(titleEl)title=titleEl.value.trim();var subEl=document.getElementById('id_subheader');if(subEl)subhed=subEl.value.trim()}catch(e){}
-  combined=[title,subhed,text].filter(Boolean).join('\\n\\n');
-} else {
-  // Published article page: read from DOM
-  var title=document.querySelector('h1')?document.querySelector('h1').textContent.trim():'';
-  var metaDesc=document.querySelector('meta[name="description"]')?document.querySelector('meta[name="description"]').getAttribute('content').trim():'';
-  var paras=[...document.querySelectorAll('article p')].map(function(p){return p.textContent.trim();}).filter(Boolean).join('\\n\\n');
-  combined=[title,metaDesc,paras].filter(Boolean).join('\\n\\n');
-}
-
-if(!combined||combined.length<50){
-  alert('Headline Lab: Could not read article text from this page.');
-  return;
-}
-
-var f=document.createElement('form');f.method='POST';f.action=relayURL;f.target='_blank';
-var i=document.createElement('input');i.type='hidden';i.name='text';i.value=combined;
-f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);
-})();`;
-
-document.getElementById('bookmarklet').href = code.replace(/\n/g, ' ');})();
+  document.getElementById('bookmarklet').href = code;
+})();
 </script>
 </body>
 </html>
