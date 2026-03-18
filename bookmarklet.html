@@ -123,8 +123,7 @@ var i=document.createElement('input');i.type='hidden';i.name='text';i.value=comb
 f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);
 })();`;
 
-  document.getElementById('bookmarklet').href = code;
-})();
+document.getElementById('bookmarklet').href = code.replace(/\n/g, ' ');})();
 </script>
 </body>
 </html>
