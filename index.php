@@ -200,54 +200,53 @@ if (!empty($_SESSION['prefill'])) {
   }
 
   // ── Render headline cards ─────────────────────────────────
-  function renderHeadlines(headlines, data) {
-    if (!headlines || !headlines.length) { showError('No headlines returned — try again.'); return; }
+function renderHeadlines(headlines, data) {
+  if (!headlines || !headlines.length) { showError('No headlines returned — try again.'); return; }
 
-    const competitionHTML = renderCompetition(data);
+  const competitionHTML = renderCompetition(data);
 
-    resultsEl.innerHTML = competitionHTML +
-      '<div class="hl-instructions">Hover over a card to show keyword, length &amp; justification</div>' +
-      headlines.map((h) => {
-        const safeH = escHtml(h.headline || '');
-        const len   = (h.headline || '').length;
-        const lenClass = len >= 50 && len <= 60 ? 'ok' : len > 60 ? 'long' : '';
-        const lenLabel = `Hed: ${len} chars${len < 50 ? ' (short)' : len > 60 ? ' (long)' : ''}`;
+  resultsEl.innerHTML = competitionHTML +
+    '<div class="hl-instructions">Hover to show details | Click hed or sub to copy</div>' +
+    headlines.map((h) => {
+      const safeH    = escHtml(h.headline  || '');
+      const safeS    = escHtml(h.subhed    || '');
+      const safeR    = escHtml(h.rationale || '');
+      const safeK    = escHtml(h.keyword   || '');
+      const safeSlug = escHtml(h.slug      || '');
+      const len      = (h.headline || '').length;
+      const lenClass = len >= 50 && len <= 60 ? 'ok' : len > 60 ? 'long' : '';
+      const lenLabel = `${len} chars${len < 50 ? '' : len > 60 ? ' (long)' : ' ✓'}`;
 
-        const safeS  = escHtml(h.subhed || '');
-        const sLen   = (h.subhed || '').length;
-        const sClass = sLen >= 80 && sLen <= 160 ? 'ok' : sLen > 160 ? 'long' : '';
-        const sLabel = `Subhed: ${sLen} chars${sLen < 80 ? ' (short)' : sLen > 160 ? ' (long)' : ''}`;
+      return `
+        <div class="headline-card">
+          <div class="headline-text">
+            <a class="hl-copy-hed" href="#" data-copy="${safeH}">${safeH}</a>
+          </div>
+          ${safeS ? `<div class="headline-subhed">
+            <a class="hl-copy-sub" href="#" data-copy="${safeS}">${safeS}</a>
+          </div>` : ''}
+          ${safeSlug ? `<div class="headline-slug">
+            <a class="hl-copy-slug" href="#" data-copy="${safeSlug}">${safeSlug}</a>
+          </div>` : ''}
+          <div class="headline-meta">
+            <span class="badge badge-kw">🔑 ${safeK}</span>
+            <span class="badge badge-len ${lenClass}">${lenLabel}</span>
+          </div>
+          ${safeR ? `<div class="headline-rationale">${safeR}</div>` : ''}
+        </div>`;
+    }).join('');
 
-        const safeSlug = escHtml(h.slug || '');
-        const safeR    = escHtml(h.rationale || '');
-        const safeK    = escHtml(h.keyword   || '');
-
-        const subhedBlock = safeS ? `<div class="headline-subhed">${safeS}</div>` : '';
-        const slugBlock   = safeSlug
-          ? `<div class="headline-slug"><a href="#" onclick="copyHL(this, '${safeSlug}'); return false;">${safeSlug}</a></div>`
-          : '';
-        const subhedMeta = safeS
-          ? ` <span class="badge badge-subhed-len ${sClass}">${sLabel}</span>
-              <button class="badge copy-btn" onclick="copyHL(this, ${JSON.stringify(safeS)})">Copy sub</button>`
-          : '';
-
-        return `
-          <div class="headline-card">
-            <div class="headline-text">${safeH}</div>
-            ${subhedBlock}
-            ${slugBlock}
-            <div class="headline-meta">
-              <span class="badge badge-len ${lenClass}">${lenLabel}</span>
-              <button class="badge copy-btn" onclick="copyHL(this, ${JSON.stringify(safeH)})">Copy hed</button>
-              ${subhedMeta}
-            </div>
-            <div class="headline-meta headline-meta-kw">
-              <span class="badge badge-kw">🔑 ${safeK}</span>
-            </div>
-            ${safeR ? `<div class="headline-rationale">${safeR}</div>` : ''}
-          </div>`;
-      }).join('');
-  }
+  document.querySelectorAll('.hl-copy-hed, .hl-copy-sub, .hl-copy-slug').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      navigator.clipboard.writeText(a.dataset.copy).then(() => {
+        const orig = a.textContent;
+        a.textContent = '✓ Copied!';
+        setTimeout(() => a.textContent = orig, 1500);
+      });
+    });
+  });
+}
 
   // ── Render social posts ───────────────────────────────────
   function renderSocialPosts(social) {
