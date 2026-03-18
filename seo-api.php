@@ -9,7 +9,7 @@
 $config = parse_ini_file('/home/bradwu/.headline-lab-config.ini');
 define('ANTHROPIC_API_KEY', $config['anthropic_key']);
 define('BRAVE_API_KEY',     $config['brave_key']);
-define('ALLOWED_ORIGIN', 'https://admin.govexec.com'); // optional: e.g. 'https://www.navybook.com'
+define('ALLOWED_ORIGIN',    'https://admin.govexec.com');
 
 // Major outlets to flag as competition
 define('COMPETITOR_DOMAINS', [
@@ -31,10 +31,10 @@ define('COMPETITION_THRESHOLD', 3);
 // ============================================================
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
-
 header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -89,7 +89,6 @@ exit;
 // ============================================================
 function handle_social(string $article): void {
 
-    // STEP 1: Find the most compelling facts from anywhere in the article
     $facts_prompt = <<<PROMPT
 Read the following article and return a JSON array of 6-8 of the most interesting, surprising, or reader-grabbing facts from ANYWHERE in the article — not just the lede. These will be used for social media posts, which don't need to reflect the main point; they just need to hook a reader.
 
@@ -121,7 +120,6 @@ $facts_list
 FACTS;
     }
 
-    // STEP 2: Generate social posts
     $prompt = <<<PROMPT
 You are a social media editor for Defense One, a specialist defense and national security news publication. Generate social media posts for three platforms based on the article below.
 
@@ -162,10 +160,7 @@ PROMPT;
         return;
     }
 
-    log_usage('social', [
-        'article_chars' => strlen($article),
-    ]);
-
+    log_usage('social', ['article_chars' => strlen($article)]);
     echo json_encode(['social' => $social]);
 }
 
@@ -367,6 +362,17 @@ PROMPT;
         return;
     }
 
+    // STEP 5: Score and sort headlines (best first, score not exposed to client)
+    foreach ($headlines as &$h) {
+        $h['_score'] = score_headline($h, $focus_kw);
+    }
+    unset($h);
+    usort($headlines, fn($a, $b) => $b['_score'] <=> $a['_score']);
+    foreach ($headlines as &$h) {
+        unset($h['_score']);
+    }
+    unset($h);
+
     log_usage('headlines', [
         'tone'              => $tone,
         'focus_kw'          => $focus_kw !== '' ? 'yes' : 'no',
@@ -374,13 +380,69 @@ PROMPT;
         'competition_found' => $competition_found,
     ]);
 
-    // STEP 5: Return everything
+    // STEP 6: Return everything
     echo json_encode([
         'headlines'         => $headlines,
         'competition_found' => $competition_found,
         'competition'       => array_slice($competition, 0, 8),
         'search_query'      => $search_query,
     ]);
+}
+
+
+// ============================================================
+// HEADLINE SCORING
+// Headlines are sorted best-first; score is not sent to client.
+// ============================================================
+function score_headline(array $h, string $focus_kw): float {
+    $score = 0.0;
+    $hed   = $h['headline'] ?? '';
+    $len   = mb_strlen($hed);
+
+    // 1. Length sweet spot (50-60 chars = full marks, taper outside)
+    if ($len >= 50 && $len <= 60) {
+        $score += 30;
+    } elseif ($len >= 45 && $len < 50) {
+        $score += 20;
+    } elseif ($len > 60 && $len <= 70) {
+        $score += 15;
+    } elseif ($len >= 40 && $len < 45) {
+        $score += 10;
+    } else {
+        $score += 5;
+    }
+
+    // 2. Keyword placement — reward front-loading
+    $kw = strtolower($focus_kw ?: ($h['keyword'] ?? ''));
+    if ($kw) {
+        $pos = mb_strpos(strtolower($hed), $kw);
+        if ($pos !== false) {
+            // Full marks if keyword in first 20 chars, sliding scale after
+            $score += max(0, 25 - ($pos * 0.5));
+        }
+    }
+
+    // 3. Active voice — penalise common passive constructions
+    if (preg_match('/\b(is being|are being|was|were|has been|have been|will be)\b/i', $hed)) {
+        $score -= 10;
+    }
+
+    // 4. Contains a number — specificity signal
+    if (preg_match('/\d/', $hed)) {
+        $score += 8;
+    }
+
+    // 5. Avoid question marks (questions underperform for news SEO)
+    if (str_ends_with(trim($hed), '?')) {
+        $score -= 5;
+    }
+
+    // 6. Avoid clickbait openers
+    if (preg_match('/^(here\'s|this is|why you|what you|you need|the reason)/i', $hed)) {
+        $score -= 8;
+    }
+
+    return $score;
 }
 
 
@@ -437,7 +499,7 @@ function call_claude(string $prompt, int $max_tokens, float $temperature = 1.0):
 function brave_search(string $query): ?array {
     $url = 'https://api.search.brave.com/res/v1/news/search?q='
          . urlencode($query)
-         . '&count=10&freshness=pd';   // pd = past day; pw = past week
+         . '&count=10&freshness=pd';
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
