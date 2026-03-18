@@ -245,9 +245,10 @@ button {
 
 /* Hide meta/rationale until hover; show "Details" hint */
 .headline-card .headline-meta,
-.headline-card .headline-rationale { display: none; }
-.headline-card:hover .headline-meta  { display: flex; }
-.headline-card:hover .headline-rationale { display: block; }
+.headline-card .headline-rationale {
+  display: none !important;}
+.headline-card:hover .headline-meta     { display: flex !important; }
+.headline-card:hover .headline-rationale { display: block !important; }
 .headline-card::after {
   content: 'Details ▼';
   display: block;
@@ -442,9 +443,11 @@ p { font-size: 0.92rem; color: #444; margin-bottom: 0.85rem; line-height: 1.7; }
 
 /* ── Clickable hed/sub links in headline cards ── */
 .headline-text a,
-.headline-subhed a {
-  color: inherit;
+.headline-subhed a,
+.headline-slug a {
+  color: var(--ink) !important;
   text-decoration: none;
 }
-.headline-text a:hover  { color: var(--green); }
-.headline-subhed a:hover { color: var(--green); }
+.headline-text a:hover,
+.headline-subhed a:hover,
+.headline-slug a:hover { color: var(--green) !important; }
