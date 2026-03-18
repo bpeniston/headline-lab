@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Athena Tools",
   "version": "1.0.0",
-  "description": "UI polish and Headline Lab integration for the Athena CMS.",
+  "description": "UI improvements and Headline Lab SEO tools for the Athena CMS post editor.",
 
   "permissions": ["storage"],
 
@@ -23,6 +23,12 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Athena Tools"
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
 
   "web_accessible_resources": [{
