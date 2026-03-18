@@ -16,7 +16,7 @@ if (!empty($_SESSION['prefill'])) {
   <title>SEO Headline Generator · Newsroom</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="headline-lab.css">
+<link rel="stylesheet" href="headline-lab.css?v=2">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
