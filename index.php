@@ -1,4 +1,6 @@
 <?php
+// CARD UI: Keep in sync with athena-tools/content/main.js renderResults()
+// Only legitimate difference: click copies to clipboard (no Athena fields here)
 session_start();
 $prefill = '';
 if (!empty($_SESSION['prefill'])) {
@@ -103,16 +105,16 @@ if (!empty($_SESSION['prefill'])) {
 </div>
 
 <script>
-  const articleEl   = document.getElementById('articleText');
-  const charCountEl = document.getElementById('charCount');
-  const generateBtn = document.getElementById('generateBtn');
-  const spinner     = document.getElementById('spinner');
-  const btnLabel    = document.getElementById('btnLabel');
-  const socialBtn   = document.getElementById('socialBtn');
-  const socialSpinner  = document.getElementById('socialSpinner');
+  const articleEl     = document.getElementById('articleText');
+  const charCountEl   = document.getElementById('charCount');
+  const generateBtn   = document.getElementById('generateBtn');
+  const spinner       = document.getElementById('spinner');
+  const btnLabel      = document.getElementById('btnLabel');
+  const socialBtn     = document.getElementById('socialBtn');
+  const socialSpinner = document.getElementById('socialSpinner');
   const socialBtnLabel = document.getElementById('socialBtnLabel');
-  const resultsEl   = document.getElementById('results');
-  const resultsLabel = document.getElementById('resultsLabel');
+  const resultsEl     = document.getElementById('results');
+  const resultsLabel  = document.getElementById('resultsLabel');
 
   // ── Load usage stats ──────────────────────────────────────
   fetch('stats.php')
@@ -194,59 +196,57 @@ if (!empty($_SESSION['prefill'])) {
     spinnerEl.style.display = on ? 'block' : 'none';
     labelEl.textContent = on ? 'Generating…' : idleLabel;
   }
-
-  function showError(msg) {
-    resultsEl.innerHTML = `<div class="error-box">⚠ ${escHtml(msg)}</div>`;
-  }
+  function showError(msg) { resultsEl.innerHTML = `<div class="error-box">⚠ ${escHtml(msg)}</div>`; }
 
   // ── Render headline cards ─────────────────────────────────
-function renderHeadlines(headlines, data) {
-  if (!headlines || !headlines.length) { showError('No headlines returned — try again.'); return; }
+  // SYNC NOTE: Keep in sync with main.js renderResults()
+  // Only difference: clicking hed/sub copies to clipboard instead of applying to Athena fields
+  function renderHeadlines(headlines, data) {
+    if (!headlines || !headlines.length) { showError('No headlines returned — try again.'); return; }
 
-  const competitionHTML = renderCompetition(data);
+    resultsEl.innerHTML = renderCompetition(data) +
+      '<div class="hl-instructions">Hover to show justification | Click a hed or sub to copy</div>' +
+      headlines.map((h) => {
+        const len      = h.headline ? h.headline.length : 0;
+        const lenClass = (len >= 50 && len <= 60) ? 'ok' : (len > 60 ? 'long' : '');
+        const lenLabel = len + ' chars' + (len < 50 ? '' : (len > 60 ? ' (long)' : ' ✓'));
+        const safeH    = escHtml(h.headline  || '');
+        const safeS    = escHtml(h.subhed    || '');
+        const safeR    = escHtml(h.rationale || '');
+        const safeK    = escHtml(h.keyword   || '');
+        const safeSlug = escHtml(h.slug      || '');
 
-  resultsEl.innerHTML = competitionHTML +
-    '<div class="hl-instructions">Hover to show details | Click hed or sub to copy</div>' +
-    headlines.map((h) => {
-      const safeH    = escHtml(h.headline  || '');
-      const safeS    = escHtml(h.subhed    || '');
-      const safeR    = escHtml(h.rationale || '');
-      const safeK    = escHtml(h.keyword   || '');
-      const safeSlug = escHtml(h.slug      || '');
-      const len      = (h.headline || '').length;
-      const lenClass = len >= 50 && len <= 60 ? 'ok' : len > 60 ? 'long' : '';
-      const lenLabel = `${len} chars${len < 50 ? '' : len > 60 ? ' (long)' : ' ✓'}`;
+        return `
+          <div class="headline-card">
+            <div class="headline-text">
+              <a class="hl-copy-hed" href="#" data-copy="${safeH}">${safeH}</a>
+            </div>
+            ${safeS ? `<div class="headline-subhed">
+              <a class="hl-copy-sub" href="#" data-copy="${safeS}">${safeS}</a>
+            </div>` : ''}
+            ${safeSlug ? `<div class="headline-slug">
+              <a class="hl-copy-slug" href="#" data-copy="${safeSlug}">${safeSlug}</a>
+            </div>` : ''}
+            <div class="headline-meta">
+              <span class="badge badge-kw">🔑 ${safeK}</span>
+              <span class="badge badge-len ${lenClass}">${lenLabel}</span>
+            </div>
+            ${safeR ? `<div class="headline-rationale">${safeR}</div>` : ''}
+          </div>`;
+      }).join('');
 
-      return `
-        <div class="headline-card">
-          <div class="headline-text">
-            <a class="hl-copy-hed" href="#" data-copy="${safeH}">${safeH}</a>
-          </div>
-          ${safeS ? `<div class="headline-subhed">
-            <a class="hl-copy-sub" href="#" data-copy="${safeS}">${safeS}</a>
-          </div>` : ''}
-          ${safeSlug ? `<div class="headline-slug">
-            <a class="hl-copy-slug" href="#" data-copy="${safeSlug}">${safeSlug}</a>
-          </div>` : ''}
-          <div class="headline-meta">
-            <span class="badge badge-kw">🔑 ${safeK}</span>
-            <span class="badge badge-len ${lenClass}">${lenLabel}</span>
-          </div>
-          ${safeR ? `<div class="headline-rationale">${safeR}</div>` : ''}
-        </div>`;
-    }).join('');
-
-  document.querySelectorAll('.hl-copy-hed, .hl-copy-sub, .hl-copy-slug').forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      navigator.clipboard.writeText(a.dataset.copy).then(() => {
-        const orig = a.textContent;
-        a.textContent = '✓ Copied!';
-        setTimeout(() => a.textContent = orig, 1500);
+    // Click hed or sub → copy to clipboard
+    document.querySelectorAll('.hl-copy-hed, .hl-copy-sub, .hl-copy-slug').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        navigator.clipboard.writeText(a.dataset.copy).then(() => {
+          const orig = a.textContent;
+          a.textContent = '✓ Copied!';
+          setTimeout(() => a.textContent = orig, 1500);
+        });
       });
     });
-  });
-}
+  }
 
   // ── Render social posts ───────────────────────────────────
   function renderSocialPosts(social) {
@@ -261,14 +261,9 @@ function renderHeadlines(headlines, data) {
     const panels = platforms.map((p, i) => {
       const posts = (social[p.key] || []).map((text) => {
         const len = text.length;
-        let charBadge = '';
-        if (p.charLimit) {
-          const cls = len <= p.charLimit ? 'x-ok' : 'x-long';
-          const lbl = len <= p.charLimit ? `${len} / ${p.charLimit} chars ✓` : `${len} chars — too long`;
-          charBadge = `<span class="social-char-badge ${cls}">${lbl}</span>`;
-        } else {
-          charBadge = `<span class="social-char-badge">${len} chars</span>`;
-        }
+        let charBadge = p.charLimit
+          ? `<span class="social-char-badge ${len <= p.charLimit ? 'x-ok' : 'x-long'}">${len <= p.charLimit ? `${len} / ${p.charLimit} chars ✓` : `${len} chars — too long`}</span>`
+          : `<span class="social-char-badge">${len} chars</span>`;
         const safeText = escHtml(text);
         return `
           <div class="social-post-card">
@@ -315,14 +310,6 @@ function renderHeadlines(headlines, data) {
   }
 
   function toggleComp() { document.getElementById('compPanel').classList.toggle('open'); }
-
-  function copyHL(btn, text) {
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = orig, 1500);
-    });
-  }
 
   function copySocial(btn, text) {
     const raw = text.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');
