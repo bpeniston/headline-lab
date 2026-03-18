@@ -426,4 +426,16 @@
   cursor: pointer;
 }
 .hl-use-hed:hover { color: #2c6e49; }
-.hl-use-sub:hover { color: #2c6e49; }
+
+/* ── Suggested slug ── */
+.hl-slug {
+  margin: 0.3rem 0 0.5rem;
+}
+.hl-copy-slug {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 11px;
+  color: #888;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.hl-copy-slug:hover { color: #2c6e49; }

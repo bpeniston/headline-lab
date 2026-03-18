@@ -1,17 +1,13 @@
 <?php
 // ============================================================
 // seo-api.php  —  Private SEO Headline & Social Generator
-// Place this file in the SAME directory as index.php on DreamHost
-// NEVER commit your API key to a public git repo
 // ============================================================
 
-// --- CONFIGURATION ---
 $config = parse_ini_file('/home/bradwu/.headline-lab-config.ini');
 define('ANTHROPIC_API_KEY', $config['anthropic_key']);
 define('BRAVE_API_KEY',     $config['brave_key']);
 define('ALLOWED_ORIGIN',    'https://admin.govexec.com');
 
-// Major outlets to flag as competition
 define('COMPETITOR_DOMAINS', [
     'nytimes.com', 'washingtonpost.com', 'cnn.com', 'bbc.com', 'bbc.co.uk',
     'reuters.com', 'apnews.com', 'theguardian.com', 'nbcnews.com', 'cbsnews.com',
@@ -21,12 +17,7 @@ define('COMPETITOR_DOMAINS', [
     'militarytimes.com', 'stripes.com', 'airforcetimes.com', 'armytimes.com',
 ]);
 
-// Minimum number of major-outlet results to trigger competition mode
 define('COMPETITION_THRESHOLD', 3);
-
-// --- BASIC AUTH (optional but recommended) ---
-// define('BASIC_AUTH_USER', 'newsroom');
-// define('BASIC_AUTH_PASS', 'changeme123');
 
 // ============================================================
 header('Content-Type: application/json');
@@ -35,23 +26,7 @@ header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-if (defined('BASIC_AUTH_USER')) {
-    if (
-        !isset($_SERVER['PHP_AUTH_USER']) ||
-        $_SERVER['PHP_AUTH_USER'] !== BASIC_AUTH_USER ||
-        $_SERVER['PHP_AUTH_PW']   !== BASIC_AUTH_PASS
-    ) {
-        header('WWW-Authenticate: Basic realm="SEO Tool"');
-        http_response_code(401);
-        echo json_encode(['error' => 'Unauthorized']);
-        exit;
-    }
-}
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -69,15 +44,8 @@ if (strlen($article) < 50) {
     exit;
 }
 
-// ============================================================
-// Route to the correct action
-// ============================================================
-if ($action === 'generate_social') {
-    handle_social($article);
-    exit;
-}
+if ($action === 'generate_social') { handle_social($article); exit; }
 
-// Default: headline generation
 $focus_kw = isset($body['focus_kw']) ? trim($body['focus_kw']) : '';
 $tone     = isset($body['tone'])     ? trim($body['tone'])     : 'neutral';
 handle_headlines($article, $focus_kw, $tone);
@@ -123,22 +91,22 @@ FACTS;
     $prompt = <<<PROMPT
 You are a social media editor for Defense One, a specialist defense and national security news publication. Generate social media posts for three platforms based on the article below.
 
-Social posts do NOT need to reflect the main point of the article. Instead, lead with whatever fact, detail, or angle from anywhere in the article is most likely to make a reader stop scrolling and click. Surprising statistics, striking quotes, unexpected consequences, and specific details often outperform the main news point on social.
+Social posts do NOT need to reflect the main point of the article. Instead, lead with whatever fact, detail, or angle from anywhere in the article is most likely to make a reader stop scrolling and click.
 
 ARTICLE:
 ---
 $article
 ---
 $facts_block
-ACCURACY RULES — READ CAREFULLY:
+ACCURACY RULES:
 - Every claim must be directly supported by a specific fact explicitly stated in the article.
 - Do not infer, speculate, editorialize, or add drama not present in the text.
 - Do not use superlatives ("massive", "explosive", "shocking") unless the article uses them.
 
 PLATFORM GUIDELINES:
-- Facebook (3 posts): 1-3 sentences, conversational but authoritative. Can include a brief setup sentence for context. No hashtags. Each post should lead with a different hook or angle.
-- X / Twitter (3 posts): Under 280 characters each. Punchy, direct. One hashtag maximum, only if it adds real value. Each post should lead with a different hook or angle.
-- LinkedIn (3 posts): 2-4 sentences, professional tone, defense/policy audience. Frame the significance for industry or policy professionals. Each post should lead with a different hook or angle.
+- Facebook (3 posts): 1-3 sentences, conversational but authoritative. No hashtags. Each post leads with a different hook.
+- X / Twitter (3 posts): Under 280 characters each. Punchy, direct. One hashtag maximum. Each post leads with a different hook.
+- LinkedIn (3 posts): 2-4 sentences, professional tone, defense/policy audience. Each post leads with a different hook.
 
 Format your response as a JSON object with this exact structure (no extra text, no markdown fences):
 {
@@ -151,8 +119,7 @@ PROMPT;
     $raw_text = call_claude($prompt, 1200, 0.3);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
-
-    $social = json_decode(trim($raw_text), true);
+    $social   = json_decode(trim($raw_text), true);
 
     if (!is_array($social)) {
         http_response_code(500);
@@ -172,17 +139,15 @@ function handle_headlines(string $article, string $focus_kw, string $tone): void
 
     // STEP 1: Extract key facts + search query
     $facts_prompt = <<<PROMPT
-Read the following article carefully. It is written in inverted-pyramid structure, meaning the most important information comes first.
+Read the following article carefully. It is written in inverted-pyramid structure.
 
 Return a JSON object with three fields:
 
-1. "lede_facts": An array of 3-5 specific, verifiable facts drawn only from the FIRST THREE PARAGRAPHS of the article. These represent the main point of the story and must drive the headline.
+1. "lede_facts": An array of 3-5 specific, verifiable facts drawn only from the FIRST THREE PARAGRAPHS. These must drive the headline.
 
-2. "supporting_facts": An array of 3-5 interesting, verifiable facts from the REST of the article (below the first three paragraphs). These can be used in subheds but not headlines.
+2. "supporting_facts": An array of 3-5 interesting facts from the REST of the article. These can be used in subheds but not headlines.
 
-3. "search_query": A single short search query (4-7 words) capturing the main news topic, suitable for a news search engine.
-
-Each fact should be a short declarative sentence using only information explicitly present in the text — no inference, no embellishment.
+3. "search_query": A single short search query (4-7 words) capturing the main news topic.
 
 Return ONLY valid JSON, no extra text, no markdown fences:
 {
@@ -202,15 +167,13 @@ PROMPT;
     $facts_raw  = preg_replace('/```\s*$/m', '', $facts_raw);
     $facts_data = json_decode(trim($facts_raw), true);
 
-    $key_facts        = isset($facts_data['lede_facts'])       ? $facts_data['lede_facts']       : [];
-    $supporting_facts = isset($facts_data['supporting_facts']) ? $facts_data['supporting_facts'] : [];
-    $search_query     = isset($facts_data['search_query'])     ? $facts_data['search_query']     : '';
-    $search_query     = trim(strip_tags($search_query));
+    $key_facts        = $facts_data['lede_facts']       ?? [];
+    $supporting_facts = $facts_data['supporting_facts'] ?? [];
+    $search_query     = trim(strip_tags($facts_data['search_query'] ?? ''));
 
-    // Fallback query extraction
     if (!$search_query) {
         $query_prompt = <<<PROMPT
-Read the following article and return a single short search query (4-7 words) that captures the main news topic. Return ONLY the query text, nothing else - no punctuation, no explanation.
+Read the following article and return a single short search query (4-7 words) capturing the main news topic. Return ONLY the query text, nothing else.
 
 ARTICLE:
 ---
@@ -220,7 +183,6 @@ PROMPT;
         $search_query = trim(strip_tags(call_claude($query_prompt, 50, 0.2)));
     }
 
-    // Build facts blocks
     $facts_block = '';
     if (!empty($key_facts) || !empty($supporting_facts)) {
         $lede_list = !empty($key_facts)
@@ -246,7 +208,6 @@ FACTS;
 
     if ($search_query) {
         $brave_results = brave_search($search_query);
-
         if ($brave_results && isset($brave_results['results'])) {
             foreach ($brave_results['results'] as $result) {
                 $url    = $result['url']   ?? '';
@@ -254,25 +215,18 @@ FACTS;
                 $source = $result['meta_url']['hostname'] ?? parse_url($url, PHP_URL_HOST) ?? '';
                 $source = preg_replace('/^www\./', '', $source);
                 $age    = $result['age']   ?? '';
-
                 foreach (COMPETITOR_DOMAINS as $domain) {
                     if (str_contains($source, $domain) || str_contains($url, $domain)) {
-                        $competition[] = [
-                            'title'  => $title,
-                            'source' => $source,
-                            'url'    => $url,
-                            'age'    => $age,
-                        ];
+                        $competition[] = ['title' => $title, 'source' => $source, 'url' => $url, 'age' => $age];
                         break;
                     }
                 }
             }
         }
-
         $competition_found = count($competition) >= COMPETITION_THRESHOLD;
     }
 
-    // STEP 3: Build the headline prompt
+    // STEP 3: Build headline prompt
     $kw_instruction = $focus_kw
         ? "The editor's target keyword/phrase is: \"$focus_kw\". Prioritize including it naturally, but only if it fits the facts."
         : "Identify the most searchable keyword or phrase from the article and use it.";
@@ -299,7 +253,7 @@ COMP;
     }
 
     $prompt = <<<PROMPT
-You are an expert SEO editor for Defense One, a specialist defense and national security news publication. Your job is to generate headline + subhed pairs that are optimized for search engine ranking AND compelling for human readers.
+You are an expert SEO editor for Defense One, a specialist defense and national security news publication. Generate headline + subhed + slug combinations optimized for search ranking and human readers.
 
 This article is written in inverted-pyramid structure. The main point is in the first three paragraphs.
 
@@ -313,36 +267,43 @@ TONE PREFERENCE: $tone
 $kw_instruction
 $competition_block
 
-Generate exactly 6 headline + subhed pairs. For each provide:
+Generate exactly 6 headline + subhed + slug combinations. For each provide:
 1. The headline
 2. A complementary subhed
-3. A one-sentence rationale (why this pair works for SEO/readers)
-4. Primary keyword used
+3. An SEO-optimized URL slug
+4. A one-sentence rationale
+5. Primary keyword used
 
 HEADLINE RULES:
-- Headlines must reflect the main point of the story — draw only from the LEDE FACTS above
-- Write in sentence case (capitalize only the first word and proper nouns — not title case)
-- Ideal length: 50-60 characters (Google displays ~60 chars)
+- Must reflect the main point — draw only from LEDE FACTS above
+- Sentence case (capitalize only first word and proper nouns)
+- Ideal length: 50-60 characters
 - Front-load the most important keyword when natural
 - Use numbers only when the article explicitly supports them
 - Prefer active voice
-- Vary style where the article naturally supports it: straight news, question format, how/why framing, listicle — but never force a format that distorts the facts
 
 SUBHED RULES:
 - Must NOT repeat any words or phrases from its paired headline
-- CAN draw from the SUPPORTING FACTS (lower in the article) to add an interesting angle or detail the headline couldn't fit
-- One or two sentences maximum, written in sentence case
-- Ideal length: 80–160 characters
+- Can draw from SUPPORTING FACTS to add an interesting detail
+- One or two sentences maximum, sentence case
+- Ideal length: 80-160 characters
 - Active voice, no opening colon
 
-ACCURACY RULE (applies to both):
-- Every claim must be traceable to a specific sentence in the article. Do not infer, speculate, or embellish.
+SLUG RULES:
+- Lowercase, hyphens only (no underscores, no special characters)
+- 3-5 words maximum — extract the most searchable nouns, drop stop words and verbs
+- Must share the core keyword(s) with its paired headline
+- No dates
+- Examples: "navy-robots-ship-inspection", "pentagon-civilian-workforce-cuts"
+
+ACCURACY RULE: Every claim must be traceable to a specific sentence in the article.
 
 Format your response as a JSON array with this exact structure (no extra text, no markdown fences):
 [
   {
     "headline": "...",
     "subhed": "...",
+    "slug": "...",
     "rationale": "...",
     "keyword": "..."
   }
@@ -350,10 +311,9 @@ Format your response as a JSON array with this exact structure (no extra text, n
 PROMPT;
 
     // STEP 4: Generate headlines
-    $raw_text = call_claude($prompt, 1200, 0.3);
+    $raw_text = call_claude($prompt, 1400, 0.3);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
-
     $headlines = json_decode(trim($raw_text), true);
 
     if (!is_array($headlines)) {
@@ -380,7 +340,6 @@ PROMPT;
         'competition_found' => $competition_found,
     ]);
 
-    // STEP 6: Return everything
     echo json_encode([
         'headlines'         => $headlines,
         'competition_found' => $competition_found,
@@ -392,55 +351,32 @@ PROMPT;
 
 // ============================================================
 // HEADLINE SCORING
-// Headlines are sorted best-first; score is not sent to client.
 // ============================================================
 function score_headline(array $h, string $focus_kw): float {
     $score = 0.0;
     $hed   = $h['headline'] ?? '';
     $len   = mb_strlen($hed);
 
-    // 1. Length sweet spot (50-60 chars = full marks, taper outside)
-    if ($len >= 50 && $len <= 60) {
-        $score += 30;
-    } elseif ($len >= 45 && $len < 50) {
-        $score += 20;
-    } elseif ($len > 60 && $len <= 70) {
-        $score += 15;
-    } elseif ($len >= 40 && $len < 45) {
-        $score += 10;
-    } else {
-        $score += 5;
-    }
+    if ($len >= 50 && $len <= 60)      { $score += 30; }
+    elseif ($len >= 45 && $len < 50)   { $score += 20; }
+    elseif ($len > 60 && $len <= 70)   { $score += 15; }
+    elseif ($len >= 40 && $len < 45)   { $score += 10; }
+    else                                { $score += 5;  }
 
-    // 2. Keyword placement — reward front-loading
     $kw = strtolower($focus_kw ?: ($h['keyword'] ?? ''));
     if ($kw) {
         $pos = mb_strpos(strtolower($hed), $kw);
         if ($pos !== false) {
-            // Full marks if keyword in first 20 chars, sliding scale after
             $score += max(0, 25 - ($pos * 0.5));
         }
     }
 
-    // 3. Active voice — penalise common passive constructions
     if (preg_match('/\b(is being|are being|was|were|has been|have been|will be)\b/i', $hed)) {
         $score -= 10;
     }
-
-    // 4. Contains a number — specificity signal
-    if (preg_match('/\d/', $hed)) {
-        $score += 8;
-    }
-
-    // 5. Avoid question marks (questions underperform for news SEO)
-    if (str_ends_with(trim($hed), '?')) {
-        $score -= 5;
-    }
-
-    // 6. Avoid clickbait openers
-    if (preg_match('/^(here\'s|this is|why you|what you|you need|the reason)/i', $hed)) {
-        $score -= 8;
-    }
+    if (preg_match('/\d/', $hed))                                              { $score += 8; }
+    if (str_ends_with(trim($hed), '?'))                                        { $score -= 5; }
+    if (preg_match('/^(here\'s|this is|why you|what you|you need|the reason)/i', $hed)) { $score -= 8; }
 
     return $score;
 }
@@ -476,20 +412,12 @@ function call_claude(string $prompt, int $max_tokens, float $temperature = 1.0):
     $curl_error  = curl_error($ch);
     curl_close($ch);
 
-    if ($curl_error) {
-        http_response_code(502);
-        echo json_encode(['error' => 'API connection failed: ' . $curl_error]);
-        exit;
-    }
+    if ($curl_error) { http_response_code(502); echo json_encode(['error' => 'API connection failed: ' . $curl_error]); exit; }
 
     $api_data = json_decode($response, true);
-
     if ($http_status !== 200 || !isset($api_data['content'][0]['text'])) {
         http_response_code(502);
-        echo json_encode([
-            'error'   => 'Anthropic API error',
-            'details' => $api_data['error']['message'] ?? 'Unknown error'
-        ]);
+        echo json_encode(['error' => 'Anthropic API error', 'details' => $api_data['error']['message'] ?? 'Unknown error']);
         exit;
     }
 
@@ -497,38 +425,23 @@ function call_claude(string $prompt, int $max_tokens, float $temperature = 1.0):
 }
 
 function brave_search(string $query): ?array {
-    $url = 'https://api.search.brave.com/res/v1/news/search?q='
-         . urlencode($query)
-         . '&count=10&freshness=pd';
-
-    $ch = curl_init($url);
+    $url = 'https://api.search.brave.com/res/v1/news/search?q=' . urlencode($query) . '&count=10&freshness=pd';
+    $ch  = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => [
-            'Accept: application/json',
-            'Accept-Encoding: gzip',
-            'X-Subscription-Token: ' . BRAVE_API_KEY,
-        ],
-        CURLOPT_TIMEOUT  => 10,
-        CURLOPT_ENCODING => 'gzip',
+        CURLOPT_HTTPHEADER     => ['Accept: application/json', 'Accept-Encoding: gzip', 'X-Subscription-Token: ' . BRAVE_API_KEY],
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_ENCODING       => 'gzip',
     ]);
-
     $response = curl_exec($ch);
     $status   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
     if ($status !== 200 || !$response) return null;
-
     return json_decode($response, true);
 }
 
 function log_usage(string $action, array $data = []): void {
     $log_file = '/home/bradwu/headline-lab-usage.log';
-    $entry = implode("\t", [
-        date('Y-m-d H:i:s'),
-        $action,
-        $_SERVER['REMOTE_ADDR'] ?? '-',
-        json_encode($data),
-    ]) . "\n";
+    $entry = implode("\t", [date('Y-m-d H:i:s'), $action, $_SERVER['REMOTE_ADDR'] ?? '-', json_encode($data)]) . "\n";
     file_put_contents($log_file, $entry, FILE_APPEND | LOCK_EX);
 }

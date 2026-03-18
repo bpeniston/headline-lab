@@ -6,29 +6,19 @@
 
   const HL_API_URL = 'https://www.navybook.com/D1/seo/seo-api.php';
 
-  // ── Run immediately ──
   applyDOMTweaks();
   injectHeaderButton();
   injectPanel();
-
-  // ── Poll for content state once CKEditor is ready ──
-  waitForCKEditor(function() {
-    updateBtnState();
-  });
+  waitForCKEditor(function() { updateBtnState(); });
 
   // ============================================================
   // DOM TWEAKS
   // ============================================================
   function applyDOMTweaks() {
-
-    // 1. Move Subhed to directly after Slug
     var slugRow   = document.querySelector('.grp-row.slug');
     var subhedRow = document.querySelector('.grp-row.subheader');
-    if (slugRow && subhedRow) {
-      slugRow.insertAdjacentElement('afterend', subhedRow);
-    }
+    if (slugRow && subhedRow) slugRow.insertAdjacentElement('afterend', subhedRow);
 
-    // 2. Group Status + Publish date + Expiration date into one bar
     var statusRow = document.querySelector('.grp-row.status');
     var pubRow    = document.querySelector('.grp-row.date_published');
     var expRow    = document.querySelector('.grp-row.expiration_date');
@@ -41,7 +31,6 @@
       dateBar.appendChild(expRow);
     }
 
-    // 3. Group checkboxes into one bar
     var riverRow    = document.querySelector('.grp-row.suppress_from_river');
     var insightsRow = document.querySelector('.grp-row.suppress_from_insights_river');
     var googleRow   = document.querySelector('.grp-row.suppress_from_google_search');
@@ -62,21 +51,18 @@
   // ============================================================
   function waitForCKEditor(callback, attempts) {
     attempts = attempts || 0;
-    if (
-      typeof CKEDITOR !== 'undefined' &&
-      CKEDITOR.instances['id_content'] &&
-      CKEDITOR.instances['id_content'].status === 'ready'
-    ) { callback(); return; }
+    if (typeof CKEDITOR !== 'undefined' && CKEDITOR.instances['id_content'] && CKEDITOR.instances['id_content'].status === 'ready') {
+      callback(); return;
+    }
     if (attempts > 40) { callback(); return; }
     setTimeout(function() { waitForCKEditor(callback, attempts + 1); }, 100);
   }
 
   // ============================================================
-  // HEADLINE LAB BUTTON — right of Title field, both pages
+  // HEADLINE LAB BUTTON
   // ============================================================
   function injectHeaderButton() {
     if (document.getElementById('hl-header-btn')) return;
-
     var titleC2 = document.querySelector('.grp-row.title .c-2');
     if (!titleC2) return;
 
@@ -98,19 +84,12 @@
     });
   }
 
-  // Enable/disable button based on whether content field has text
   function updateBtnState() {
     var btn = document.getElementById('hl-header-btn');
     if (!btn) return;
     var text = '';
-    try {
-      var inst = CKEDITOR.instances['id_content'];
-      if (inst) text = inst.getData();
-    } catch(e) {}
-    if (!text) {
-      var ta = document.getElementById('id_content');
-      if (ta) text = ta.value;
-    }
+    try { var inst = CKEDITOR.instances['id_content']; if (inst) text = inst.getData(); } catch(e) {}
+    if (!text) { var ta = document.getElementById('id_content'); if (ta) text = ta.value; }
     var hasContent = text && text.replace(/<[^>]+>/g, '').trim().length > 50;
     btn.classList.toggle('hl-btn-disabled', !hasContent);
   }
@@ -120,7 +99,6 @@
   // ============================================================
   function injectPanel() {
     if (document.getElementById('hl-panel')) return;
-
     var panel = document.createElement('div');
     panel.id = 'hl-panel';
     panel.innerHTML =
@@ -150,16 +128,12 @@
         '</button>' +
         '<hr class="hl-rule">' +
         '<div id="hl-results">' +
-          '<div class="hl-placeholder">' +
-            '<span class="hl-glyph">&#8546;</span>' +
-          '</div>' +
+          '<div class="hl-placeholder"><span class="hl-glyph">&#8546;</span></div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(panel);
 
-    document.getElementById('hl-close-btn').addEventListener('click', function() {
-      panel.classList.remove('hl-open');
-    });
+    document.getElementById('hl-close-btn').addEventListener('click', function() { panel.classList.remove('hl-open'); });
     document.getElementById('hl-generate-btn').addEventListener('click', generateHeadlines);
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && panel.classList.contains('hl-open')) panel.classList.remove('hl-open');
@@ -173,19 +147,11 @@
     var text = '';
     try {
       var inst = CKEDITOR.instances['id_content'];
-      if (inst) {
-        var tmp = document.createElement('div');
-        tmp.innerHTML = inst.getData();
-        text = (tmp.innerText || tmp.textContent || '').trim();
-      }
+      if (inst) { var tmp = document.createElement('div'); tmp.innerHTML = inst.getData(); text = (tmp.innerText || tmp.textContent || '').trim(); }
     } catch(e) {}
     if (!text) {
       var ta = document.getElementById('id_content');
-      if (ta && ta.value) {
-        var tmp2 = document.createElement('div');
-        tmp2.innerHTML = ta.value;
-        text = (tmp2.innerText || tmp2.textContent || '').trim();
-      }
+      if (ta && ta.value) { var tmp2 = document.createElement('div'); tmp2.innerHTML = ta.value; text = (tmp2.innerText || tmp2.textContent || '').trim(); }
     }
     var title  = (document.getElementById('id_title')     || {value:''}).value.trim();
     var subhed = (document.getElementById('id_subheader') || {value:''}).value.trim();
@@ -235,7 +201,6 @@
     }
     var html = '';
 
-    // Competition panel
     if (data.competition_found && data.competition && data.competition.length) {
       var items = data.competition.map(function(c) {
         return '<li><span class="hl-comp-source">' + escHtml(c.source) + '</span>' +
@@ -245,15 +210,13 @@
         '<button class="hl-comp-toggle" onclick="this.closest(\'.hl-comp-panel\').classList.toggle(\'open\')">' +
         '&#9889; Competition detected — headlines adjusted &#9660;</button>' +
         '<div class="hl-comp-body">' +
-        '<div style="font-family:Arial,sans-serif;font-size:11px;color:#aaa;margin-bottom:0.5rem;">Search: <em>' +
-        escHtml(data.search_query) + '</em></div>' +
+        '<div style="font-family:Arial,sans-serif;font-size:11px;color:#aaa;margin-bottom:0.5rem;">Search: <em>' + escHtml(data.search_query) + '</em></div>' +
         '<ul class="hl-comp-list">' + items + '</ul></div></div>';
     }
-html += '<div class="hl-instructions">Hover to show justification | Click a hed or sub to add to post</div>';
 
+    html += '<div class="hl-instructions">Hover to show justification | Click a hed or sub to add to post</div>';
 
-    // Headline cards
-    html += headlines.map(function(h, i) {
+    html += headlines.map(function(h) {
       var len      = h.headline ? h.headline.length : 0;
       var lenClass = (len >= 50 && len <= 60) ? 'ok' : (len > 60 ? 'long' : '');
       var lenLabel = len + ' chars' + (len < 50 ? '' : (len > 60 ? ' (long)' : ' \u2713'));
@@ -261,6 +224,7 @@ html += '<div class="hl-instructions">Hover to show justification | Click a hed 
       var safeS    = escHtml(h.subhed    || '');
       var safeR    = escHtml(h.rationale || '');
       var safeK    = escHtml(h.keyword   || '');
+      var safeSlug = escHtml(h.slug      || '');
 
       return '<div class="hl-card">' +
         '<div class="hl-text">' +
@@ -268,6 +232,9 @@ html += '<div class="hl-instructions">Hover to show justification | Click a hed 
         '</div>' +
         (safeS ? '<div class="hl-subhed">' +
           '<a class="hl-use-sub" href="#" data-subhed="' + safeS + '">' + safeS + '</a>' +
+        '</div>' : '') +
+        (safeSlug ? '<div class="hl-slug">' +
+          '<a class="hl-copy-slug" href="#" data-copy="' + safeSlug + '">' + safeSlug + '</a>' +
         '</div>' : '') +
         '<div class="hl-meta">' +
           '<span class="hl-badge hl-badge-kw">&#128273; ' + safeK + '</span>' +
@@ -279,7 +246,6 @@ html += '<div class="hl-instructions">Hover to show justification | Click a hed 
 
     showResults(html);
 
-    // Click hed → paste into Title field
     document.querySelectorAll('.hl-use-hed').forEach(function(a) {
       a.addEventListener('click', function(e) {
         e.preventDefault();
@@ -295,7 +261,6 @@ html += '<div class="hl-instructions">Hover to show justification | Click a hed 
       });
     });
 
-    // Click sub → paste into Subheader field
     document.querySelectorAll('.hl-use-sub').forEach(function(a) {
       a.addEventListener('click', function(e) {
         e.preventDefault();
@@ -310,21 +275,29 @@ html += '<div class="hl-instructions">Hover to show justification | Click a hed 
         }
       });
     });
+
+    document.querySelectorAll('.hl-copy-slug').forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigator.clipboard.writeText(a.dataset.copy).then(function() {
+          var orig = a.textContent;
+          a.textContent = '\u2713 Copied!';
+          setTimeout(function() { a.textContent = orig; }, 1500);
+        });
+      });
+    });
   }
 
   // ============================================================
   // HELPERS
   // ============================================================
-  function showResults(html) {
-    var el = document.getElementById('hl-results');
-    if (el) el.innerHTML = html;
-  }
+  function showResults(html) { var el = document.getElementById('hl-results'); if (el) el.innerHTML = html; }
   function setLoading(on) {
-    var btn     = document.getElementById('hl-generate-btn');
-    var label   = document.getElementById('hl-btn-label');
+    var btn = document.getElementById('hl-generate-btn');
+    var label = document.getElementById('hl-btn-label');
     var spinner = document.getElementById('hl-spinner');
-    if (btn)     btn.disabled          = on;
-    if (label)   label.textContent     = on ? 'Generating\u2026' : 'Generate Headlines';
+    if (btn) btn.disabled = on;
+    if (label) label.textContent = on ? 'Generating\u2026' : 'Generate Headlines';
     if (spinner) spinner.style.display = on ? 'block' : 'none';
   }
   function escHtml(s) {
