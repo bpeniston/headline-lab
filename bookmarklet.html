@@ -26,8 +26,12 @@
 
   <div class="section-label">One-Click Setup</div>
   <h2>The Athena Bookmarklet</h2>
-  <p>Drag the button below to your bookmarks bar. After that, whenever you're in an Athena post, one click grabs the article text and sends it straight to Headline Lab — no copying, no switching tabs, no pasting.</p>
-  <p>If you click the bookmarklet while on any other site, it will open Headline Lab directly so you can paste text in manually.</p>
+  <p>Drag the button below to your bookmarks bar. It works three ways:</p>
+  <ul class="steps">
+    <li><div><strong>On Athena</strong> — grabs the article text from the CKEditor, title, and subhed, and sends everything to Headline Lab pre-filled.</div></li>
+    <li><div><strong>On a published GovExec network article</strong> — reads the headline and body text from the page and sends it to Headline Lab pre-filled.</div></li>
+    <li><div><strong>Anywhere else</strong> — opens Headline Lab directly so you can paste text in manually.</div></li>
+  </ul>
 
   <!-- THE DRAG TARGET -->
   <div class="drag-zone">
@@ -40,16 +44,7 @@
   <ol class="steps">
     <li><div><strong>Show your bookmarks bar</strong> if it's hidden — in Chrome: <kbd>Ctrl+Shift+B</kbd> (Win) or <kbd>⌘+Shift+B</kbd> (Mac). In Firefox: View → Toolbars → Bookmarks Toolbar.</div></li>
     <li><div><strong>Drag the red button</strong> above into your bookmarks bar. You'll see it appear as "📰 Headline Lab".</div></li>
-    <li><div><strong>That's it.</strong> Go to any Athena post, click the bookmark, and the tool opens with your article text already loaded. On any other site, it opens Headline Lab so you can paste text in manually.</div></li>
-  </ol>
-
-  <hr class="rule" />
-
-  <div class="section-label">What It Does</div>
-  <p>When you click the bookmarklet, it checks what site you're on:</p>
-  <ol class="steps">
-    <li><div><strong>On Athena or a GovExec network site</strong> — reads the Content field via the CKEditor API, strips HTML tags, grabs the Title and Subhed fields, and POSTs everything directly to Headline Lab, which opens in a new tab with everything pre-filled.</div></li>
-    <li><div><strong>On any other site</strong> — opens <a href="http://www.navybook.com/D1/seo">Headline Lab</a> directly so you can paste text in manually.</div></li>
+    <li><div><strong>That's it.</strong> Click it from any page to launch Headline Lab.</div></li>
   </ol>
 
   <hr class="rule" />
@@ -58,11 +53,11 @@
   <ul class="qa-list">
     <li>
       <div class="qa-q">The bookmarklet opens Headline Lab but the text field is empty.</div>
-      <div class="qa-a">Make sure you're on an Athena <em>post editing</em> page (the URL should contain <code>/athena/post_manager/post/</code>). The bookmarklet reads the Content field via CKEditor — if you click it from a list page or dashboard, there's no content to grab. Also make sure the post has some body text already entered.</div>
+      <div class="qa-a">Make sure you're on an Athena <em>post editing</em> page (the URL should contain <code>/athena/post_manager/post/</code>). The bookmarklet reads the Content field via CKEditor — if you click it from a list page or dashboard, there's no content to grab.</div>
     </li>
     <li>
       <div class="qa-q">It only grabbed the title, not the article body.</div>
-      <div class="qa-a">The CKEditor instance may not have loaded yet. Wait a second after the page finishes loading, then try again. If it still fails, <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab%20bookmarklet">let me know</a> — I can tune the selector.</div>
+      <div class="qa-a">The CKEditor instance may not have loaded yet. Wait a second after the page finishes loading, then try again. If it still fails, <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab%20bookmarklet">let me know</a>.</div>
     </li>
     <li>
       <div class="qa-q">Can I see the bookmarklet code?</div>
@@ -85,19 +80,44 @@
     'route-fifty.com'
   ];
 
+  const athenaDomain = 'admin.govexec.com';
+
   const code = `javascript:(function(){
 var allowed=${JSON.stringify(allowedDomains)};
+var athenaDomain='${athenaDomain}';
 var host=window.location.hostname;
 var isAllowed=allowed.some(function(d){return host===d||host.endsWith('.'+d);});
-if(!isAllowed){window.open('http://www.navybook.com/D1/seo','_blank');return;}
+var isAthena=host===athenaDomain||host.endsWith('.'+athenaDomain);
 var relayURL='${relayURL}';
-var text='';
-try{if(window.CKEDITOR){var inst=CKEDITOR.instances['id_content'];if(inst){var html=inst.getData();var tmp=document.createElement('div');tmp.innerHTML=html;text=(tmp.innerText||tmp.textContent||'').trim()}}}catch(e){}
-if(!text){var ta=document.getElementById('id_content');if(ta&&ta.value){var tmp2=document.createElement('div');tmp2.innerHTML=ta.value;text=(tmp2.innerText||tmp2.textContent||'').trim()}}
-var title='';var subhed='';
-try{var titleEl=document.getElementById('id_title');if(titleEl)title=titleEl.value.trim();var subEl=document.getElementById('id_subheader');if(subEl)subhed=subEl.value.trim()}catch(e){}
-var combined=[title,subhed,text].filter(Boolean).join('\\n\\n');
-if(!combined||combined.length<50){alert('Headline Lab: Could not read the Content field.\\nMake sure you are on an Athena post page.');return;}
+
+if(!isAllowed){
+  window.open('http://www.navybook.com/D1/seo','_blank');
+  return;
+}
+
+var combined='';
+
+if(isAthena){
+  // Athena: read from CKEditor + form fields
+  var text='';
+  try{if(window.CKEDITOR){var inst=CKEDITOR.instances['id_content'];if(inst){var html=inst.getData();var tmp=document.createElement('div');tmp.innerHTML=html;text=(tmp.innerText||tmp.textContent||'').trim()}}}catch(e){}
+  if(!text){var ta=document.getElementById('id_content');if(ta&&ta.value){var tmp2=document.createElement('div');tmp2.innerHTML=ta.value;text=(tmp2.innerText||tmp2.textContent||'').trim()}}
+  var title='';var subhed='';
+  try{var titleEl=document.getElementById('id_title');if(titleEl)title=titleEl.value.trim();var subEl=document.getElementById('id_subheader');if(subEl)subhed=subEl.value.trim()}catch(e){}
+  combined=[title,subhed,text].filter(Boolean).join('\\n\\n');
+} else {
+  // Published article page: read from DOM
+  var title=document.querySelector('h1')?document.querySelector('h1').textContent.trim():'';
+  var metaDesc=document.querySelector('meta[name="description"]')?document.querySelector('meta[name="description"]').getAttribute('content').trim():'';
+  var paras=[...document.querySelectorAll('article p')].map(function(p){return p.textContent.trim();}).filter(Boolean).join('\\n\\n');
+  combined=[title,metaDesc,paras].filter(Boolean).join('\\n\\n');
+}
+
+if(!combined||combined.length<50){
+  alert('Headline Lab: Could not read article text from this page.');
+  return;
+}
+
 var f=document.createElement('form');f.method='POST';f.action=relayURL;f.target='_blank';
 var i=document.createElement('input');i.type='hidden';i.name='text';i.value=combined;
 f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);
