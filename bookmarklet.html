@@ -87,10 +87,15 @@
       'try{var te=document.getElementById("id_title");if(te)title=te.value.trim();var se=document.getElementById("id_subheader");if(se)subhed=se.value.trim()}catch(e){}' +
       'combined=[title,subhed,text].filter(Boolean).join("\\n\\n");' +
     '}else{' +
-      'var h1=document.querySelector("h1")?document.querySelector("h1").textContent.trim():"";' +
-      'var meta=document.querySelector("meta[name=\\"description\\"]")?document.querySelector("meta[name=\\"description\\"]").getAttribute("content").trim():"";' +
-      'var paras=[].slice.call(document.querySelectorAll("article p")).map(function(p){return p.textContent.trim();}).filter(Boolean).join("\\n\\n");' +
-      'combined=[h1,meta,paras].filter(Boolean).join("\\n\\n");' +
+'var h1=document.querySelector("h1")?document.querySelector("h1").textContent.trim():"";' +
+'var meta=document.querySelector("meta[name=\\"description\\"]")?document.querySelector("meta[name=\\"description\\"]").getAttribute("content").trim():"";' +
+'var articleClone=document.querySelector("article")?document.querySelector("article").cloneNode(true):null;' +
+'if(articleClone){' +
+  'var strip=[".js-article-advert-injected",".advert-tag",".l-content-rail-item",".content-caption-and-attribution",".content-image-attribution","header.content-header",".l-content-right-rail-companion","figure","figcaption"];' +
+  'strip.forEach(function(sel){[].slice.call(articleClone.querySelectorAll(sel)).forEach(function(el){el.remove();});});' +
+  'var paras=[].slice.call(articleClone.querySelectorAll("p")).map(function(p){return p.textContent.trim();}).filter(Boolean).join("\\n\\n");' +
+'}else{var paras="";}' +
+'combined=[h1,meta,paras].filter(Boolean).join("\\n\\n");' +
     '}' +
     'if(!combined||combined.length<50){alert("Headline Lab: Could not read article text from this page.");return;}' +
   'var f=document.createElement("form");f.method="POST";f.action=relayURL;f.target="_blank";' +
