@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Athena Tools",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "UI improvements and Headline Lab SEO tools for the Athena CMS post editor.",
 
   "permissions": ["storage"],
