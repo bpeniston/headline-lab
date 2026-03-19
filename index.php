@@ -164,7 +164,7 @@ if (!empty($_SESSION['prefill_url'])) {
       const res  = await fetch('seo-api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_social', article, source_url: prefillUrl }),
+        body: JSON.stringify({ action: 'headlines', article, focus_kw: focusKw, tone }),
       });
       const data = await res.json();
       if (!res.ok || data.error) { showError(data.error || `Server error (${res.status})`); return; }
@@ -186,7 +186,7 @@ if (!empty($_SESSION['prefill_url'])) {
       const res  = await fetch('seo-api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_social', article }),
+        body: JSON.stringify({ action: 'generate_social', article, source_url: prefillUrl }),
       });
       const data = await res.json();
       if (!res.ok || data.error) { showError(data.error || `Server error (${res.status})`); return; }
