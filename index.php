@@ -7,6 +7,13 @@ if (!empty($_SESSION['prefill'])) {
     $prefill = $_SESSION['prefill'];
     unset($_SESSION['prefill']);
 }
+
+$prefill_url = '';
+if (!empty($_SESSION['prefill_url'])) {
+    $prefill_url = $_SESSION['prefill_url'];
+    unset($_SESSION['prefill_url']);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -115,6 +122,7 @@ if (!empty($_SESSION['prefill'])) {
   const socialBtnLabel = document.getElementById('socialBtnLabel');
   const resultsEl     = document.getElementById('results');
   const resultsLabel  = document.getElementById('resultsLabel');
+  const prefillUrl = <?php echo json_encode($prefill_url); ?>;
 
   // ── Load usage stats ──────────────────────────────────────
   fetch('stats.php')
@@ -156,7 +164,7 @@ if (!empty($_SESSION['prefill'])) {
       const res  = await fetch('seo-api.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'headlines', article, focus_kw: focusKw, tone }),
+        body: JSON.stringify({ action: 'generate_social', article, source_url: prefillUrl }),
       });
       const data = await res.json();
       if (!res.ok || data.error) { showError(data.error || `Server error (${res.status})`); return; }

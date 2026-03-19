@@ -93,10 +93,14 @@
       'combined=[h1,meta,paras].filter(Boolean).join("\\n\\n");' +
     '}' +
     'if(!combined||combined.length<50){alert("Headline Lab: Could not read article text from this page.");return;}' +
-    'var f=document.createElement("form");f.method="POST";f.action=relayURL;f.target="_blank";' +
-    'var i=document.createElement("input");i.type="hidden";i.name="text";i.value=combined;' +
-    'f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f);' +
+  'var f=document.createElement("form");f.method="POST";f.action=relayURL;f.target="_blank";' +
+'var i=document.createElement("input");i.type="hidden";i.name="text";i.value=combined;' +
+'var u=document.createElement("input");u.type="hidden";u.name="url";u.value=window.location.href;' +
+'f.appendChild(i);f.appendChild(u);document.body.appendChild(f);f.submit();document.body.removeChild(f);' +
   '})();';
+  
+
+  
 
   document.getElementById('bookmarklet').href = code;
 })();

@@ -27,10 +27,15 @@ $text = $_POST['text'] ?? '';
 $text = trim(strip_tags($text));
 $text = mb_substr($text, 0, 50000);
 
-if (strlen($text) > 10) {
-    $_SESSION['prefill'] = $text;
-}
+$source_url = $_POST['url'] ?? '';
+// Only keep clean http/https URLs; discard anything else
+if (!preg_match('/^https?:\/\//i', $source_url)) $source_url = '';
+$source_url = mb_substr($source_url, 0, 2000);
 
+if (strlen($text) > 10) {
+    $_SESSION['prefill']      = $text;
+    $_SESSION['prefill_url']  = $source_url;
+}
 // Redirect to the tool
 header('Location: index.php');
 exit;

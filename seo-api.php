@@ -34,9 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$body    = json_decode(file_get_contents('php://input'), true);
-$action  = isset($body['action'])  ? trim($body['action'])  : 'headlines';
-$article = isset($body['article']) ? trim($body['article']) : '';
+$body       = json_decode(file_get_contents('php://input'), true);
+$action     = isset($body['action'])     ? trim($body['action'])     : 'headlines';
+$article    = isset($body['article'])    ? trim($body['article'])    : '';
+$source_url = isset($body['source_url']) ? trim($body['source_url']) : '';
+
+// Validate source_url — only allow clean http/https URLs
+if (!preg_match('/^https?:\/\//i', $source_url)) $source_url = '';
+$source_url = mb_substr($source_url, 0, 2000);
 
 if (strlen($article) < 50) {
     http_response_code(400);
@@ -44,7 +49,7 @@ if (strlen($article) < 50) {
     exit;
 }
 
-if ($action === 'generate_social') { handle_social($article); exit; }
+if ($action === 'generate_social') { handle_social($article, $source_url); exit; }
 
 $focus_kw = isset($body['focus_kw']) ? trim($body['focus_kw']) : '';
 $tone     = isset($body['tone'])     ? trim($body['tone'])     : 'neutral';
@@ -55,7 +60,7 @@ exit;
 // ============================================================
 // HANDLER: Social media posts
 // ============================================================
-function handle_social(string $article): void {
+function handle_social(string $article, string $source_url = ''): void {
 
     $facts_prompt = <<<PROMPT
 Read the following article and return a JSON array of 6-8 of the most interesting, surprising, or reader-grabbing facts from ANYWHERE in the article — not just the lede. These will be used for social media posts, which don't need to reflect the main point; they just need to hook a reader.
@@ -88,6 +93,19 @@ $facts_list
 FACTS;
     }
 
+    // Build the URL instruction block
+    if ($source_url !== '') {
+        $url_instruction = <<<URL
+
+ARTICLE URL: $source_url
+
+Each post must end with this URL on its own line. Do not fabricate or alter it.
+
+URL;
+    } else {
+        $url_instruction = "\nNo article URL was provided — do not include or fabricate one.\n";
+    }
+
     $prompt = <<<PROMPT
 You are a social media editor for Defense One, a specialist defense and national security news publication. Generate social media posts for three platforms based on the article below.
 
@@ -98,15 +116,16 @@ ARTICLE:
 $article
 ---
 $facts_block
+$url_instruction
 ACCURACY RULES:
 - Every claim must be directly supported by a specific fact explicitly stated in the article.
 - Do not infer, speculate, editorialize, or add drama not present in the text.
 - Do not use superlatives ("massive", "explosive", "shocking") unless the article uses them.
 
 PLATFORM GUIDELINES:
-- Facebook (3 posts): 1-3 sentences, conversational but authoritative. No hashtags. Each post leads with a different hook.
-- X / Twitter (3 posts): Under 280 characters each. Punchy, direct. One hashtag maximum. Each post leads with a different hook.
-- LinkedIn (3 posts): 2-4 sentences, professional tone, defense/policy audience. Each post leads with a different hook.
+- Facebook (3 posts): 1-3 sentences, conversational but authoritative. No hashtags. Each post leads with a different hook. End each post with the article URL on its own line (if provided).
+- X / Twitter (3 posts): Under 280 characters each INCLUDING the URL (if provided). Punchy, direct. One hashtag maximum. Each post leads with a different hook. Include the URL at the end.
+- LinkedIn (3 posts): 2-4 sentences, professional tone, defense/policy audience. Each post leads with a different hook. End each post with the article URL on its own line (if provided).
 
 Format your response as a JSON object with this exact structure (no extra text, no markdown fences):
 {
@@ -116,7 +135,7 @@ Format your response as a JSON object with this exact structure (no extra text, 
 }
 PROMPT;
 
-    $raw_text = call_claude($prompt, 1200, 0.3);
+    $raw_text = call_claude($prompt, 1400, 0.3);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
     $social   = json_decode(trim($raw_text), true);
@@ -127,7 +146,7 @@ PROMPT;
         return;
     }
 
-    log_usage('social', ['article_chars' => strlen($article)]);
+    log_usage('social', ['article_chars' => strlen($article), 'has_url' => $source_url !== '']);
     echo json_encode(['social' => $social]);
 }
 
