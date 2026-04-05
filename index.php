@@ -363,24 +363,30 @@ if (!empty($_SESSION['prefill_url'])) {
   function renderEmailSubjects(subjects) {
     if (!subjects || !subjects.length) { showError('No subject lines returned — try again.'); return; }
     resultsEl.innerHTML =
-      '<div class="hl-instructions">Click a subject line to copy it</div>' +
+      '<div class="hl-instructions">Click subject or preview text to copy · Target: under 50 chars</div>' +
       subjects.map(s => {
-        const len      = s.subject.length;
-        const lenClass = len <= 60 ? 'ok' : (len <= 75 ? '' : 'long');
-        const lenLabel = len + ' chars' + (len <= 60 ? ' ✓' : len > 75 ? ' (long)' : '');
+        const sLen      = s.subject.length;
+        const sClass    = sLen <= 50 ? 'ok' : (sLen <= 75 ? '' : 'long');
+        const sLabel    = sLen + ' chars' + (sLen <= 50 ? ' ✓' : sLen > 75 ? ' (too long)' : '');
+        const pLen      = (s.preview || '').length;
+        const pLabel    = pLen + ' chars' + (pLen >= 40 && pLen <= 80 ? ' ✓' : '');
         return `
           <div class="headline-card">
             <div class="headline-text">
               <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
             </div>
+            ${s.preview ? `<div class="headline-subhed">
+              <a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
+            </div>` : ''}
             <div class="headline-meta">
               <span class="badge badge-kw">✉ ${escHtml(s.approach)}</span>
-              <span class="badge badge-len ${lenClass}">${lenLabel}</span>
+              <span class="badge badge-len ${sClass}" title="Subject length">${sLabel}</span>
+              ${s.preview ? `<span class="badge" title="Preview text length" style="background:#e8e8e8;color:#555">${pLabel} preview</span>` : ''}
             </div>
           </div>`;
       }).join('');
 
-    document.querySelectorAll('.email-copy-subj').forEach(a => {
+    document.querySelectorAll('.email-copy-subj, .email-copy-prev').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         navigator.clipboard.writeText(a.dataset.copy).then(() => {

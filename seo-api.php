@@ -64,19 +64,25 @@ exit;
 function handle_email_subjects(string $article): void {
 
     $prompt = <<<PROMPT
-You are an email editor for Defense One, a specialist defense and national security news publication. Generate 5 email alert subject lines for the article below.
+You are an email editor for Defense One, a specialist defense and national security news publication. Generate 5 email alert subject lines — each with a preview text snippet — for the article below.
 
-Email subject lines are different from web headlines:
-- They must compel a subscriber to open the email, not rank in search
-- They should create curiosity, urgency, or a sense of "you need to know this"
-- They can be slightly more conversational than a web hed
-- Optimal length: under 60 characters (shows fully on most clients without truncation)
-- Acceptable up to 75 characters
-- Sentence case; no trailing punctuation unless a question mark adds value
-- No clickbait, no fabricated drama — every claim must be directly supported by the article
-- Do NOT start with "Defense One:", publication names, or "BREAKING"
+SUBJECT LINE RULES:
+- Target length: 40–50 characters (fully visible on most mobile clients)
+- Absolute maximum: 75 characters
+- Sentence case; no trailing punctuation
+- No question-form subjects — they underperform for news alerts
+- Do NOT open with "Defense One:", a publication name, or "BREAKING"
+- Specificity beats vague intrigue — lead with the news (names, numbers, outcomes)
+- No clickbait; every claim must be directly supported by the article
+- Active voice, past tense for completed events
 
-Generate exactly 5 subject lines with a variety of approaches: e.g. straight news, curiosity angle, implication angle, key number or detail, question form. Label each with a short approach tag (2-4 words).
+PREVIEW TEXT RULES:
+- 40–80 characters
+- Extends the subject — gives one more specific detail or angle
+- Must NOT repeat words or phrases from the subject line
+- No "Click to read more" or calls to action
+
+Generate exactly 5 pairs with varied approaches: straight news, key number or name, implication for defense/policy, urgency/consequence, and curiosity/contrast. Label each with a short approach tag (2–4 words).
 
 ARTICLE:
 ---
@@ -85,8 +91,8 @@ $article
 
 Return ONLY a valid JSON array with no extra text or markdown fences:
 [
-  {"subject": "...", "approach": "straight news"},
-  {"subject": "...", "approach": "curiosity angle"},
+  {"subject": "...", "preview": "...", "approach": "straight news"},
+  {"subject": "...", "preview": "...", "approach": "key number"},
   ...
 ]
 PROMPT;

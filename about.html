@@ -14,7 +14,7 @@
 <!-- Masthead -->
 <header>
   <h1><a href="index.php">Headline Lab</a></h1>
-  <span class="kicker">SEO &amp; Social-Media Tool</span>
+  <span class="kicker">SEO, Social &amp; Email Tool</span>
   <nav>
     <a href="index.php">The Tool</a>
     <a href="about.html" class="active">About</a>
@@ -26,7 +26,7 @@
 <!-- Hero -->
 <div class="hero">
   <div class="hero-eyebrow">Huh?</div>
-  <p>Point it at your story. Get six SEO headlines and nine social posts back. Maybe&nbsp;they're&nbsp;useful.</p>
+  <p>Point it at your story. Get six SEO headlines, nine social posts, and five email subject lines back. Maybe&nbsp;they're&nbsp;useful.</p>
 </div>
 
 <!-- Page body -->
@@ -68,9 +68,10 @@
     </div>
     <div class="prose">
       <h3>How to use it</h3>
-            <p>Use the webpage, the bookmarklet, or the Chrome extension to generate six SEO-friendly <strong>heds and subheds</strong> or nine <strong>social-media posts</strong> tuned for Facebook, X, and LinkedIn.</p>
+      <p>Use the webpage, the bookmarklet, or the Chrome extension to generate six SEO-friendly <strong>heds and subheds</strong>, nine <strong>social-media posts</strong> tuned for Facebook, X, and LinkedIn, or five <strong>email alert subject lines</strong> with preview text.</p>
       <p>For headlines, you can specify a target keyword and a tone — straight news, urgent/breaking, analytical, conversational, or authoritative. The tool applies SEO rules automatically: front-loaded keywords, 50–60 character targets, active voice. Formats like listicles or question-framing are only used when the article actually supports them — accuracy beats structure.</p>
       <p>For social posts, the tool writes to each platform's conventions: punchy for X, conversational for Facebook, analytical and professional for LinkedIn. Both headline and social generation start with a fact-extraction step, so suggestions stay grounded in what the article actually says rather than drifting into inference or hype.</p>
+      <p>For email subjects, the tool follows inbox best practices: 40–50 character subject lines (fully visible on mobile without truncation), no question-form subjects (they underperform for news alerts), specificity over vague intrigue, and paired preview text that extends — rather than repeats — the subject line.</p>
 
     </div>
   </div>
@@ -90,13 +91,13 @@
     <div class="flow-step">
       <span class="flow-icon">🖥️</span>
       <strong>Navybook.com</strong>
-      <span>Receives your text; sends it to the AI API</span>
+      <span>Receives your text; sends it to the AI API (headlines, social posts, or email subjects)</span>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-step">
       <span class="flow-icon">🤖</span>
       <strong>Anthropic API</strong>
-      <span>Extracts key facts, then generates headlines or nine social posts; returns them instantly</span>
+      <span>Extracts key facts, then generates headlines, social posts, or email subjects; returns them instantly</span>
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-step">
@@ -154,11 +155,27 @@
     </li>
     <li>
       <div class="qa-q">Can I generate both headlines and social posts for the same article?</div>
-      <div class="qa-a">Yes — the two buttons are fully independent. Run Generate Heds first, review the options, then hit Generate SM Posts whenever you're ready. Or skip headlines entirely and go straight to social. Each run is a fresh API call; results from one don't affect the other.</div>
+      <div class="qa-a">Yes — all three buttons are fully independent. Run them in any order; each is a fresh API call and results from one don't affect the others.</div>
+    </li>
+    <li>
+      <div class="qa-q">Why does the email tool target 40–50 characters, not 60?</div>
+      <div class="qa-a">The 50–60 character rule is for web headlines in Google Search. Email inboxes are different: most mobile clients (where the majority of email is now opened) display 40–45 characters before truncating the subject line. Staying under 50 ensures the full subject is visible without ellipsis on virtually all clients. Up to 75 characters is acceptable if the extra length earns its place, but the green badge triggers at 50.</div>
+    </li>
+    <li>
+      <div class="qa-q">Why does the tool avoid question-form email subjects?</div>
+      <div class="qa-a">Questions like "Is the Pentagon ready?" consistently underperform straight news subjects for news-alert emails. Subscribers already trust you — they don't need to be teased into clicking. Specificity works better: "Pentagon freezes civilian hiring" outperforms "Will Pentagon cuts go too far?" because it gives readers something concrete before they decide whether to open.</div>
+    </li>
+    <li>
+      <div class="qa-q">What is preview text and why does it matter?</div>
+      <div class="qa-a">Preview text is the snippet of gray text that appears after the subject line in most email clients — effectively a second line of selling copy. Most senders leave it to chance (inboxes grab whatever text comes first in the email body). Explicitly setting preview text that extends the subject — rather than repeating it — is one of the highest-return, lowest-effort improvements you can make to email open rates. The tool generates 40–80 characters of preview text for each subject line; click it to copy separately.</div>
+    </li>
+    <li>
+      <div class="qa-q">Should I use the email subject lines as-is?</div>
+      <div class="qa-a">Same rule as headlines and social posts: strong first draft, not finished product. The tool is good at specificity, length discipline, and avoiding common mistakes (question form, vague teasers, publication-name openers). What it doesn't know is your subscriber list's specific behavior, which angles your audience responds to most, or editorial context you haven't included in the article text. A quick edit almost always improves the output.</div>
     </li>
     <li>
       <div class="qa-q">Does it cost anything to use?</div>
-      <div class="qa-a">Each request costs a small fraction of a cent in Anthropic API fees (roughly $0.003 for headlines, $0.008 for social posts). At typical newsroom usage this amounts to a few dollars a month — negligible compared to the time savings. There's no per-seat cost or subscription for the tool itself.</div>
+      <div class="qa-a">Each request costs a small fraction of a cent in Anthropic API fees (roughly $0.003 for headlines, $0.008 for social posts, $0.002 for email subjects). At typical newsroom usage this amounts to a few dollars a month — negligible compared to the time savings. There's no per-seat cost or subscription for the tool itself.</div>
     </li>
     <li>
       <div class="qa-q">What if I already have a headline in mind?</div>
@@ -237,6 +254,43 @@
       <span class="fc-icon">🔄</span>
       <h4>Check the facts, then add color</h4>
       <p>The tool avoids claims not in the article and won't use superlatives the story doesn't earn. That makes posts safer to publish quickly — but you can still add context, a reaction quote, or a sharper angle that the AI missed.</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="section-label">Tips for Best Email Subject Results</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-icon">📏</span>
+      <h4>Aim for the green zone: under 50</h4>
+      <p>Most mobile email clients truncate at 40–45 characters. A subject fully visible without an ellipsis gets more opens. The badge turns green at 50 chars — tighter is almost always better.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">📰</span>
+      <h4>Lead with the news</h4>
+      <p>Subscribers already trust you — don't tease. "Army cuts 3,000 civilian jobs" outperforms "Big changes coming to the Army." Names, numbers, and outcomes stop the eye.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">👁️</span>
+      <h4>Set your preview text</h4>
+      <p>Preview text is the gray snippet after the subject in most inboxes. Explicitly setting it to extend (not repeat) the subject is one of the highest-return, lowest-effort email improvements. Click the preview text in the results to copy it separately.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">❌</span>
+      <h4>Skip the question form</h4>
+      <p>"Is the Pentagon ready?" underperforms for news alerts. Readers want to know what happened, not be invited to wonder. The tool avoids question subjects by design.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔢</span>
+      <h4>Numbers and names earn clicks</h4>
+      <p>"$18B", "Hegseth", "F-35" are visually distinct and signal specificity. If the article has a compelling number or name, make sure it's in the subject — the tool will usually surface it, but check.</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🚫</span>
+      <h4>Don't open with your name</h4>
+      <p>Subscribers already know they're reading Defense One. "Defense One: Pentagon freezes hiring" wastes 15 characters on information they already have. Start with the news.</p>
     </div>
   </div>
 
@@ -339,9 +393,61 @@
     </tbody>
   </table>
 
+  <hr class="rule" />
+
+  <!-- Email reference -->
+  <div class="section-label">Quick Email Reference</div>
+
+  <blockquote>
+    "The subject line is your headline. The preview text is your subhed. Most senders write neither with enough care."
+    <cite>General principle, email marketing practice</cite>
+  </blockquote>
+
+  <table class="tips-table">
+    <thead>
+      <tr>
+        <th>Element</th>
+        <th>Best Practice</th>
+        <th>What the Tool Does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Subject length</td>
+        <td>40–50 characters (mobile sweet spot); 75 max</td>
+        <td>Targets under 50; badge is green at ≤50, neutral up to 75, red over 75. Tighter is almost always better.</td>
+      </tr>
+      <tr>
+        <td>Opening words</td>
+        <td>Lead with the news — name, number, or outcome</td>
+        <td>Avoids openers like "Defense One:", "BREAKING", or vague phrases. Instructs the AI to front-load specifics.</td>
+      </tr>
+      <tr>
+        <td>Question form</td>
+        <td>Avoid — underperforms for news alerts</td>
+        <td>Explicitly excluded from the prompt. The tool won't generate question-form subjects.</td>
+      </tr>
+      <tr>
+        <td>Preview text</td>
+        <td>40–80 chars; extends subject without repeating it</td>
+        <td>Generated alongside each subject. Click the preview text in results to copy it separately from the subject line.</td>
+      </tr>
+      <tr>
+        <td>Voice</td>
+        <td>Active, past tense for completed events</td>
+        <td>Defaults to active constructions; avoids passive ("cuts were made") and nominalization ("a reduction of").</td>
+      </tr>
+      <tr>
+        <td>Approach variety</td>
+        <td>Test different angles — open rates vary by framing</td>
+        <td>Generates 5 subjects with distinct approaches: straight news, key number/name, implication, urgency/consequence, curiosity/contrast. Use whichever fits the story best.</td>
+      </tr>
+    </tbody>
+  </table>
+
   <!-- CTA -->
   <div class="cta-bar">
-    <p>Ready to write headlines and social posts that get found?</p>
+    <p>Ready to write headlines, social posts, and email subjects that work?</p>
     <a href="index.php" class="cta-link">Open Headline Lab →</a>
   </div>
 
