@@ -375,8 +375,8 @@ if (!empty($_SESSION['prefill_url'])) {
             <div class="headline-text">
               <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
             </div>
-            ${s.preview ? `<div class="headline-subhed">
-              <a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
+            ${s.preview ? `<div class="headline-subhed" style="font-size:0.78rem">
+              <span style="color:#aaa;font-family:var(--mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-right:0.4rem">Preview text</span><a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
             </div>` : ''}
             <div class="headline-meta">
               <span class="badge badge-kw">✉ ${escHtml(s.approach)}</span>
