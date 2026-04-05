@@ -64,7 +64,7 @@ exit;
 function handle_email_subjects(string $article): void {
 
     $prompt = <<<PROMPT
-You are an email editor for Defense One, a specialist defense and national security news publication. Generate 5 email alert subject lines — each with a preview text snippet — for the article below.
+You are an email editor for Defense One, a specialist defense and national security news publication. Generate 5 email alert subject lines for the article below.
 
 SUBJECT LINE RULES:
 - Target length: 40–50 characters (fully visible on most mobile clients)
@@ -76,13 +76,7 @@ SUBJECT LINE RULES:
 - No clickbait; every claim must be directly supported by the article
 - Active voice, past tense for completed events
 
-PREVIEW TEXT RULES:
-- 40–80 characters
-- Extends the subject — gives one more specific detail or angle
-- Must NOT repeat words or phrases from the subject line
-- No "Click to read more" or calls to action
-
-Generate exactly 5 pairs with varied approaches: straight news, key number or name, implication for defense/policy, urgency/consequence, and curiosity/contrast. Label each with a short approach tag (2–4 words).
+Generate exactly 5 subject lines with varied approaches: straight news, key number or name, implication for defense/policy, urgency/consequence, and curiosity/contrast. Label each with a short approach tag (2–4 words).
 
 ARTICLE:
 ---
@@ -91,8 +85,8 @@ $article
 
 Return ONLY a valid JSON array with no extra text or markdown fences:
 [
-  {"subject": "...", "preview": "...", "approach": "straight news"},
-  {"subject": "...", "preview": "...", "approach": "key number"},
+  {"subject": "...", "approach": "straight news"},
+  {"subject": "...", "approach": "key number"},
   ...
 ]
 PROMPT;

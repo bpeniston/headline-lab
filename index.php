@@ -379,17 +379,12 @@ if (!empty($_SESSION['prefill_url'])) {
               <div class="email-subject">
                 <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
               </div>
-              ${s.preview ? `
-              <div class="email-preview-row">
-                <span class="email-preview-label">Preview</span>
-                <a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
-              </div>` : ''}
               <div class="email-approach">✉ ${escHtml(s.approach)}</div>
             </div>
           </div>`;
       }).join('');
 
-    document.querySelectorAll('.email-copy-subj, .email-copy-prev').forEach(a => {
+    document.querySelectorAll('.email-copy-subj').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         navigator.clipboard.writeText(a.dataset.copy).then(() => {
