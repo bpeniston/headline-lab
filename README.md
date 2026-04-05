@@ -1,143 +1,109 @@
-# SEO Headline Generator — Setup Guide
-Internal newsroom tool · Hosted on DreamHost
+# Athena Tools
+Internal newsroom toolset for the Defense One / GovExec Athena CMS · Hosted on DreamHost
 
-# Headline Lab — deploy cheatsheet
+---
 
-## Every time you make changes
+## What this project contains
 
-**Step 1 — Edit files on your laptop**
-Make your changes in whatever editor you're using.
+### 1. Chrome Extension — `athena-tools/`
+A Manifest V3 Chrome extension that injects into the Athena CMS (`admin.govexec.com`) and adds three features:
 
-**Step 2 — Open Terminal and go to the project folder**
-```
+| Feature | Where it runs | What it does |
+|---|---|---|
+| **UI Tweaks** | All CMS post editor pages | Reorders fields, groups date/status controls into a cleaner bar |
+| **Headline Lab** | CMS post editor | Reads article body → calls backend API → generates 6 SEO headline/subhed/slug options with rationale and competition check |
+| **Trending Topics** | D1-Trending items list page | Queries GA4, scrapes article topic tags, weights by recency, shows top 7 for review, applies them to the CMS automatically |
+
+### 2. Backend API — `navybook.com/D1/seo/`
+PHP endpoints on DreamHost shared hosting:
+
+| File | What it does |
+|---|---|
+| `seo-api.php` | Headline Lab: takes article text, calls Anthropic API, returns headlines |
+| `trending-topics.php` | Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON |
+| `stats.php` | Returns usage log counts |
+
+---
+
+## Deploy workflow
+
+**Every time you make changes to the extension or server files:**
+
+```bash
 cd ~/Documents/devstuff/headline-lab
-```
-
-**Step 3 — Commit and push to GitHub**
-```
 git add .
 git commit -m "describe what you changed"
 git push
+deploy    # alias: ssh to server and git pull
 ```
 
-**Step 4 — Deploy to the live server**
-```
-deploy
+**To upload a new/changed PHP file directly:**
+```bash
+scp server/trending-topics.php bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/seo/trending-topics.php
 ```
 
-That's it. The site is live.
+**To reload the extension after code changes:**
+Go to `chrome://extensions` → Athena Tools → ↺ reload button, then hard-refresh the CMS page.
 
 ---
 
-## If you need to SSH into the server manually
-```
-ssh bradwu@pdx1-shared-a1-08.dreamhost.com
-cd navybook.com/D1/seo
-```
-
 ## Project locations
-- **Laptop:** `~/Documents/devstuff/headline-lab`
-- **GitHub:** `https://github.com/bpeniston/headline-lab`
-- **Server:** `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo`
 
-## Working with Claude on this project
+| What | Where |
+|---|---|
+| Local repo | `~/Documents/devstuff/headline-lab` |
+| GitHub | `https://github.com/bpeniston/headline-lab` |
+| Server (SSH) | `bradwu@pdx1-shared-a1-08.dreamhost.com` |
+| Server path | `~/navybook.com/D1/seo/` |
+| Deploy alias | `deploy` in Terminal |
 
-At the start of each session, tell Claude:
+---
 
-- **Project:** Headline Lab — HTML/CSS/JS/PHP static-ish site
-- **Repo:** https://github.com/bpeniston/headline-lab (public)
-- **Server:** DreamHost shared hosting, pdx1-shared-a1-08.dreamhost.com
-- **Server path:** bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo
-- **Local path:** ~/Documents/devstuff/headline-lab
-- **Deploy:** git push to main, then run `deploy` alias in Terminal
-  (alias runs: ssh bradwu@pdx1-shared-a1-08.dreamhost.com "cd navybook.com/D1/seo && git pull")
-- **Editor:** vscode.dev/github/bpeniston/headline-lab open in Chrome
-  (Claude can read files, make edits, and commit directly — you just run `deploy`)
+## Server credentials & config files
 
-**Ask Claude to:**
-- Read files from vscode.dev before making changes
-- Give targeted diffs, not full rewrites (unless asked)
-- Write commit messages
-- Not give you the deploy command — just say "deploy when ready"
+| File | Path on server | Purpose |
+|---|---|---|
+| GA4 OAuth credentials | `/home/bradwu/ga4-oauth.json` | Defense One GA4 API access (client_id, client_secret, refresh_token) |
+| Trending main cache | `/home/bradwu/trending-main-cache.json` | 1-hour cache of scored topic results |
+| Article topic cache | `/home/bradwu/trending-article-cache.json` | 24-hour per-article topic tag cache |
+| Topic name cache | `/home/bradwu/trending-topicname-cache.json` | 7-day slug→display name cache |
+| Usage log | `/home/bradwu/headline-lab-usage.log` | Tab-separated: timestamp, action, ip, json |
+
+**GA4 property:** Defense One editorial = `353836589` (account `395628`). Do NOT use `529112613` — that tracks the Chrome extension itself.
+
+---
 
 ## Checking usage logs
 
-SSH into the server, then:
 ```bash
-# Show the last 50 entries
-tail -50 ~/headline-lab-usage.log
-
-# Live-tail as requests come in
-tail -f ~/headline-lab-usage.log
-
-# Count uses by action type
-cut -f2 ~/headline-lab-usage.log | sort | uniq -c
-
-# Show all entries from a specific date
-grep "^2026-03-15" ~/headline-lab-usage.log
-
-# Count total requests
-wc -l ~/headline-lab-usage.log
+ssh bradwu@pdx1-shared-a1-08.dreamhost.com
+tail -50 ~/headline-lab-usage.log       # last 50 entries
+tail -f ~/headline-lab-usage.log        # live tail
+cut -f2 ~/headline-lab-usage.log | sort | uniq -c   # count by action
 ```
-
-Log location: `/home/bradwu/headline-lab-usage.log` (outside web root, not publicly accessible).
-
-Each line is tab-separated: `timestamp`, `action`, `ip_address`, `json_data`.
-
-## How it works
-
-```
-Editor's browser → index.html (DreamHost) → seo-api.php (DreamHost) → Anthropic API → back to browser
-```
-
-Your API key lives only in the PHP file on your server. Article text never touches any public AI product.
 
 ---
 
-## Setup (5 steps)
+## Architecture
 
-### 1. Get an Anthropic API key
-- Go to https://console.anthropic.com → API Keys → Create Key
-- Copy the key (starts with `sk-ant-...`)
-
-### 2. Edit seo-api.php
-Open `seo-api.php` and replace the placeholder:
-```php
-define('ANTHROPIC_API_KEY', 'sk-ant-YOUR-KEY-HERE');
 ```
-
-### 3. (Recommended) Add a password
-Uncomment and set these lines in `seo-api.php` to require a login:
-```php
-define('BASIC_AUTH_USER', 'newsroom');
-define('BASIC_AUTH_PASS', 'your-strong-password');
+CMS browser (admin.govexec.com)
+  └── Athena Tools extension
+        ├── UI Tweaks (CSS + DOM reorder)
+        ├── Headline Lab panel
+        │     └── POST → navybook.com/D1/seo/seo-api.php
+        │                   └── Anthropic API
+        └── Trending Topics panel
+              ├── GET → navybook.com/D1/seo/trending-topics.php
+              │           ├── Google Analytics Data API (OAuth)
+              │           └── defenseone.com article pages (scraped)
+              └── PUT edits via Grappelli autocomplete + Django form POST
+                  (directly within admin.govexec.com — no external call)
 ```
-This adds browser-native HTTP Basic Auth — simple and effective for internal tools.
-
-### 4. Upload to DreamHost
-Upload **both files** to the same directory on your DreamHost server:
-- `index.html`
-- `seo-api.php`
-
-Via FTP/SFTP, place them somewhere like:
-```
-/home/yourusername/yourdomain.com/seo-tool/
-```
-They'll be accessible at: `https://yourdomain.com/seo-tool/`
-
-### 5. Make sure PHP curl is enabled
-DreamHost shared hosting has curl enabled by default. If you hit errors, 
-contact DreamHost support to confirm `php-curl` is active.
 
 ---
 
-## Cost estimate
-- Claude Sonnet: ~$0.003 per API call (1 article → 6 headlines)
-- 100 uses/month ≈ $0.30
+## Cost
 
----
-
-## Optional hardening
-- **IP restriction**: In `.htaccess`, add `Allow from YOUR.OFFICE.IP` to limit access by IP
-- **HTTPS only**: DreamHost provides free Let's Encrypt SSL — enable it in the panel
-- **Locked subdirectory**: Put the tool in a non-guessable path like `/tools/hl-gen-x7/`
+- **Headline Lab:** Claude Sonnet ~$0.003/call · 100 uses/month ≈ $0.30
+- **Trending Topics:** GA4 Data API is free within quota · article scraping is free · no ongoing cost

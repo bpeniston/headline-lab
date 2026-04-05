@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Athena Tools",
-  "version": "1.0.1",
-  "description": "UI improvements and Headline Lab SEO tools for the Athena CMS post editor.",
+  "version": "1.1.0",
+  "description": "Tools for the Athena CMS: UI tweaks, Headline Lab SEO headline generator, and Trending Topics automation for Defense One.",
 
   "permissions": ["storage"],
 
@@ -16,6 +16,12 @@
       "matches": ["*://admin.govexec.com/*"],
       "js": ["content/main.js"],
       "css": ["styles/tweaks.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://admin.govexec.com/athena/curate/defenseonetrendingitem*"],
+      "js": ["content/trending.js"],
+      "css": ["styles/trending.css"],
       "run_at": "document_idle"
     }
   ],

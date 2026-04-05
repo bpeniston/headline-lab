@@ -1,9 +1,10 @@
 // popup/popup.js
-const DEFAULTS = { uiTweaks: true, headlineLab: true };
+const DEFAULTS = { uiTweaks: true, headlineLab: true, trendingTopics: true };
 
 const toggles = {
-  uiTweaks:    document.getElementById('toggle-uiTweaks'),
-  headlineLab: document.getElementById('toggle-headlineLab'),
+  uiTweaks:       document.getElementById('toggle-uiTweaks'),
+  headlineLab:    document.getElementById('toggle-headlineLab'),
+  trendingTopics: document.getElementById('toggle-trendingTopics'),
 };
 
 // Load saved state
