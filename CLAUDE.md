@@ -1,7 +1,7 @@
 # Athena Tools — Claude Project Context
 
 ## What this project is
-A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`) that adds three tools to the Athena CMS used at Defense One (admin.govexec.com).
+A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`) that adds tools to the Athena CMS shared by the **GE360** family of publications (see below). Currently deployed for Defense One; being extended to the full family.
 
 ## Three features
 
@@ -18,6 +18,33 @@ On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonet
 - Scores: month_views + week_views + day_views per topic
 - Returns top 7; user reviews and clicks Apply
 - Extension POSTs form updates to each Live item's edit page via Grappelli autocomplete
+
+## GE360 Publication Family
+
+The newsroom operates five publications under the **GE360** umbrella, all running the Athena CMS at `admin.govexec.com`.
+
+| Publication | Site URL | Pub key | CMS Trending path |
+|---|---|---|---|
+| Defense One | defenseone.com | `defenseone` | `/athena/curate/defenseonetrendingitem/` |
+| GovExec | govexec.com | `govexec` | `/athena/curate/govexectrendingitem/` |
+| Nextgov | nextgov.com | `nextgov` | `/athena/curate/nextgovtrendingitem/` |
+| Route Fifty | route-fifty.com | `routefifty` | `/athena/curate/routefiftytrendingtopicitem/` |
+| Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/` |
+
+**Known per-publication details (Defense One only so far):**
+- GA4 property: `353836589` (account `395628`)
+- Article topic oref: `oref=d1-article-topics`
+- Grappelli autocomplete model: `app_label=post_manager&model_name=defenseonetopic`
+- CMS content_type for Topic: `382`
+
+**Pending for GovExec, Nextgov, Route Fifty, Washington Technology:**
+- GA4 property IDs (need GA4 access permissions)
+- Grappelli model names (get from autocomplete field on each pub's trending item edit page)
+- Article topic oref values (likely `oref={pub}-article-topics`; confirm by inspecting a live article page per pub)
+- content_type integer for Topic (may differ per pub; get from edit page form)
+
+**Sponsored topic slots:**
+Some Trending slots are sold to advertisers; their `title_override` text begins with `"Sponsored:"`. The auto-apply function must **skip** any slot currently holding a sponsored topic and leave it unchanged.
 
 ## Key technical details
 
