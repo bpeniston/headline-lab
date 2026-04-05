@@ -11,6 +11,8 @@ $counts = [
     'headlines_alltime'  => 0,
     'social_today'       => 0,
     'social_alltime'     => 0,
+    'email_today'        => 0,
+    'email_alltime'      => 0,
 ];
 
 if (file_exists($log_file)) {
@@ -26,6 +28,9 @@ if (file_exists($log_file)) {
         } elseif ($action === 'social') {
             $counts['social_alltime']++;
             if ($date === $today) $counts['social_today']++;
+        } elseif ($action === 'email_subjects') {
+            $counts['email_alltime']++;
+            if ($date === $today) $counts['email_today']++;
         }
     }
 }

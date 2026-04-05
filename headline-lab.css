@@ -151,7 +151,7 @@ button {
 
 /* ── Dual generate buttons ── */
 .btn-row { display: flex; gap: 0.6rem; margin-top: 0.5rem; }
-.btn-primary, .btn-social {
+.btn-primary, .btn-social, .btn-email {
   box-sizing: border-box;
   cursor: pointer;
   border: none;
@@ -173,6 +173,8 @@ button {
 .btn-primary:hover:not(:disabled) { background: var(--accent); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
 .btn-social { background: var(--green); color: #fff; }
 .btn-social:hover:not(:disabled) { background: #1e4f34; box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
+.btn-email { background: #2e6da4; color: #fff; }
+.btn-email:hover:not(:disabled) { background: #1d4f7a; box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
 
 /* Results panel */
 #results { min-height: 300px; }

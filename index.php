@@ -77,6 +77,10 @@ if (!empty($_SESSION['prefill_url'])) {
         <span class="spinner" id="socialSpinner"></span>
         <span id="socialBtnLabel">Generate SM Posts</span>
       </button>
+      <button id="emailBtn" class="btn-email">
+        <span class="spinner" id="emailSpinner"></span>
+        <span id="emailBtnLabel">Generate Email Subjects</span>
+      </button>
     </div>
 
     <hr class="divider" />
@@ -94,7 +98,8 @@ if (!empty($_SESSION['prefill_url'])) {
     <div class="section-label">Generated</div>
     <div id="usageStats" style="font-size:0.78rem;color:#888;line-height:1.7;font-family:var(--sans)">
       <strong style="color:var(--ink)">Headlines:</strong> <span id="statHedToday">–</span> today, <span id="statHedAll">–</span> all-time<br>
-      <strong style="color:var(--ink)">Social posts:</strong> <span id="statSocToday">–</span> today, <span id="statSocAll">–</span> all-time
+      <strong style="color:var(--ink)">Social posts:</strong> <span id="statSocToday">–</span> today, <span id="statSocAll">–</span> all-time<br>
+      <strong style="color:var(--ink)">Email subjects:</strong> <span id="statEmailToday">–</span> today, <span id="statEmailAll">–</span> all-time
     </div>
   </div>
 
@@ -117,9 +122,12 @@ if (!empty($_SESSION['prefill_url'])) {
   const generateBtn   = document.getElementById('generateBtn');
   const spinner       = document.getElementById('spinner');
   const btnLabel      = document.getElementById('btnLabel');
-  const socialBtn     = document.getElementById('socialBtn');
-  const socialSpinner = document.getElementById('socialSpinner');
+  const socialBtn      = document.getElementById('socialBtn');
+  const socialSpinner  = document.getElementById('socialSpinner');
   const socialBtnLabel = document.getElementById('socialBtnLabel');
+  const emailBtn       = document.getElementById('emailBtn');
+  const emailSpinner   = document.getElementById('emailSpinner');
+  const emailBtnLabel  = document.getElementById('emailBtnLabel');
   const resultsEl     = document.getElementById('results');
   const resultsLabel  = document.getElementById('resultsLabel');
   const prefillUrl = <?php echo json_encode($prefill_url); ?>;
@@ -130,8 +138,10 @@ if (!empty($_SESSION['prefill_url'])) {
     .then(d => {
       document.getElementById('statHedToday').textContent = d.headlines_today.toLocaleString();
       document.getElementById('statHedAll').textContent   = d.headlines_alltime.toLocaleString();
-      document.getElementById('statSocToday').textContent = d.social_today.toLocaleString();
-      document.getElementById('statSocAll').textContent   = d.social_alltime.toLocaleString();
+      document.getElementById('statSocToday').textContent   = d.social_today.toLocaleString();
+      document.getElementById('statSocAll').textContent     = d.social_alltime.toLocaleString();
+      document.getElementById('statEmailToday').textContent = (d.email_today || 0).toLocaleString();
+      document.getElementById('statEmailAll').textContent   = (d.email_alltime || 0).toLocaleString();
     })
     .catch(() => { document.getElementById('usageStats').style.display = 'none'; });
 
@@ -196,6 +206,28 @@ if (!empty($_SESSION['prefill_url'])) {
       showError('Network error — is the server reachable? ' + err.message);
     } finally {
       setLoading(socialBtn, socialSpinner, socialBtnLabel, 'Generate SM Posts', false);
+    }
+  });
+
+  // ── Generate Email Subject Lines ─────────────────────────
+  emailBtn.addEventListener('click', async () => {
+    const article = articleEl.value.trim();
+    if (article.length < 50) { showError('Please paste at least 50 characters of article text.'); return; }
+    setLoading(emailBtn, emailSpinner, emailBtnLabel, 'Generate Email Subjects', true);
+    try {
+      const res  = await fetch('seo-api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'email_subjects', article }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { showError(data.error || `Server error (${res.status})`); return; }
+      resultsLabel.textContent = 'Email Subject Lines';
+      renderEmailSubjects(data.subjects);
+    } catch (err) {
+      showError('Network error — is the server reachable? ' + err.message);
+    } finally {
+      setLoading(emailBtn, emailSpinner, emailBtnLabel, 'Generate Email Subjects', false);
     }
   });
 
@@ -324,6 +356,39 @@ if (!empty($_SESSION['prefill_url'])) {
     navigator.clipboard.writeText(raw).then(() => {
       btn.textContent = 'Copied!';
       setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  }
+
+  // ── Render email subject lines ────────────────────────────
+  function renderEmailSubjects(subjects) {
+    if (!subjects || !subjects.length) { showError('No subject lines returned — try again.'); return; }
+    resultsEl.innerHTML =
+      '<div class="hl-instructions">Click a subject line to copy it</div>' +
+      subjects.map(s => {
+        const len      = s.subject.length;
+        const lenClass = len <= 60 ? 'ok' : (len <= 75 ? '' : 'long');
+        const lenLabel = len + ' chars' + (len <= 60 ? ' ✓' : len > 75 ? ' (long)' : '');
+        return `
+          <div class="headline-card">
+            <div class="headline-text">
+              <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
+            </div>
+            <div class="headline-meta">
+              <span class="badge badge-kw">✉ ${escHtml(s.approach)}</span>
+              <span class="badge badge-len ${lenClass}">${lenLabel}</span>
+            </div>
+          </div>`;
+      }).join('');
+
+    document.querySelectorAll('.email-copy-subj').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        navigator.clipboard.writeText(a.dataset.copy).then(() => {
+          const orig = a.textContent;
+          a.textContent = '✓ Copied!';
+          setTimeout(() => a.textContent = orig, 1500);
+        });
+      });
     });
   }
 

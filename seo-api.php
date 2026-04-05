@@ -49,12 +49,62 @@ if (strlen($article) < 50) {
     exit;
 }
 
-if ($action === 'generate_social') { handle_social($article, $source_url); exit; }
+if ($action === 'generate_social')  { handle_social($article, $source_url); exit; }
+if ($action === 'email_subjects')   { handle_email_subjects($article); exit; }
 
 $focus_kw = isset($body['focus_kw']) ? trim($body['focus_kw']) : '';
 $tone     = isset($body['tone'])     ? trim($body['tone'])     : 'neutral';
 handle_headlines($article, $focus_kw, $tone);
 exit;
+
+
+// ============================================================
+// HANDLER: Email subject lines
+// ============================================================
+function handle_email_subjects(string $article): void {
+
+    $prompt = <<<PROMPT
+You are an email editor for Defense One, a specialist defense and national security news publication. Generate 5 email alert subject lines for the article below.
+
+Email subject lines are different from web headlines:
+- They must compel a subscriber to open the email, not rank in search
+- They should create curiosity, urgency, or a sense of "you need to know this"
+- They can be slightly more conversational than a web hed
+- Optimal length: under 60 characters (shows fully on most clients without truncation)
+- Acceptable up to 75 characters
+- Sentence case; no trailing punctuation unless a question mark adds value
+- No clickbait, no fabricated drama — every claim must be directly supported by the article
+- Do NOT start with "Defense One:", publication names, or "BREAKING"
+
+Generate exactly 5 subject lines with a variety of approaches: e.g. straight news, curiosity angle, implication angle, key number or detail, question form. Label each with a short approach tag (2-4 words).
+
+ARTICLE:
+---
+$article
+---
+
+Return ONLY a valid JSON array with no extra text or markdown fences:
+[
+  {"subject": "...", "approach": "straight news"},
+  {"subject": "...", "approach": "curiosity angle"},
+  ...
+]
+PROMPT;
+
+    $raw  = call_claude($prompt, 600, 0.4);
+    $raw  = preg_replace('/^```(?:json)?\s*/m', '', $raw);
+    $raw  = preg_replace('/```\s*$/m', '', $raw);
+    $subjects = json_decode(trim($raw), true);
+
+    if (!is_array($subjects)) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Could not parse email subject response', 'raw' => $raw]);
+        return;
+    }
+
+    log_usage('email_subjects', ['article_chars' => strlen($article)]);
+    echo json_encode(['subjects' => $subjects]);
+}
 
 
 // ============================================================
