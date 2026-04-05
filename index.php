@@ -23,7 +23,7 @@ if (!empty($_SESSION['prefill_url'])) {
   <title>SEO Headline Generator · Newsroom</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="headline-lab.css?v=3">
+<link rel="stylesheet" href="headline-lab.css?v=4">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
@@ -365,23 +365,26 @@ if (!empty($_SESSION['prefill_url'])) {
     resultsEl.innerHTML =
       '<div class="hl-instructions">Click subject or preview text to copy · Target: under 50 chars</div>' +
       subjects.map(s => {
-        const sLen      = s.subject.length;
-        const sClass    = sLen <= 50 ? 'ok' : (sLen <= 75 ? '' : 'long');
-        const sLabel    = sLen + ' chars' + (sLen <= 50 ? ' ✓' : sLen > 75 ? ' (too long)' : '');
-        const pLen      = (s.preview || '').length;
-        const pLabel    = pLen + ' chars' + (pLen >= 40 && pLen <= 80 ? ' ✓' : '');
+        const sLen   = s.subject.length;
+        const sClass = sLen <= 50 ? 'ok' : (sLen <= 75 ? '' : 'long');
+        const sLabel = sLen + ' chars' + (sLen <= 50 ? ' ✓' : sLen > 75 ? ' ✗' : '');
         return `
-          <div class="headline-card">
-            <div class="headline-text">
-              <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
-            </div>
-            ${s.preview ? `<div class="headline-subhed" style="font-size:0.78rem">
-              <span style="color:#aaa;font-family:var(--mono);font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;margin-right:0.4rem">Preview text</span><a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
-            </div>` : ''}
-            <div class="headline-meta">
-              <span class="badge badge-kw">✉ ${escHtml(s.approach)}</span>
-              <span class="badge badge-len ${sClass}" title="Subject length">${sLabel}</span>
-              ${s.preview ? `<span class="badge" title="Preview text length" style="background:#e8e8e8;color:#555">${pLabel} preview</span>` : ''}
+          <div class="email-card">
+            <div class="email-avatar">D1</div>
+            <div class="email-body">
+              <div class="email-row-top">
+                <span class="email-sender">Defense One Editors</span>
+                <span class="badge badge-len ${sClass}">${sLabel}</span>
+              </div>
+              <div class="email-subject">
+                <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
+              </div>
+              ${s.preview ? `
+              <div class="email-preview-row">
+                <span class="email-preview-label">Preview</span>
+                <a class="email-copy-prev" href="#" data-copy="${escHtml(s.preview)}">${escHtml(s.preview)}</a>
+              </div>` : ''}
+              <div class="email-approach">✉ ${escHtml(s.approach)}</div>
             </div>
           </div>`;
       }).join('');
