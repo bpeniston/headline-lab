@@ -370,14 +370,12 @@ if (!empty($_SESSION['prefill_url'])) {
         const sLabel = sLen + ' chars' + (sLen <= 50 ? ' ✓' : sLen > 75 ? ' ✗' : '');
         return `
           <div class="email-card">
-            <div class="email-avatar">D1</div>
             <div class="email-body">
               <div class="email-row-top">
-                <span class="email-sender">Defense One Editors</span>
+                <div class="email-subject">
+                  <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
+                </div>
                 <span class="badge badge-len ${sClass}">${sLabel}</span>
-              </div>
-              <div class="email-subject">
-                <a class="email-copy-subj" href="#" data-copy="${escHtml(s.subject)}">${escHtml(s.subject)}</a>
               </div>
               <div class="email-approach">✉ ${escHtml(s.approach)}</div>
             </div>
