@@ -169,12 +169,10 @@ button {
   transition: all 0.15s;
   white-space: nowrap;
 }
-.btn-primary { background: var(--ink); color: var(--paper); }
-.btn-primary:hover:not(:disabled) { background: var(--accent); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
-.btn-social { background: var(--green); color: #fff; }
-.btn-social:hover:not(:disabled) { background: #1e4f34; box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
-.btn-email { background: #2e6da4; color: #fff; }
-.btn-email:hover:not(:disabled) { background: #1d4f7a; box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
+.btn-primary, .btn-social, .btn-email { background: var(--ink); color: var(--paper); }
+.btn-primary:hover:not(:disabled),
+.btn-social:hover:not(:disabled),
+.btn-email:hover:not(:disabled) { background: var(--accent); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px,-1px); }
 
 /* Results panel */
 #results { min-height: 300px; }
