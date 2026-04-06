@@ -79,6 +79,30 @@
     .toggle input:checked + .toggle-slider { background: #2c6e49; }
     .toggle input:checked + .toggle-slider::before { transform: translateX(14px); }
 
+    .time-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+    }
+    .time-row input[type="time"] {
+      border: 1px solid #c8b89a;
+      border-radius: 3px;
+      background: #fff;
+      color: #1a1208;
+      font-family: inherit;
+      font-size: 0.68rem;
+      padding: 0.2rem 0.35rem;
+    }
+    .time-row input[type="time"]:disabled { opacity: 0.4; }
+    .status-line {
+      font-size: 0.58rem;
+      color: #aaa;
+      margin-top: 0.55rem;
+      line-height: 1.4;
+      min-height: 0.8rem;
+    }
+    .status-line.error { color: #c0392b; }
     .footer {
       padding: 0.6rem 1rem;
       font-size: 0.55rem;
@@ -91,7 +115,7 @@
 <body>
   <div class="header">
     <span>Athena Tools</span>
-    <span class="badge">v1.0</span>
+    <span class="badge">v1.2</span>
   </div>
 
   <div class="section">
@@ -117,6 +141,22 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Auto-apply Trending</div>
+    <div class="toggle-row">
+      <span class="toggle-label">Nightly auto-apply</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-autoApply" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="time-row">
+      <span class="toggle-label">Apply at</span>
+      <input type="time" id="apply-time" value="02:00" />
+    </div>
+    <div id="last-run-status" class="status-line"></div>
   </div>
 
   <div class="footer">
