@@ -13,6 +13,13 @@ header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: https://admin.govexec.com');
 header('Access-Control-Allow-Methods: GET');
 
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+if (!str_starts_with($referer, 'https://admin.govexec.com/')) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Forbidden']);
+    exit;
+}
+
 // ── Config ────────────────────────────────────────────────────
 $CREDS_FILE      = '/home/bradwu/ga4-oauth.json';
 $GA4_PROPERTY    = '353836589';
