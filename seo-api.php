@@ -28,8 +28,10 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-$referer = $_SERVER['HTTP_REFERER'] ?? '';
-if (!str_starts_with($referer, ALLOWED_ORIGIN . '/')) {
+$referer       = $_SERVER['HTTP_REFERER'] ?? '';
+$allowed_refs  = [ALLOWED_ORIGIN . '/', 'https://www.navybook.com/'];
+$ref_ok        = array_filter($allowed_refs, fn($r) => str_starts_with($referer, $r));
+if (!$ref_ok) {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden']);
     exit;
