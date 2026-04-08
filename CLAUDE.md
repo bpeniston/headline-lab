@@ -9,10 +9,7 @@ A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`) t
 Runs on all CMS post editor pages. Reorders form fields, groups date/status into a cleaner bar.
 
 ### Headline Lab (`content/main.js`, `seo-api.php`)
-On the CMS post editor: reads article body → calls `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO headline/subhed/slug options, social media posts, and email subject lines.
-
-### Standalone tool (`navybook.com/D1/seo/index.php`)
-Web UI version of Headline Lab. Generates headlines, SM posts, and email subject lines. Also has About and Bookmarklet pages. No Referer check on `seo-api.php` — Chrome strips the header on same-origin fetch in some configurations; the endpoint is protected by obscurity + usage logging.
+On the CMS post editor: reads article body → calls `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO headline/subhed/slug options.
 
 ### Trending Topics (`content/trending.js`, `styles/trending.css`, `server/trending-topics.php`)
 On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonetrendingitem/`):
@@ -21,16 +18,9 @@ On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonet
 - Scores: month_views + week_views + day_views per topic
 - Returns top 7; user reviews and clicks Apply
 - Extension POSTs form updates to each Live item's edit page via Grappelli autocomplete
-- Skips any slot whose title begins with `"Sponsored:"`
 
-### Nightly auto-apply (`background.js`)
-Service worker that applies trending topics automatically on a schedule:
-- Configured via popup: on/off toggle + time picker (default 2:00am)
-- Uses `chrome.alarms` — requires Chrome to be running with the work profile active
-- Before applying, saves current slot state to `chrome.storage.local` for undo
-- After applying, shows a persistent desktop notification with **Undo** (8hr window) and **Dismiss** buttons
-- Undo re-POSTs the saved previous values back to the CMS
-- Intended to run on a dedicated Mac (M1 MacBook Air) set to wake nightly via System Settings → Battery → Schedule
+**Planned: Nightly auto-apply (in development)**
+A nightly cron job on the M1 MacBook Air (see SETUP.md) will automate the Trending Topics update for all 5 publications at ~5am, before editors arrive. Editors review results after the fact rather than before. The script will use a headless browser (Playwright) logged into the CMS to apply topics automatically. Sponsored slots will be skipped. CMS credentials stored in `~/headline-lab/.env` on the Air.
 
 ## GE360 Publication Family
 
@@ -77,7 +67,8 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - Tags appear twice in DOM (desktop/mobile) — deduplicate by slug
 
 ## Repo & deploy
-- Local: `~/Documents/devstuff/headline-lab`
+- Local (MBP): `~/Documents/devstuff/headline-lab`
+- Local (Air): `~/headline-lab` (cloned; used for cron automation scripts)
 - GitHub: `https://github.com/bpeniston/headline-lab`
 - Server: `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/`
 - Deploy: `git push` then run `deploy` alias in Terminal
@@ -91,20 +82,13 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - `trending-topicname-cache.json` — 7-day slug→display name cache
 - `headline-lab-usage.log` — usage log
 
+## Secrets & credentials
+- DreamHost SSH: passwordless from both MBP (`bradwu@pdx1-shared-a1-08.dreamhost.com`) and Air (SSH key installed)
+- CMS credentials: stored in `~/headline-lab/.env` on the Air (never in GitHub)
+- GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost server
+
 ## Extension manifest
-- Version: 1.2.0
-- Permissions: `storage`, `alarms`, `notifications`
+- Version: 1.1.0
 - Host permissions: `admin.govexec.com`, `www.navybook.com`
-- Background: `background.js` service worker (nightly auto-apply)
 - Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
 - Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
-
-## Chrome profile setup
-- **Work profile** — gets stable releases from Chrome Web Store (auto-update)
-- **Developer profile** — Developer Mode on, extension loaded unpacked from `~/Documents/devstuff/headline-lab/athena-tools`; always runs latest local code, reload with ↺ after changes
-- **Dedicated auto-apply machine** — M1 MacBook Air running a dedicated Mac user account; Chrome set to open on login; Mac scheduled to wake at 1:55am nightly; auto-apply enabled in popup at 2:00am
-
-## Security notes
-- `trending-topics.php` has a `Referer` check — rejects requests not from `admin.govexec.com`
-- `seo-api.php` has NO Referer check — Chrome strips the header on same-origin fetch; protected by obscurity + logging instead
-- GA4 OAuth token and Anthropic API key are server-side only, never in the extension
