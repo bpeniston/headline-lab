@@ -186,51 +186,58 @@ async function runApply() {
 
       try {
         const editUrl = `${CMS_BASE}/athena/curate/defenseonetrendingitem/${item.id}/`;
-        await page.goto(editUrl, { waitUntil: 'domcontentloaded' });
 
-        // Preserve existing live_date
-        const liveDate = await page.inputValue('input[name="live_date"]').catch(() => '');
+        // Use fetch() inside the browser context — same approach as the
+        // Chrome extension's trending.js, which is known to work.
+        const result = await page.evaluate(async ({ editUrl, topicLabel, cmsBase }) => {
+          // Step 1: GET edit page for CSRF token and current live_date
+          const pageRes = await fetch(editUrl, { credentials: 'include' });
+          if (!pageRes.ok) return { error: `GET returned ${pageRes.status}` };
+          const html = await pageRes.text();
+          const doc  = new DOMParser().parseFromString(html, 'text/html');
 
-        // Resolve topic label → integer ID via Grappelli
-        const acUrl = `${CMS_BASE}/grappelli/lookup/autocomplete/?` +
-          `term=${encodeURIComponent(topic.label)}&app_label=post_manager&model_name=defenseonetopic&query_string=t=id`;
-        const acRes = await page.evaluate(async (url) => {
-          const r = await fetch(url, { credentials: 'include' });
-          return r.json();
-        }, acUrl);
+          const csrf = doc.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+          if (!csrf) return { error: 'No CSRF token found — session may have expired' };
 
-        if (!acRes[0]?.value) throw new Error(`Topic not found in Grappelli: "${topic.label}"`);
-        const objectId = acRes[0].value;
+          const liveDate = doc.querySelector('[name="live_date"]')?.value || '';
+          const statusSelect = doc.querySelector('select[name="status"]');
+          const liveVal = Array.from(statusSelect?.options || [])
+            .find(o => o.text.trim() === 'Live')?.value ?? 'live';
 
-        // object_id is readonly (controlled by Grappelli) — set via JS
-        await page.evaluate((val) => {
-          const el = document.querySelector('input[name="object_id"]');
-          if (el) { el.removeAttribute('readonly'); el.value = val; }
-        }, String(objectId));
+          // Step 2: Resolve topic label → integer ID via Grappelli
+          const acUrl = `${cmsBase}/grappelli/lookup/autocomplete/?` +
+            `term=${encodeURIComponent(topicLabel)}&app_label=post_manager&model_name=defenseonetopic&query_string=t=id`;
+          const acRes  = await fetch(acUrl, { credentials: 'include' });
+          if (!acRes.ok) return { error: `Grappelli returned ${acRes.status}` };
+          const acData = await acRes.json();
+          if (!acData[0]?.value) return { error: `Topic not found in Grappelli: "${topicLabel}"` };
+          const objectId = acData[0].value;
 
-        const ctSelect = page.locator('select[name="content_type"]');
-        if (await ctSelect.count()) await ctSelect.selectOption({ value: '382' });
+          // Step 3: POST form data directly (bypasses widget UI entirely)
+          const formData = new FormData();
+          formData.append('csrfmiddlewaretoken', csrf);
+          formData.append('content_type',        '382');
+          formData.append('object_id',           String(objectId));
+          formData.append('status',              liveVal);
+          formData.append('live_date',           liveDate);
+          formData.append('expiration_date',     '');
+          formData.append('is_sponsored_content','');
+          formData.append('url',                 '');
+          formData.append('title_override',      '');
 
-        await page.fill('input[name="title_override"]', '').catch(() => {});
-        await page.fill('input[name="url"]', '').catch(() => {});
+          const saveRes = await fetch(editUrl, {
+            method: 'POST', body: formData, credentials: 'include',
+          });
+          if (!saveRes.ok) return { error: `POST returned ${saveRes.status}` };
+          if (saveRes.url?.includes(`/${item.id}/`)) {
+            return { error: 'Stayed on edit page after POST — validation error' };
+          }
+          return { objectId };
+        }, { editUrl, topicLabel: topic.label, cmsBase: CMS_BASE, item });
 
-        const statusSelect = page.locator('select[name="status"]');
-        const liveVal = await statusSelect.evaluate(el =>
-          Array.from(el.options).find(o => o.text.trim() === 'Live')?.value ?? 'live'
-        );
-        await statusSelect.selectOption({ value: liveVal });
+        if (result.error) throw new Error(result.error);
 
-        // Submit
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
-          page.click('input[name="_save"], button[name="_save"]'),
-        ]);
-
-        if (page.url().includes(`/${item.id}/`)) {
-          throw new Error('Still on edit page after submit — possible validation error');
-        }
-
-        log(`  ✓ Applied "${topic.label}" (object_id=${objectId})`);
+        log(`  ✓ Applied "${topic.label}" (object_id=${result.objectId})`);
         applied++;
       } catch (err) {
         log(`  ✗ Failed for item ${item.id}: ${err.message}`);
