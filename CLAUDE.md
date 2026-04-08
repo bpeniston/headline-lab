@@ -96,6 +96,7 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
-- Pre-automation monthly pageviews on `/topic/*/?oref=d1-article-topics` links (Oct 2025–Mar 2026): ~2,000–4,065/month, trending up
-- **Check on 2026-05-08**: compare Apr and May 2026 to pre-automation baseline
-- To pull the data: SSH to DreamHost, use GA4 OAuth at `/home/bradwu/ga4-oauth.json`, query property `353836589`, dimension `yearMonth`, metric `screenPageViews`, filter `fullPageUrl` contains `oref=d1-article-topics`, date range `180daysAgo` to `today`
+- Pre-automation monthly pageviews on `oref=d1-article-topics` links (Oct 2025–Mar 2026): avg **3,005/month**
+- **Automated monthly report** fires 6am on the 1st of each month via `scripts/monthly-report.js` on the Air — fetches previous month's count from `monthly-stats.php` on DreamHost, compares to baseline, sends Slack email
+- `monthly-stats.php` is protected by `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` (not in GitHub)
+- To pull data manually: SSH to DreamHost, use GA4 OAuth at `/home/bradwu/ga4-oauth.json`, query property `353836589`, dimension `yearMonth`, metric `screenPageViews`, filter `fullPageUrl` contains `oref=d1-article-topics`

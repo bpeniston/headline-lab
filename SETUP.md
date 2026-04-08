@@ -123,25 +123,48 @@ This document describes the physical machines, services, and configurations that
   ```
 - To run manually: `launchctl start com.navybook.trending-apply`
 
-### Nightly job: Trending Topics auto-apply
+### Launchd jobs
 
-| Job | Schedule | Script | Notes |
-|---|---|---|---|
-| D1 Trending Topics | 5:00am nightly | `scripts/apply-trending.js` | Playwright fetches GA4 scores, applies top 7 topics to CMS, skips sponsored slots, sends Slack notification |
+| Job | Schedule | Plist | Script | Log |
+|---|---|---|---|---|
+| D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
+| Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
+
+To reload a plist after changes:
+```
+launchctl unload ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
+launchctl load  ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
+```
+To run manually: `launchctl start com.navybook.JOBNAME`
+
+---
+
+### Job: Trending Topics auto-apply (`apply-trending.js`)
 
 **Flow:**
 1. Fetches scored topics from `navybook.com/D1/seo/trending-topics.php`
-2. Loads saved CMS session; detects expiry and sends Slack alert if needed
+2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
 3. Parses D1 Trending Items list — skips any slot whose title starts with `"Sponsored:"`
 4. For each editable Live slot: GETs edit page for CSRF, resolves topic via Grappelli autocomplete, POSTs form
 5. Re-saves session to keep cookies fresh
-6. Sends Slack email via Gmail SMTP — subject line is the applied topic list (`Drones | Army | Iran | …`)
+6. Sends Slack email via Gmail SMTP — topic list in subject line (`Drones | Army | Iran | …`)
 
-**Script flags:**
-- `--dry-run` — fetch and log recommendations, skip CMS writes
-- `--setup` — interactive login to save/refresh session (requires desktop, not SSH)
+**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
 **Currently Defense One only.** Will extend to other GE360 pubs once GA4 property IDs and Grappelli model names are confirmed.
+
+---
+
+### Job: Monthly click report (`monthly-report.js`)
+
+Runs 6:00am on the 1st of each month. Calls `navybook.com/D1/seo/monthly-stats.php` (protected by secret token in `~/.headline-lab-config.ini` on DreamHost), which queries GA4 for previous month's pageviews on URLs containing `oref=d1-article-topics`.
+
+Sends a Slack email comparing the result to the pre-automation baseline:
+- **Baseline:** 3,005/month avg (Oct 2025–Mar 2026)
+- **Subject:** `D1 Trending Topics — [Month Year]: [N] clicks`
+- **Body:** total + `+/-N (+/-X%) vs Oct 2025–Mar 2026 avg of 3,005`
+
+**Secret:** `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` on DreamHost (not in GitHub).
 
 ---
 
