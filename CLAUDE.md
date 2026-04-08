@@ -19,8 +19,7 @@ On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonet
 - Returns top 7; user reviews and clicks Apply
 - Extension POSTs form updates to each Live item's edit page via Grappelli autocomplete
 
-**Planned: Nightly auto-apply (in development)**
-A nightly cron job on the M1 MacBook Air (see SETUP.md) will automate the Trending Topics update for all 5 publications at ~5am, before editors arrive. Editors review results after the fact rather than before. The script will use a headless browser (Playwright) logged into the CMS to apply topics automatically. Sponsored slots will be skipped. CMS credentials stored in `~/headline-lab/.env` on the Air.
+**Nightly auto-apply** — `scripts/apply-trending.js`, running as a launchd job on the M1 MacBook Air at 5:00am. Uses a saved Playwright browser session to avoid re-doing 2FA nightly. Skips sponsored slots. Sends a Slack notification (topic list in subject line) on success, or a re-login alert if the session has expired. See SETUP.md for full details.
 
 ## GE360 Publication Family
 

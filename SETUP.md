@@ -88,13 +88,60 @@ This document describes the physical machines, services, and configurations that
 
 ---
 
-## What runs on the Air (Cron)
+## What runs on the Air
 
-Currently being set up. Planned jobs:
+### Installed software
+- **Node.js** (`/opt/homebrew/bin/node`) — v25.9.0, installed via Homebrew
+- **Playwright** + Chromium — installed in `~/headline-lab/node_modules`
+- **nodemailer** — installed in `~/headline-lab/node_modules`
 
-| Job | Schedule | Notes |
-|---|---|---|
-| Trending Topics auto-apply | ~5am nightly | Headless browser (Playwright) logs into CMS, applies top 7 topics for all 5 GE360 pubs. Skips sponsored slots. |
+### Secrets on the Air (`~/headline-lab/.env`)
+- `CMS_USERNAME` / `CMS_PASSWORD` — Athena CMS login credentials
+- `SMTP_USER` / `SMTP_PASS` — Gmail app password for dcwriter@gmail.com (used for Slack notifications)
+- Never committed to GitHub
+
+### CMS session (`~/headline-lab/.cms-session.json`)
+- Playwright browser session saved after manual login (including 2FA)
+- Reused by the nightly script so it never needs to log in fresh
+- Expires every few weeks; when it does the script sends a Slack alert with re-login instructions
+- To refresh: open Screen Sharing (`vnc://100.117.250.37`), open Terminal, run:
+  ```
+  export PATH=/opt/homebrew/bin:$PATH
+  cd ~/headline-lab
+  node scripts/apply-trending.js --setup
+  ```
+
+### Launchd job
+- **Plist:** `~/Library/LaunchAgents/com.navybook.trending-apply.plist`
+- **Source:** `scripts/com.navybook.trending-apply.plist` in repo
+- **Schedule:** 5:00am nightly
+- **Log:** `~/headline-lab/logs/trending-apply.log`
+- To reload after plist changes:
+  ```
+  launchctl unload ~/Library/LaunchAgents/com.navybook.trending-apply.plist
+  launchctl load ~/Library/LaunchAgents/com.navybook.trending-apply.plist
+  ```
+- To run manually: `launchctl start com.navybook.trending-apply`
+
+### Nightly job: Trending Topics auto-apply
+
+| Job | Schedule | Script | Notes |
+|---|---|---|---|
+| D1 Trending Topics | 5:00am nightly | `scripts/apply-trending.js` | Playwright fetches GA4 scores, applies top 7 topics to CMS, skips sponsored slots, sends Slack notification |
+
+**Flow:**
+1. Fetches scored topics from `navybook.com/D1/seo/trending-topics.php`
+2. Loads saved CMS session; detects expiry and sends Slack alert if needed
+3. Parses D1 Trending Items list — skips any slot whose title starts with `"Sponsored:"`
+4. For each editable Live slot: GETs edit page for CSRF, resolves topic via Grappelli autocomplete, POSTs form
+5. Re-saves session to keep cookies fresh
+6. Sends Slack email via Gmail SMTP — subject line is the applied topic list (`Drones | Army | Iran | …`)
+
+**Script flags:**
+- `--dry-run` — fetch and log recommendations, skip CMS writes
+- `--setup` — interactive login to save/refresh session (requires desktop, not SSH)
+
+**Currently Defense One only.** Will extend to other GE360 pubs once GA4 property IDs and Grappelli model names are confirmed.
 
 ---
 
