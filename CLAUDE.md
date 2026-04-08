@@ -19,7 +19,7 @@ On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonet
 - Returns top 7; user reviews and clicks Apply
 - Extension POSTs form updates to each Live item's edit page via Grappelli autocomplete
 
-**Nightly auto-apply** — `scripts/apply-trending.js`, running as a launchd job on the M1 MacBook Air at 5:00am. Uses a saved Playwright browser session to avoid re-doing 2FA nightly. Skips sponsored slots. Sends a Slack notification (topic list in subject line) on success, or a re-login alert if the session has expired. See SETUP.md for full details.
+**Nightly auto-apply launched: 2026-04-08.** `scripts/apply-trending.js`, running as a launchd job on the M1 MacBook Air at 5:00am. Uses a saved Playwright browser session to avoid re-doing 2FA nightly. Skips sponsored slots. Sends a Slack notification (topic list in subject line) on success, or a re-login alert if the session has expired. See SETUP.md for full details.
 
 ## GE360 Publication Family
 
@@ -87,7 +87,15 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost server
 
 ## Extension manifest
-- Version: 1.1.0
+- Version: 1.2.0
+- Permissions: `storage`, `alarms`, `notifications`
 - Host permissions: `admin.govexec.com`, `www.navybook.com`
+- Background: `background.js` service worker
 - Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
 - Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
+
+## Trending Topics impact measurement
+- **Baseline established: 2026-04-08** (day automation launched)
+- Pre-automation monthly pageviews on `/topic/*/?oref=d1-article-topics` links (Oct 2025–Mar 2026): ~2,000–4,065/month, trending up
+- **Check on 2026-05-08**: compare Apr and May 2026 to pre-automation baseline
+- To pull the data: SSH to DreamHost, use GA4 OAuth at `/home/bradwu/ga4-oauth.json`, query property `353836589`, dimension `yearMonth`, metric `screenPageViews`, filter `fullPageUrl` contains `oref=d1-article-topics`, date range `180daysAgo` to `today`
