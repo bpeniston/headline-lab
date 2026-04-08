@@ -22,11 +22,12 @@ const path         = require('path');
 const https        = require('https');
 
 // ── Config ────────────────────────────────────────────────────
-const SESSION_FILE = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
-const LOG_FILE     = path.join(process.env.HOME, 'headline-lab', 'logs', 'trending-apply.log');
-const API_URL      = 'https://www.navybook.com/D1/seo/trending-topics.php';
-const CMS_BASE     = 'https://admin.govexec.com';
-const LIST_URL     = `${CMS_BASE}/athena/curate/defenseonetrendingitem/`;
+const SESSION_FILE  = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
+const LOG_FILE      = path.join(process.env.HOME, 'headline-lab', 'logs', 'trending-apply.log');
+const API_URL       = 'https://www.navybook.com/D1/seo/trending-topics.php';
+const CMS_BASE      = 'https://admin.govexec.com';
+const LIST_URL      = `${CMS_BASE}/athena/curate/defenseonetrendingitem/`;
+const SLACK_EMAIL   = 'u5q8h4r0o7x8o9l7@govexec.slack.com';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
@@ -45,6 +46,22 @@ function die(msg) {
   log(`FATAL: ${msg}`);
   logStream.end();
   process.exit(1);
+}
+
+// ── Send status email to Slack ────────────────────────────────
+function sendSlackEmail(subject, body) {
+  return new Promise((resolve) => {
+    const { execFile } = require('child_process');
+    // Use macOS sendmail — available on all Macs via postfix
+    const msg = `To: ${SLACK_EMAIL}\nSubject: ${subject}\n\n${body}\n`;
+    const child = execFile('/usr/sbin/sendmail', ['-t'], (err) => {
+      if (err) log(`Slack email error: ${err.message}`);
+      else log('Slack notification sent.');
+      resolve();
+    });
+    child.stdin.write(msg);
+    child.stdin.end();
+  });
 }
 
 // ── Fetch recommendations from backend ────────────────────────
@@ -249,6 +266,13 @@ async function runApply() {
     await context.storageState({ path: SESSION_FILE });
 
     log(`=== Done: ${applied} applied, ${failed} failed, ${sponsoredCount} sponsored skipped ===`);
+
+    // 8. Notify via Slack email
+    const appliedLabels = topics.slice(0, count).map(t => t.label);
+    await sendSlackEmail(
+      'Updated D1 Trending Topics',
+      appliedLabels.join(' | ')
+    );
 
   } finally {
     await browser.close();
