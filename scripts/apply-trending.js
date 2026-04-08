@@ -48,19 +48,48 @@ function die(msg) {
   process.exit(1);
 }
 
-// ── Send status email to Slack ────────────────────────────────
-function sendSlackEmail(subject, body) {
+// ── Send status email to Slack via Gmail SMTP ────────────────
+function sendSlackEmail(subject, body, env) {
   return new Promise((resolve) => {
-    const { execFile } = require('child_process');
-    // Use macOS sendmail — available on all Macs via postfix
-    const msg = `To: ${SLACK_EMAIL}\nSubject: ${subject}\n\n${body}\n`;
-    const child = execFile('/usr/sbin/sendmail', ['-t'], (err) => {
-      if (err) log(`Slack email error: ${err.message}`);
-      else log('Slack notification sent.');
-      resolve();
+    const net = require('net');
+    const tls = require('tls');
+
+    const user = env.SMTP_USER;
+    const pass = env.SMTP_PASS.replace(/\s+/g, ''); // strip spaces from app password
+    const auth = Buffer.from(`\0${user}\0${pass}`).toString('base64');
+
+    const lines = [
+      `EHLO blotchy-macbook`,
+      `AUTH PLAIN ${auth}`,
+      `MAIL FROM:<${user}>`,
+      `RCPT TO:<${SLACK_EMAIL}>`,
+      `DATA`,
+      `From: Athena Tools <${user}>`,
+      `To: ${SLACK_EMAIL}`,
+      `Subject: ${subject}`,
+      ``,
+      body,
+      `.`,
+      `QUIT`,
+    ];
+
+    let idx = 0;
+    const send = (sock) => {
+      if (idx < lines.length) { sock.write(lines[idx++] + '\r\n'); }
+    };
+
+    const sock = tls.connect({ host: 'smtp.gmail.com', port: 465 }, () => {
+      // wait for server greeting before sending
     });
-    child.stdin.write(msg);
-    child.stdin.end();
+
+    sock.on('data', (d) => {
+      const resp = d.toString();
+      if (/^220 /.test(resp) || /^2\d\d /.test(resp) || /^334 /.test(resp)) send(sock);
+      if (/^221 /.test(resp)) { sock.destroy(); log('Slack notification sent.'); resolve(); }
+      if (/^[45]\d\d /.test(resp)) { sock.destroy(); log(`SMTP error: ${resp.trim()}`); resolve(); }
+    });
+
+    sock.on('error', (e) => { log(`SMTP connection error: ${e.message}`); resolve(); });
   });
 }
 
@@ -120,9 +149,23 @@ async function runSetup() {
   logStream.end();
 }
 
+// ── Load .env ─────────────────────────────────────────────────
+function loadEnv() {
+  const envFile = path.join(process.env.HOME, 'headline-lab', '.env');
+  if (!fs.existsSync(envFile)) die(`.env not found at ${envFile}`);
+  const env = {};
+  fs.readFileSync(envFile, 'utf8').split('\n').forEach(line => {
+    const m = line.match(/^([^#=]+)=(.*)$/);
+    if (m) env[m[1].trim()] = m[2].trim();
+  });
+  return env;
+}
+
 // ── Apply mode: use saved session to update CMS ───────────────
 async function runApply() {
   log(`=== Trending apply start${DRY_RUN ? ' (DRY RUN)' : ''} ===`);
+
+  const env = loadEnv();
 
   // 1. Check session file exists
   if (!fs.existsSync(SESSION_FILE)) {
@@ -271,7 +314,8 @@ async function runApply() {
     const appliedLabels = topics.slice(0, count).map(t => t.label);
     await sendSlackEmail(
       'Updated D1 Trending Topics',
-      appliedLabels.join(' | ')
+      appliedLabels.join(' | '),
+      env
     );
 
   } finally {
