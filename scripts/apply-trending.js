@@ -291,8 +291,8 @@ async function runApply() {
     // 8. Notify via Slack email
     const appliedLabels = topics.slice(0, count).map(t => t.label);
     await sendSlackEmail(
-      'Updated D1 Trending Topics',
       appliedLabels.join(' | '),
+      '',
       env
     );
 
