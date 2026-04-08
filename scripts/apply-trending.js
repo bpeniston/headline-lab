@@ -202,8 +202,11 @@ async function runApply() {
         if (!acRes[0]?.value) throw new Error(`Topic not found in Grappelli: "${topic.label}"`);
         const objectId = acRes[0].value;
 
-        // Fill form fields
-        await page.fill('input[name="object_id"]', String(objectId));
+        // object_id is readonly (controlled by Grappelli) — set via JS
+        await page.evaluate((val) => {
+          const el = document.querySelector('input[name="object_id"]');
+          if (el) { el.removeAttribute('readonly'); el.value = val; }
+        }, String(objectId));
 
         const ctSelect = page.locator('select[name="content_type"]');
         if (await ctSelect.count()) await ctSelect.selectOption({ value: '382' });
