@@ -178,7 +178,12 @@ async function runApply() {
 
     // Detect session expiry — redirected to login
     if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') || page.url().includes('/sso/')) {
-      die('Session has expired. Re-run with --setup to log in again.');
+      await sendSlackEmail(
+        'Action required: The Air is logged out of the CMS',
+        'The Air is logged out of the CMS.\n\nUse the Screen Sharing app to access the Air: vnc://100.117.250.37\n\nThen in Terminal:\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup',
+        env
+      );
+      die('Session has expired — Slack notification sent.');
     }
 
     log('Session valid — on Trending Items list page.');
