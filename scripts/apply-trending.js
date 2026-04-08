@@ -49,48 +49,26 @@ function die(msg) {
 }
 
 // ── Send status email to Slack via Gmail SMTP ────────────────
-function sendSlackEmail(subject, body, env) {
-  return new Promise((resolve) => {
-    const net = require('net');
-    const tls = require('tls');
-
-    const user = env.SMTP_USER;
-    const pass = env.SMTP_PASS.replace(/\s+/g, ''); // strip spaces from app password
-    const auth = Buffer.from(`\0${user}\0${pass}`).toString('base64');
-
-    const lines = [
-      `EHLO blotchy-macbook`,
-      `AUTH PLAIN ${auth}`,
-      `MAIL FROM:<${user}>`,
-      `RCPT TO:<${SLACK_EMAIL}>`,
-      `DATA`,
-      `From: Athena Tools <${user}>`,
-      `To: ${SLACK_EMAIL}`,
-      `Subject: ${subject}`,
-      ``,
-      body,
-      `.`,
-      `QUIT`,
-    ];
-
-    let idx = 0;
-    const send = (sock) => {
-      if (idx < lines.length) { sock.write(lines[idx++] + '\r\n'); }
-    };
-
-    const sock = tls.connect({ host: 'smtp.gmail.com', port: 465 }, () => {
-      // wait for server greeting before sending
+async function sendSlackEmail(subject, body, env) {
+  try {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS.replace(/\s+/g, ''),
+      },
     });
-
-    sock.on('data', (d) => {
-      const resp = d.toString();
-      if (/^220 /.test(resp) || /^2\d\d /.test(resp) || /^334 /.test(resp)) send(sock);
-      if (/^221 /.test(resp)) { sock.destroy(); log('Slack notification sent.'); resolve(); }
-      if (/^[45]\d\d /.test(resp)) { sock.destroy(); log(`SMTP error: ${resp.trim()}`); resolve(); }
+    await transporter.sendMail({
+      from: `Athena Tools <${env.SMTP_USER}>`,
+      to:   SLACK_EMAIL,
+      subject,
+      text: body,
     });
-
-    sock.on('error', (e) => { log(`SMTP connection error: ${e.message}`); resolve(); });
-  });
+    log('Slack notification sent.');
+  } catch (e) {
+    log(`Slack email error: ${e.message}`);
+  }
 }
 
 // ── Fetch recommendations from backend ────────────────────────
