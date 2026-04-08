@@ -229,11 +229,11 @@ async function runApply() {
             method: 'POST', body: formData, credentials: 'include',
           });
           if (!saveRes.ok) return { error: `POST returned ${saveRes.status}` };
-          if (saveRes.url?.includes(`/${item.id}/`)) {
+          if (saveRes.url?.includes(`/defenseonetrendingitem/`) && saveRes.url?.includes(`/change/`) || saveRes.url === editUrl) {
             return { error: 'Stayed on edit page after POST — validation error' };
           }
           return { objectId };
-        }, { editUrl, topicLabel: topic.label, cmsBase: CMS_BASE, item });
+        }, { editUrl, topicLabel: topic.label, cmsBase: CMS_BASE });
 
         if (result.error) throw new Error(result.error);
 
