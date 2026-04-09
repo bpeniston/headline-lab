@@ -104,7 +104,19 @@ async function postItem(item, newObjectId) {
     redirect: 'follow',
   });
 
-  console.log(`Slot ${item.slot}: response URL = ${res.url}`);
+  console.log(`Slot ${item.slot}: response status=${res.status} url=${res.url}`);
+
+  // On 500 log Django's error page
+  if (res.status === 500) {
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const summary = doc.querySelector('pre.exception_value')?.textContent?.trim()
+                 || doc.querySelector('#summary td')?.textContent?.trim()
+                 || doc.querySelector('h1')?.textContent?.trim()
+                 || '(no detail)';
+    console.error(`Slot ${item.slot} 500 — ${summary}`);
+    throw new Error(`Slot ${item.slot}: server 500 — ${summary.slice(0, 120)}`);
+  }
 
   // Django redirects to the list on success; staying on the edit URL = validation error
   const itemId = item.postUrl.match(/\/(\d+)\/?$/)?.[1];
