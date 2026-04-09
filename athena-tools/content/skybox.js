@@ -51,10 +51,12 @@
       if (!item.objectId) throw new Error(`Could not read object_id for slot ${item.slot}.`);
     }
 
-    // Cascade: slot 5 ← slot 4's ID, …, slot 1 ← newPostId
-    for (let i = 4; i >= 0; i--) {
+    // Cascade top-to-bottom: slot 1 gets newPostId first (releasing its old ID),
+    // then slot 2 gets slot 1's old ID (just freed), etc.
+    // This avoids unique-constraint conflicts — no two slots share an ID at any point.
+    for (let i = 0; i < items.length; i++) {
       const targetId = i === 0 ? newPostId : items[i - 1].objectId;
-      setStatus(overlay, `Updating slot ${i + 1} of 5…`);
+      setStatus(overlay, `Updating slot ${i + 1} of ${items.length}…`);
       await postItem(items[i], targetId);
     }
 
