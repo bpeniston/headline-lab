@@ -1,18 +1,19 @@
 # Athena Tools
-Internal newsroom toolset for the Defense One / GovExec Athena CMS · Hosted on DreamHost
+Internal newsroom toolset for the GE360 family of publications (Defense One, GovExec, Nextgov, Route Fifty, Washington Technology) · Athena CMS at `admin.govexec.com` · Hosted on DreamHost
 
 ---
 
 ## What this project contains
 
-### 1. Chrome Extension — `athena-tools/`
-A Manifest V3 Chrome extension that injects into the Athena CMS (`admin.govexec.com`) and adds three features:
+### 1. Chrome Extension — `athena-tools/` (v1.4.0)
+A Manifest V3 Chrome extension that injects into the Athena CMS (`admin.govexec.com`) and adds four features:
 
 | Feature | Where it runs | What it does |
 |---|---|---|
 | **UI Tweaks** | All CMS post editor pages | Reorders fields, groups date/status controls into a cleaner bar |
 | **Headline Lab** | CMS post editor | Reads article body → calls backend API → generates 6 SEO headline/subhed/slug options with rationale and competition check |
 | **Trending Topics** | D1-Trending items list page | Queries GA4, scrapes article topic tags, weights by recency, shows top 7 for review, applies them to the CMS automatically |
+| **Skybox Push** | All five pubs' skybox list + edit pages | Bookmarklet on any article page cascades it into skybox slot 1; slots shift down; sponsored slots act as a wall |
 
 ### 2. Backend API — `navybook.com/D1/seo/`
 PHP endpoints on DreamHost shared hosting:
@@ -93,12 +94,19 @@ CMS browser (admin.govexec.com)
         ├── Headline Lab panel
         │     └── POST → navybook.com/D1/seo/seo-api.php
         │                   └── Anthropic API
-        └── Trending Topics panel
-              ├── GET → navybook.com/D1/seo/trending-topics.php
-              │           ├── Google Analytics Data API (OAuth)
-              │           └── defenseone.com article pages (scraped)
-              └── PUT edits via Grappelli autocomplete + Django form POST
-                  (directly within admin.govexec.com — no external call)
+        ├── Trending Topics panel
+        │     ├── GET → navybook.com/D1/seo/trending-topics.php
+        │     │           ├── Google Analytics Data API (OAuth)
+        │     │           └── defenseone.com article pages (scraped)
+        │     └── Applies edits via Grappelli autocomplete + Django form POST
+        │         (directly within admin.govexec.com — no external call)
+        └── Skybox Push (triggered by bookmarklet on article pages)
+              └── Cascades slots 1–5 via sequential page navigation + saveBtn.click()
+                  (sessionStorage carries plan across navigations)
+
+Bookmarklet (browser toolbar)
+  ├── SEO Bookmarklet → grabs article text → POST to prefill.php → Headline Lab
+  └── Skyboxer → detects pub from hostname → opens CMS skybox page with #push=POSTID
 ```
 
 ---
