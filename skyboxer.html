@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyboxer · Headline Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="headline-lab.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header>
+  <h1><a href="index.php">Headline Lab</a></h1>
+  <span class="kicker">Athena Tools</span>
+  <nav>
+    <a href="index.php">The Tool</a>
+    <a href="about.html">About</a>
+    <a href="bookmarklet.html">SEO Bookmarklet</a>
+    <a href="skyboxer.html" class="active">Skyboxer</a>
+    <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab">Contact</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <div class="section-label">One-Click Skybox Push</div>
+  <h2>Skyboxer</h2>
+  <p>Skyboxer puts the article you're reading into slot 1 of the homepage skybox — instantly, without opening the CMS. Works on all five GE360 publications.</p>
+
+  <ul class="steps">
+    <li><div><strong>Click the bookmarklet</strong> on any article page at Defense One, GovExec, Nextgov, Route Fifty, or Washington Technology.</div></li>
+    <li><div><strong>The CMS opens</strong> automatically to that publication's skybox admin page.</div></li>
+    <li><div><strong>The extension takes over</strong> — it reads the current five slots, shifts each article down one position, and puts the new article in slot 1. You watch the progress bar; it's done in a few seconds.</div></li>
+  </ul>
+
+  <!-- THE DRAG TARGET -->
+  <div class="drag-zone">
+    <p>↓ Drag this to your bookmarks bar ↓</p>
+    <a class="bookmarklet-btn" id="skyboxer-bookmarklet" href="#PLACEHOLDER">⬆ Skyboxer</a>
+    <p class="sub">or right-click → Bookmark this link</p>
+  </div>
+
+  <div class="section-label">How To Install</div>
+  <ol class="steps">
+    <li><div><strong>Install the Athena Tools Chrome extension</strong> — the bookmarklet alone won't work without it. <a href="https://chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj" target="_blank" rel="noopener">Get it from the Chrome Web Store</a>.</div></li>
+    <li><div><strong>Show your bookmarks bar</strong> if it's hidden: <kbd>⌘+Shift+B</kbd> on Mac, <kbd>Ctrl+Shift+B</kbd> on Windows.</div></li>
+    <li><div><strong>Drag the button above</strong> into your bookmarks bar. It'll appear as "⬆ Skyboxer".</div></li>
+    <li><div><strong>That's it.</strong> Navigate to any article on a supported publication and click Skyboxer to push it to slot 1.</div></li>
+  </ol>
+
+  <hr class="rule" />
+
+  <div class="section-label">Supported Publications</div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="fc-icon">⚔️</span>
+      <h4>Defense One</h4>
+      <p>defenseone.com</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🏛️</span>
+      <h4>GovExec</h4>
+      <p>govexec.com</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">💻</span>
+      <h4>Nextgov</h4>
+      <p>nextgov.com</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🗺️</span>
+      <h4>Route Fifty</h4>
+      <p>route-fifty.com</p>
+    </div>
+    <div class="feature-card">
+      <span class="fc-icon">🔧</span>
+      <h4>Washington Technology</h4>
+      <p>washingtontechnology.com</p>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="section-label">How It Works</div>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-icon">🔖</span>
+      <strong>You</strong>
+      <span>Click Skyboxer on any article page</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">🖥️</span>
+      <strong>Bookmarklet</strong>
+      <span>Detects the pub, extracts the post ID from the URL, opens the CMS skybox list page</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">🧩</span>
+      <strong>Extension</strong>
+      <span>Reads slots 1–5, builds a cascade plan, navigates each edit page and saves</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <span class="flow-icon">✅</span>
+      <strong>Done</strong>
+      <span>New article in slot 1; everything else shifted down by one</span>
+    </div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="section-label">Frequently Asked Questions</div>
+  <ul class="qa-list">
+    <li>
+      <div class="qa-q">Do I need the Chrome extension installed?</div>
+      <div class="qa-a">Yes. The bookmarklet only opens the correct CMS page — it's the <a href="https://chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj" target="_blank" rel="noopener">Athena Tools extension</a> that actually performs the cascade. Without the extension, the CMS page will open but nothing will happen automatically.</div>
+    </li>
+    <li>
+      <div class="qa-q">Does it work from a preview or staging URL?</div>
+      <div class="qa-a">No — the bookmarklet reads the post ID from the live article URL (e.g. <code>/article/12345/</code>). Preview and staging URLs have different formats and won't produce a valid ID.</div>
+    </li>
+    <li>
+      <div class="qa-q">What happens to the article that gets bumped out of slot 5?</div>
+      <div class="qa-a">It's removed from the skybox — its slot is overwritten by what was in slot 4. If you need to preserve it, save the URL before running Skyboxer.</div>
+    </li>
+    <li>
+      <div class="qa-q">What about sponsored/advertiser slots?</div>
+      <div class="qa-a">Skyboxer detects sponsored slots (those with a title override beginning with "Sponsored:") and treats them as a wall — the cascade stops just before the first sponsored slot, leaving it and everything below it untouched.</div>
+    </li>
+    <li>
+      <div class="qa-q">What if I click it from the wrong publication?</div>
+      <div class="qa-a">The bookmarklet reads <code>location.hostname</code> and only recognizes the five supported domains. If you click it from an unsupported page, it'll alert you rather than open anything.</div>
+    </li>
+    <li>
+      <div class="qa-q">Can I undo a push?</div>
+      <div class="qa-a">Not automatically — there's no undo function. You'd need to manually re-edit the skybox slots in the CMS to restore the previous order.</div>
+    </li>
+  </ul>
+
+</div>
+
+<script>
+(function() {
+  var code = 'javascript:(function(){' +
+    'var h=location.hostname;' +
+    'var map={' +
+      '"defenseone.com":"defenseoneskyboxitem",' +
+      '"govexec.com":"govexecskyboxitem",' +
+      '"nextgov.com":"nextgovskyboxitem",' +
+      '"route-fifty.com":"routefiftyskyboxitem",' +
+      '"washingtontechnology.com":"wtskyboxitem"' +
+    '};' +
+    'var model;' +
+    'for(var k in map){if(h===k||h.endsWith("."+k)){model=map[k];break;}}' +
+    'if(!model){alert("Not on a supported GE360 publication page.");return;}' +
+    'var m=location.pathname.match(/\\/(\\d{5,7})\\/?$/);' +
+    'if(!m){alert("No post ID found \u2014 make sure you\u2019re on an article page.");return;}' +
+    'window.open("https://admin.govexec.com/athena/curate/"+model+"/#push="+m[1]);' +
+    '})();';
+
+  document.getElementById('skyboxer-bookmarklet').href = code;
+})();
+</script>
+</body>
+</html>
