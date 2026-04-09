@@ -124,16 +124,26 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - Content script 3: all five pub `*skyboxitem/*` paths → `skybox.js` + `skybox.css`
 
 ## Earthbox auto-updater (planned)
-Similar to Trending Topics automation: populate Earthbox slots with the most-viewed posts using GA4 data. Earthboxes appear at the bottom of articles as a row of topic/section thumbnails.
+Populate the 5 editorial Earthbox slots with the most-read article pages, scored by GA4 traffic (same day/week/month weighting as Trending Topics). Earthboxes appear at the bottom of articles as a row of section/story thumbnails.
+
+**Scoring logic:** identical to Trending Topics — `score = month_views + week_views + day_views` (recency-weighted). Query GA4 `pagePath` dimension with `screenPageViews` metric, filtered to `defenseone.com`.
+
+**Candidate filtering — exclude:**
+- Homepage (`/` or no path)
+- Topic lander pages (URL contains `/topic/`)
+- Sponsored/native-ad posts (TBD — likely detectable by URL pattern or post metadata)
+- Any page that isn't a standard article path (e.g. `/`-only, `/about/`, tag/search pages)
+
+**Article oref:** `oref=d1-earthbox-post` (already used in live earthbox links — GA4 click data available under this filter)
 
 **Known (Defense One):**
 - CMS list page: `/athena/curate/defenseoneearthboxitem/`
-- 6 slots total: 5 editorial + 1 sponsor content (far right, same pattern as Skybox — treat as wall)
+- 6 slots total: 5 editorial + 1 sponsor content (far right — treat as wall, same as Skybox)
 
 **Still needed before building:**
-- Form field names (inspect an Earthbox edit page in Athena — likely similar to Skybox: `content_type`, `object_id`, `title_override`, etc.)
-- What `object_id` refers to — topics (like Trending) or posts (like Skybox)?
-- CMS paths for other four pubs (likely `govexecearthboxitem`, `nextgovearthboxitem`, etc. — confirm)
+- Inspect an Earthbox edit page in Athena to get form field names and confirm what `object_id` refers to (post ID integer, as with Skybox, is the assumption)
+- Confirm whether Grappelli autocomplete is used (as in Trending) or direct `object_id` entry (as in Skybox)
+- CMS paths for other four pubs (likely `govexecearthboxitem`, `nextgovearthboxitem`, `routefiftyearthboxitem`, `wtearthboxitem` — confirm)
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
