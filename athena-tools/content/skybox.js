@@ -55,23 +55,32 @@ async function startCascade(newPostId) {
       new URL(row.querySelector('a[href*="/defenseoneskyboxitem/"]').href, location.href).href
     );
 
-    // GET each edit page to read current object_id (fetch GETs work fine)
-    setStatus(overlay, 'Reading current post IDs…');
-    const currentIds = [];
+    // GET each edit page to read object_id + override fields
+    setStatus(overlay, 'Reading current post IDs and overrides…');
+    const current = []; // [{oid, urlOverride, titleOverride, labelOverride}]
     for (const url of editUrls) {
       const res = await fetch(url, { credentials: 'include' });
       const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
       const oid = doc.querySelector('[name="object_id"]')?.value;
       if (!oid) throw new Error(`Could not read object_id from ${url}`);
-      currentIds.push(oid);
+      current.push({
+        oid,
+        urlOverride:   doc.querySelector('[name="url_override"]')?.value   || '',
+        titleOverride: doc.querySelector('[name="title_override"]')?.value || '',
+        labelOverride: doc.querySelector('[name="label_override"]')?.value || '',
+      });
     }
 
-    // Plan: slot 1 ← newPostId, slot N ← slot N-1's old ID
+    // Plan: slot 1 ← newPostId + empty overrides
+    //       slot N ← slot N-1's object + overrides (they travel together)
     const plan = {
       newPostId,
       items: editUrls.map((url, i) => ({
-        editUrl: url,
-        newObjectId: i === 0 ? newPostId : currentIds[i - 1],
+        editUrl:       url,
+        newObjectId:   i === 0 ? newPostId          : current[i - 1].oid,
+        urlOverride:   i === 0 ? ''                 : current[i - 1].urlOverride,
+        titleOverride: i === 0 ? ''                 : current[i - 1].titleOverride,
+        labelOverride: i === 0 ? ''                 : current[i - 1].labelOverride,
         slot: i + 1,
       })),
       nextIndex: 0,
@@ -134,6 +143,15 @@ function applyAndSave(item, plan) {
     objectIdField.removeAttribute('readonly');
     objectIdField.removeAttribute('disabled');
     objectIdField.value = String(item.newObjectId);
+
+    // Set override fields — travel with the object, cleared for slot 1
+    const setField = (name, value) => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el) el.value = value;
+    };
+    setField('url_override',   item.urlOverride);
+    setField('title_override', item.titleOverride);
+    setField('label_override', item.labelOverride);
 
     // Advance the plan BEFORE submitting so the list page knows what's next
     plan.nextIndex++;
