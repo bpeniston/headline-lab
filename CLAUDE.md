@@ -3,13 +3,30 @@
 ## What this project is
 A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`) that adds tools to the Athena CMS shared by the **GE360** family of publications (see below). Currently deployed for Defense One; being extended to the full family.
 
-## Three features
+## Four features
 
 ### UI Tweaks (`content/main.js`, `styles/tweaks.css`)
 Runs on all CMS post editor pages. Reorders form fields, groups date/status into a cleaner bar.
 
 ### Headline Lab (`content/main.js`, `seo-api.php`)
 On the CMS post editor: reads article body → calls `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO headline/subhed/slug options.
+
+### Skybox Push (`content/skybox.js`, `styles/skybox.css`)
+On the D1-Skybox items list page (`admin.govexec.com/athena/curate/defenseoneskyboxitem/`):
+- Triggered by a bookmarklet on any defenseone.com article page
+- Bookmarklet extracts the post ID from the URL and opens the skybox admin page with `#push=POSTID`
+- Content script cascades slots 1–5: each article shifts down one slot, new article lands in slot 1
+- Override fields (URL, Title, Label) travel with their article; slot 1 gets a clean slate
+- Slot 6 (ad) is never touched
+- Uses real browser navigation + `saveBtn.click()` per slot — fetch() POST rejected by Athena server (requires `sec-fetch-mode: navigate`)
+- State carried across page navigations via `sessionStorage`
+
+**Bookmarklet** (save as a browser bookmark with this URL):
+```
+javascript:(function(){var m=location.pathname.match(/\/(\d{5,7})\/?$/);if(!m){alert('No post ID found — make sure you\'re on an article page.');return;}window.open('https://admin.govexec.com/athena/curate/defenseoneskyboxitem/#push='+m[1]);})();
+```
+
+**Skybox item edit form fields:** `content_type` (22 = Post), `object_id` (post ID integer), `status` (live), `live_date_0`/`live_date_1` (split date/time), `expiration_date_0`/`expiration_date_1`, `url_override`, `title_override`, `label_override`, `suppress_label` (checkbox), `image_override-*` (inline formset)
 
 ### Trending Topics (`content/trending.js`, `styles/trending.css`, `server/trending-topics.php`)
 On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonetrendingitem/`):
@@ -87,12 +104,13 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost server
 
 ## Extension manifest
-- Version: 1.2.0
+- Version: 1.3.0
 - Permissions: `storage`, `alarms`, `notifications`
 - Host permissions: `admin.govexec.com`, `www.navybook.com`
-- Background: `background.js` service worker
+- Background: `background.js` service worker (minimal; automation lives on the Air)
 - Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
 - Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
+- Content script 3: `admin.govexec.com/athena/curate/defenseoneskyboxitem/*` → `skybox.js` + `skybox.css`
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
