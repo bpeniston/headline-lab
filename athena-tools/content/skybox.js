@@ -20,15 +20,17 @@
 
     // Collect edit links — filter to only rows that have a /change/ link
     // (Grappelli sortable adds extra <tr> elements for drag handles etc.)
+    // Filter to rows that have a skybox item edit link (e.g. /defenseoneskyboxitem/6697418/)
+    // Grappelli sortable adds extra <tr> elements for drag handles — skip those
     const rows = Array.from(document.querySelectorAll('#result_list tbody tr'))
-      .filter(row => row.querySelector('a[href*="/change/"]'));
+      .filter(row => row.querySelector('a[href*="/defenseoneskyboxitem/"]'));
 
     if (rows.length < 5) {
       throw new Error(`Only ${rows.length} skybox items found — expected at least 5.`);
     }
 
     const items = rows.slice(0, 5).map((row, i) => {
-      const link = row.querySelector('a[href*="/change/"]');
+      const link = row.querySelector('a[href*="/defenseoneskyboxitem/"]');
       return { editUrl: new URL(link.href, location.href).href, slot: i + 1 };
     });
 
@@ -96,8 +98,8 @@ async function postItem(item, newObjectId) {
     redirect: 'follow',
   });
 
-  // Django redirects to the list on success; staying on the edit page = validation error
-  if (res.url.includes('/change/') || res.url.includes('/add/')) {
+  // Django redirects to the list on success; staying on the same edit URL = validation error
+  if (res.url.includes(`/defenseoneskyboxitem/${item.editUrl.match(/\/(\d+)\/$/)?.[1]}/`)) {
     const html = await res.text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const errEl = doc.querySelector('.errornote, .errorlist li');
