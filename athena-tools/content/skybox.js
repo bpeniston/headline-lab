@@ -8,26 +8,27 @@
 //   4. Reload cleanly (no ?push param)
 
 (async function initSkyboxPush() {
-  const params = new URLSearchParams(window.location.search);
-  const newPostId = params.get('push');
-  if (!newPostId || !/^\d+$/.test(newPostId)) return;
+  // Use hash (e.g. #push=412603) — query params get stripped by Django's redirect
+  const hashMatch = window.location.hash.match(/^#push=(\d+)$/);
+  const newPostId = hashMatch?.[1];
+  if (!newPostId) return;
 
   const overlay = createOverlay();
 
   try {
     setStatus(overlay, 'Reading skybox items…');
 
-    // Collect edit links from the list page (we're already on it)
-    const rows = Array.from(document.querySelectorAll('#result_list tbody tr'));
+    // Collect edit links — filter to only rows that have a /change/ link
+    // (Grappelli sortable adds extra <tr> elements for drag handles etc.)
+    const rows = Array.from(document.querySelectorAll('#result_list tbody tr'))
+      .filter(row => row.querySelector('a[href*="/change/"]'));
+
     if (rows.length < 5) {
       throw new Error(`Only ${rows.length} skybox items found — expected at least 5.`);
     }
 
     const items = rows.slice(0, 5).map((row, i) => {
-      const link = row.querySelector('a[href*="/change/"]') ||
-                   row.querySelector('th a') ||
-                   row.querySelector('td a');
-      if (!link) throw new Error(`No edit link found for row ${i + 1}.`);
+      const link = row.querySelector('a[href*="/change/"]');
       return { editUrl: new URL(link.href, location.href).href, slot: i + 1 };
     });
 
