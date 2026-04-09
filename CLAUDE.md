@@ -12,18 +12,29 @@ Runs on all CMS post editor pages. Reorders form fields, groups date/status into
 On the CMS post editor: reads article body → calls `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO headline/subhed/slug options.
 
 ### Skybox Push (`content/skybox.js`, `styles/skybox.css`)
-On the D1-Skybox items list page (`admin.govexec.com/athena/curate/defenseoneskyboxitem/`):
-- Triggered by a bookmarklet on any defenseone.com article page
-- Bookmarklet extracts the post ID from the URL and opens the skybox admin page with `#push=POSTID`
+Works on all five GE360 publication sites. Bookmarklet detects which pub you're on and opens that pub's skybox admin page.
+
+- Triggered by a bookmarklet on any article page across all five pubs
+- Bookmarklet detects the pub from `location.hostname` and opens the correct CMS skybox list page with `#push=POSTID`
 - Content script cascades slots 1–5: each article shifts down one slot, new article lands in slot 1
 - Override fields (URL, Title, Label) travel with their article; slot 1 gets a clean slate
-- Slot 6 (ad) is never touched
+- Slot 6 (ad) is never touched (script only reads slots 1–5)
+- **Sponsored slots act as a wall**: if `title_override` starts with `"Sponsored:"`, that slot and everything below it is untouched; cascade stops just before it
 - Uses real browser navigation + `saveBtn.click()` per slot — fetch() POST rejected by Athena server (requires `sec-fetch-mode: navigate`)
 - State carried across page navigations via `sessionStorage`
 
+**CMS skybox paths by pub:**
+| Publication | CMS skybox list path |
+|---|---|
+| Defense One | `/athena/curate/defenseoneskyboxitem/` |
+| GovExec | `/athena/curate/govexecskyboxitem/` |
+| Nextgov | `/athena/curate/nextgovskyboxitem/` |
+| Route Fifty | `/athena/curate/routefiftyskyboxitem/` |
+| Washington Technology | `/athena/curate/wtskyboxitem/` |
+
 **Bookmarklet** (save as a browser bookmark with this URL):
 ```
-javascript:(function(){var m=location.pathname.match(/\/(\d{5,7})\/?$/);if(!m){alert('No post ID found — make sure you\'re on an article page.');return;}window.open('https://admin.govexec.com/athena/curate/defenseoneskyboxitem/#push='+m[1]);})();
+javascript:(function(){var h=location.hostname;var map={'defenseone.com':'defenseoneskyboxitem','govexec.com':'govexecskyboxitem','nextgov.com':'nextgovskyboxitem','route-fifty.com':'routefiftyskyboxitem','washingtontechnology.com':'wtskyboxitem'};var model;for(var k in map){if(h===k||h.endsWith('.'+k)){model=map[k];break;}}if(!model){alert('Not on a supported GE360 publication page.');return;}var m=location.pathname.match(/\/(\d{5,7})\/?$/);if(!m){alert('No post ID found — make sure you\'re on an article page.');return;}window.open('https://admin.govexec.com/athena/curate/'+model+'/#push='+m[1]);})();
 ```
 
 **Skybox item edit form fields:** `content_type` (22 = Post), `object_id` (post ID integer), `status` (live), `live_date_0`/`live_date_1` (split date/time), `expiration_date_0`/`expiration_date_1`, `url_override`, `title_override`, `label_override`, `suppress_label` (checkbox), `image_override-*` (inline formset)
@@ -104,13 +115,13 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost server
 
 ## Extension manifest
-- Version: 1.3.0
+- Version: 1.4.0
 - Permissions: `storage`, `alarms`, `notifications`
 - Host permissions: `admin.govexec.com`, `www.navybook.com`
 - Background: `background.js` service worker (minimal; automation lives on the Air)
 - Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
 - Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
-- Content script 3: `admin.govexec.com/athena/curate/defenseoneskyboxitem/*` → `skybox.js` + `skybox.css`
+- Content script 3: all five pub `*skyboxitem/*` paths → `skybox.js` + `skybox.css`
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)

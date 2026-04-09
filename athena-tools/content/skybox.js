@@ -1,12 +1,19 @@
 // skybox.js — Push an article to skybox slot 1, cascading existing items down.
 //
+// Supports all five GE360 publications (Defense One, GovExec, Nextgov,
+// Route Fifty, Washington Technology). Detects which pub from the URL path.
+//
+// Sponsored slots (title_override starting with "Sponsored:") act as walls —
+// the cascade stops before the first sponsored slot, leaving it and everything
+// below it untouched.
+//
 // Approach: sessionStorage carries cascade state across page navigations.
 // fetch() is used only for GETs (reading current object_ids — works fine).
 // POSTs use real browser form submission via saveBtn.click(), which sends
 // sec-fetch-mode: navigate and satisfies Athena's server-side checks.
 //
 // Flow:
-//   List page + #push=POSTID  → read 5 edit URLs + current IDs, store plan,
+//   List page + #push=POSTID  → read edit URLs + current IDs, store plan,
 //                               navigate to slot 1's edit page
 //   Edit page (slot N)        → set object_id in form, click Save → list page
 //   List page (returning)     → advance plan, navigate to slot N+1's edit page
@@ -15,8 +22,10 @@
 'use strict';
 
 const CASCADE_KEY = 'skyboxCascade';
-const LIST_RE  = /\/defenseoneskyboxitem\/$/;
-const EDIT_RE  = /\/defenseoneskyboxitem\/\d+\//;
+
+// Matches any of the five pub skybox list or edit pages
+const LIST_RE = /\/(?:defenseone|govexec|nextgov|routefifty|wt)skyboxitem\/$/;
+const EDIT_RE = /\/(?:defenseone|govexec|nextgov|routefifty|wt)skyboxitem\/\d+\//;
 
 const path = window.location.pathname;
 
@@ -47,12 +56,12 @@ async function startCascade(newPostId) {
     setStatus(overlay, 'Reading skybox items…');
 
     const rows = Array.from(document.querySelectorAll('#result_list tbody tr'))
-      .filter(row => row.querySelector('a[href*="/defenseoneskyboxitem/"]'));
+      .filter(row => row.querySelector('a[href*="skyboxitem/"]'));
 
-    if (rows.length < 5) throw new Error(`Only ${rows.length} items found — expected 5.`);
+    if (rows.length < 5) throw new Error(`Only ${rows.length} items found — expected at least 5.`);
 
     const editUrls = rows.slice(0, 5).map(row =>
-      new URL(row.querySelector('a[href*="/defenseoneskyboxitem/"]').href, location.href).href
+      new URL(row.querySelector('a[href*="skyboxitem/"]').href, location.href).href
     );
 
     // GET each edit page to read object_id + override fields
@@ -71,11 +80,20 @@ async function startCascade(newPostId) {
       });
     }
 
+    // Sponsored slots act as a wall — find the first one (0-based index)
+    const wallIndex = current.findIndex(c => c.titleOverride.startsWith('Sponsored:'));
+    const cascadeCount = wallIndex === -1 ? current.length : wallIndex;
+
+    if (cascadeCount === 0) {
+      throw new Error('Slot 1 is a sponsored slot — cannot push here.');
+    }
+
     // Plan: slot 1 ← newPostId + empty overrides
     //       slot N ← slot N-1's object + overrides (they travel together)
+    //       slots at or beyond the wall are untouched
     const plan = {
       newPostId,
-      items: editUrls.map((url, i) => ({
+      items: editUrls.slice(0, cascadeCount).map((url, i) => ({
         editUrl:       url,
         newObjectId:   i === 0 ? newPostId          : current[i - 1].oid,
         urlOverride:   i === 0 ? ''                 : current[i - 1].urlOverride,
@@ -84,6 +102,8 @@ async function startCascade(newPostId) {
         slot: i + 1,
       })),
       nextIndex: 0,
+      // 1-based slot number of the wall (null if no sponsored slot found)
+      wallSlot: wallIndex === -1 ? null : wallIndex + 1,
     };
 
     savePlan(plan);
@@ -100,7 +120,8 @@ function advanceCascade(plan) {
   if (plan.nextIndex >= plan.items.length) {
     clearPlan();
     const overlay = createOverlay();
-    setStatus(overlay, `✓ Done — post ${plan.newPostId} is now in slot 1.`, 'success');
+    const wallNote = plan.wallSlot ? ` (stopped before sponsored slot ${plan.wallSlot})` : '';
+    setStatus(overlay, `✓ Done — post ${plan.newPostId} is now in slot 1${wallNote}.`, 'success');
     setTimeout(() => overlay.remove(), 5000);
     return;
   }
