@@ -34,7 +34,8 @@ if (!empty($_SESSION['prefill_url'])) {
   <nav>
     <a href="index.php" class="active">The Tool</a>
     <a href="about.html">About</a>
-    <a href="bookmarklet.html">Bookmarklet</a>
+    <a href="bookmarklet.html">SEO Bookmarklet</a>
+    <a href="skyboxer.html">Skyboxer</a>
     <a href="mailto:bpeniston@defenseone.com?subject=Headline%20Lab">Contact</a>
   </nav>
 </header>
