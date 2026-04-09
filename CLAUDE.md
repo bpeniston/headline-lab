@@ -124,7 +124,16 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - Content script 3: all five pub `*skyboxitem/*` paths → `skybox.js` + `skybox.css`
 
 ## Earthbox auto-updater (planned)
-Similar to Trending Topics automation: populate Earthbox slots with the most-viewed posts using GA4 data. CMS model name, slot count, and form field names TBD — need to inspect the Earthbox edit page in Athena.
+Similar to Trending Topics automation: populate Earthbox slots with the most-viewed posts using GA4 data. Earthboxes appear at the bottom of articles as a row of topic/section thumbnails.
+
+**Known (Defense One):**
+- CMS list page: `/athena/curate/defenseoneearthboxitem/`
+- 6 slots total: 5 editorial + 1 sponsor content (far right, same pattern as Skybox — treat as wall)
+
+**Still needed before building:**
+- Form field names (inspect an Earthbox edit page in Athena — likely similar to Skybox: `content_type`, `object_id`, `title_override`, etc.)
+- What `object_id` refers to — topics (like Trending) or posts (like Skybox)?
+- CMS paths for other four pubs (likely `govexecearthboxitem`, `nextgovearthboxitem`, etc. — confirm)
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
