@@ -107,6 +107,8 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - `trending-main-cache.json` — 1hr scored results cache
 - `trending-article-cache.json` — 24hr article→topics cache
 - `trending-topicname-cache.json` — 7-day slug→display name cache
+- `earthbox-cache.json` — 1hr scored article results cache
+- `earthbox-title-cache.json` — 24hr article title + sponsored-flag cache
 - `headline-lab-usage.log` — usage log
 
 ## Secrets & credentials
@@ -145,7 +147,14 @@ Populate the 5 editorial Earthbox slots with the most-read article pages, scored
 - `_is_sponsored_content` — checkbox; **sponsored slot detection** (not title_override — use this to identify the wall slot)
 - Autocomplete type: **Grappelli generic** (`[content_type, object_id]` pair), same as Trending Topics
 
-**Architecture:** Playwright script on the Air (same pattern as `apply-trending.js`) — navigates to each edit page, sets content_type=22 + object_id, clicks Save. Post ID is already known from GA4 so no autocomplete lookup needed.
+**Architecture:** Playwright script on the Air (same pattern as `apply-trending.js`) — POSTs to each edit page via `fetch()` inside `page.evaluate()`. Post ID is already known from GA4 so no Grappelli autocomplete lookup needed. Existing `image_override` is deleted on each save so the post's own featured image is used.
+
+**Scripts:**
+- `server/earthbox-posts.php` — GA4 queries, title scraping, sponsored filtering, returns top 6
+- `scripts/apply-earthbox.js` — Playwright apply script (--setup, --dry-run flags)
+- `scripts/com.navybook.earthbox-apply.plist` — launchd job, runs 5:30am daily (30 min after Trending)
+
+**Cache files (server):** `earthbox-cache.json` (1hr), `earthbox-title-cache.json` (24hr)
 
 **CMS paths (all confirmed from MODEL_URL_ARRAY):**
 | Publication | CMS earthbox list path | Model PK |
