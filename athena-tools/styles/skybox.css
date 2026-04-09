@@ -1,0 +1,36 @@
+#skybox-push-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+#skybox-push-box {
+  background: #1a1a1a;
+  color: #fff;
+  border-radius: 6px;
+  padding: 14px 18px;
+  min-width: 280px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+#skybox-push-box strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+#skybox-push-status {
+  margin: 0;
+  color: #ccc;
+}
+
+#skybox-push-box[data-state="success"] #skybox-push-status {
+  color: #4caf50;
+}
+
+#skybox-push-box[data-state="error"] #skybox-push-status {
+  color: #f44336;
+}
