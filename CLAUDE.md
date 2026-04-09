@@ -126,24 +126,37 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 ## Earthbox auto-updater (planned)
 Populate the 5 editorial Earthbox slots with the most-read article pages, scored by GA4 traffic (same day/week/month weighting as Trending Topics). Earthboxes appear at the bottom of articles as a row of section/story thumbnails.
 
-**Scoring logic:** identical to Trending Topics — `score = month_views + week_views + day_views` (recency-weighted). Query GA4 `pagePath` dimension with `screenPageViews` metric, filtered to `defenseone.com`.
+**Scoring logic:** identical to Trending Topics — `score = month_views + week_views + day_views` (recency-weighted). Query GA4 `pagePath` dimension with `screenPageViews` metric for `defenseone.com`. Extract post ID from the URL path (5–7 digit number, e.g. `/policy/2024/03/title/123456/`).
 
 **Candidate filtering — exclude:**
-- Homepage (`/` or no path)
-- Topic lander pages (URL contains `/topic/`)
-- Sponsored/native-ad posts (TBD — likely detectable by URL pattern or post metadata)
-- Any page that isn't a standard article path (e.g. `/`-only, `/about/`, tag/search pages)
+- Homepage (`/` or bare domain)
+- Topic lander pages (`/topic/` in path)
+- Sponsored/native-ad posts (detectable by URL pattern or post metadata — TBD)
+- Any non-article path (search, tag, about, etc.)
 
 **Article oref:** `oref=d1-earthbox-post` (already used in live earthbox links — GA4 click data available under this filter)
 
-**Known (Defense One):**
-- CMS list page: `/athena/curate/defenseoneearthboxitem/`
-- 6 slots total: 5 editorial + 1 sponsor content (far right — treat as wall, same as Skybox)
+**CMS form fields (confirmed from edit page inspection):**
+- `content_type` — dropdown; set to `22` (Post Manager - Post) for article slots. Currently slots hold Topics (`382` = Defense One Topic); the auto-updater will switch them to Posts.
+- `object_id` — integer; the post ID extracted from the GA4 page path
+- `status` — set to `live`
+- `live_date_0` / `live_date_1` — split date/time (keep existing or set to now)
+- `url_override`, `title_override`, `label_override`, `suppress_label` — override fields (clear for auto-applied slots)
+- `_is_sponsored_content` — checkbox; **sponsored slot detection** (not title_override — use this to identify the wall slot)
+- Autocomplete type: **Grappelli generic** (`[content_type, object_id]` pair), same as Trending Topics
 
-**Still needed before building:**
-- Inspect an Earthbox edit page in Athena to get form field names and confirm what `object_id` refers to (post ID integer, as with Skybox, is the assumption)
-- Confirm whether Grappelli autocomplete is used (as in Trending) or direct `object_id` entry (as in Skybox)
-- CMS paths for other four pubs (likely `govexecearthboxitem`, `nextgovearthboxitem`, `routefiftyearthboxitem`, `wtearthboxitem` — confirm)
+**Architecture:** Playwright script on the Air (same pattern as `apply-trending.js`) — navigates to each edit page, sets content_type=22 + object_id, clicks Save. Post ID is already known from GA4 so no autocomplete lookup needed.
+
+**CMS paths (all confirmed from MODEL_URL_ARRAY):**
+| Publication | CMS earthbox list path | Model PK |
+|---|---|---|
+| Defense One | `/athena/curate/defenseoneearthboxitem/` | 548 |
+| GovExec | `/athena/curate/govexecearthboxitem/` | 501 |
+| Nextgov | `/athena/curate/nextgovearthboxitem/` | 494 |
+| Route Fifty | `/athena/curate/routefiftyearthboxitem/` | 510 |
+| Washington Technology | `/athena/curate/wtearthboxitem/` | 621 |
+
+**Sponsored slot wall:** read `_is_sponsored_content` checkbox on each slot during planning; skip (preserve) any checked slot — same wall logic as Skybox.
 
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
