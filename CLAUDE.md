@@ -123,6 +123,9 @@ Some Trending slots are sold to advertisers; their `title_override` text begins 
 - Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
 - Content script 3: all five pub `*skyboxitem/*` paths → `skybox.js` + `skybox.css`
 
+## Earthbox auto-updater (planned)
+Similar to Trending Topics automation: populate Earthbox slots with the most-viewed posts using GA4 data. CMS model name, slot count, and form field names TBD — need to inspect the Earthbox edit page in Athena.
+
 ## Trending Topics impact measurement
 - **Baseline established: 2026-04-08** (day automation launched)
 - Pre-automation monthly pageviews on `oref=d1-article-topics` links (Oct 2025–Mar 2026): avg **3,005/month**
