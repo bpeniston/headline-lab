@@ -74,6 +74,7 @@ function extractFormFields(doc) {
   const fields = {};
   doc.querySelectorAll('input, select, textarea').forEach(el => {
     if (!el.name) return;
+    if (el.type === 'file') return; // skip — can't re-send file inputs; Django treats absent as "no change"
     if (el.type === 'checkbox') {
       if (el.checked) fields[el.name] = el.value || 'on';
     } else if (el.type === 'radio') {
@@ -86,18 +87,19 @@ function extractFormFields(doc) {
 }
 
 async function postItem(item, newObjectId) {
-  const body = new URLSearchParams();
-  Object.entries(item.fields).forEach(([k, v]) => body.append(k, v));
-  body.set('csrfmiddlewaretoken', item.csrf);
-  body.set('object_id', newObjectId);
-  body.set('_save', 'Save');
+  // Use FormData (multipart/form-data) to match what the browser sends,
+  // which is required for Django to correctly process the image inline formset.
+  const formData = new FormData();
+  Object.entries(item.fields).forEach(([k, v]) => formData.append(k, v));
+  formData.set('csrfmiddlewaretoken', item.csrf);
+  formData.set('object_id', String(newObjectId));
+  formData.set('_save', 'Save');
 
   console.log(`Slot ${item.slot}: POSTing to ${item.postUrl} with object_id=${newObjectId}`);
 
   const res = await fetch(item.postUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    body: formData,   // no Content-Type header — browser sets multipart boundary automatically
     credentials: 'include',
     redirect: 'follow',
   });
