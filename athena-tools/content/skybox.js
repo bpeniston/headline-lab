@@ -1,140 +1,165 @@
-// skybox.js — Auto-cascade skybox items when #push=POSTID is in the URL
-// Triggered by the "Push to Skybox" bookmarklet on a defenseone.com article page.
+// skybox.js — Push an article to skybox slot 1, cascading existing items down.
 //
-// Workflow:
-//   1. Read edit URLs for slots 1–5 from the list page DOM
-//   2. GET each edit page; capture resolved URL (after any redirect) + object_id + form fields
-//   3. Cascade: slot 5 ← slot 4's ID, ..., slot 1 ← new post ID
-//   4. Reload cleanly
+// Approach: sessionStorage carries cascade state across page navigations.
+// fetch() is used only for GETs (reading current object_ids — works fine).
+// POSTs use real browser form submission via saveBtn.click(), which sends
+// sec-fetch-mode: navigate and satisfies Athena's server-side checks.
+//
+// Flow:
+//   List page + #push=POSTID  → read 5 edit URLs + current IDs, store plan,
+//                               navigate to slot 1's edit page
+//   Edit page (slot N)        → set object_id in form, click Save → list page
+//   List page (returning)     → advance plan, navigate to slot N+1's edit page
+//   List page (all done)      → clear plan, show success
 
-(async function initSkyboxPush() {
-  // Use hash (e.g. #push=412603) — query params get stripped by Django's redirect
+'use strict';
+
+const CASCADE_KEY = 'skyboxCascade';
+const LIST_RE  = /\/defenseoneskyboxitem\/$/;
+const EDIT_RE  = /\/defenseoneskyboxitem\/\d+\//;
+
+const path = window.location.pathname;
+
+if (LIST_RE.test(path)) {
+  handleListPage();
+} else if (EDIT_RE.test(path)) {
+  handleEditPage();
+}
+
+// ── List page ─────────────────────────────────────────────────────────────────
+
+async function handleListPage() {
   const hashMatch = window.location.hash.match(/^#push=(\d+)$/);
-  const newPostId = hashMatch?.[1];
-  if (!newPostId) return;
 
+  if (hashMatch) {
+    history.replaceState({}, '', window.location.pathname);
+    await startCascade(hashMatch[1]);
+    return;
+  }
+
+  const plan = readPlan();
+  if (plan) advanceCascade(plan);
+}
+
+async function startCascade(newPostId) {
   const overlay = createOverlay();
-
   try {
     setStatus(overlay, 'Reading skybox items…');
 
-    // Filter to rows that have a skybox item edit link (skip Grappelli drag-handle rows)
     const rows = Array.from(document.querySelectorAll('#result_list tbody tr'))
       .filter(row => row.querySelector('a[href*="/defenseoneskyboxitem/"]'));
 
-    if (rows.length < 5) {
-      throw new Error(`Only ${rows.length} skybox items found — expected at least 5.`);
-    }
+    if (rows.length < 5) throw new Error(`Only ${rows.length} items found — expected 5.`);
 
-    const items = rows.slice(0, 5).map((row, i) => {
-      const link = row.querySelector('a[href*="/defenseoneskyboxitem/"]');
-      return { editUrl: new URL(link.href, location.href).href, slot: i + 1 };
-    });
+    const editUrls = rows.slice(0, 5).map(row =>
+      new URL(row.querySelector('a[href*="/defenseoneskyboxitem/"]').href, location.href).href
+    );
 
-    // GET each edit page; use the resolved URL (after any redirect) as the POST target
+    // GET each edit page to read current object_id (fetch GETs work fine)
     setStatus(overlay, 'Reading current post IDs…');
-    for (const item of items) {
-      const res = await fetch(item.editUrl, { credentials: 'include' });
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-
-      // The resolved URL is what we POST back to (handles any redirects from the list link)
-      item.postUrl = res.url;
-
-      item.csrf = doc.querySelector('[name="csrfmiddlewaretoken"]')?.value;
-      if (!item.csrf) throw new Error(`No CSRF token for slot ${item.slot}.`);
-
-      item.fields = extractFormFields(doc);
-      item.objectId = item.fields['object_id'] || '';
-
-      console.log(`Slot ${item.slot}: editUrl=${item.editUrl} postUrl=${item.postUrl} objectId=${item.objectId}`);
-      if (!item.objectId) throw new Error(`Could not read object_id for slot ${item.slot}.`);
+    const currentIds = [];
+    for (const url of editUrls) {
+      const res = await fetch(url, { credentials: 'include' });
+      const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+      const oid = doc.querySelector('[name="object_id"]')?.value;
+      if (!oid) throw new Error(`Could not read object_id from ${url}`);
+      currentIds.push(oid);
     }
 
-    // Cascade top-to-bottom: slot 1 gets newPostId first (releasing its old ID),
-    // then slot 2 gets slot 1's old ID (just freed), etc.
-    // This avoids unique-constraint conflicts — no two slots share an ID at any point.
-    for (let i = 0; i < items.length; i++) {
-      const targetId = i === 0 ? newPostId : items[i - 1].objectId;
-      setStatus(overlay, `Updating slot ${i + 1} of ${items.length}…`);
-      await postItem(items[i], targetId);
-    }
+    // Plan: slot 1 ← newPostId, slot N ← slot N-1's old ID
+    const plan = {
+      newPostId,
+      items: editUrls.map((url, i) => ({
+        editUrl: url,
+        newObjectId: i === 0 ? newPostId : currentIds[i - 1],
+        slot: i + 1,
+      })),
+      nextIndex: 0,
+    };
 
-    setStatus(overlay, `✓ Done — post ${newPostId} is now in skybox slot 1.`, 'success');
-    setTimeout(() => {
-      window.location.href = window.location.pathname;
-    }, 3000);
+    savePlan(plan);
+    setStatus(overlay, 'Navigating to slot 1…');
+    setTimeout(() => { window.location.href = plan.items[0].editUrl; }, 600);
 
   } catch (err) {
-    setStatus(overlay, `✗ Error: ${err.message}`, 'error');
-  }
-})();
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractFormFields(doc) {
-  const fields = {};
-  doc.querySelectorAll('input, select, textarea').forEach(el => {
-    if (!el.name) return;
-    if (el.type === 'file') return; // skip — can't re-send file inputs; Django treats absent as "no change"
-    if (el.type === 'checkbox') {
-      if (el.checked) fields[el.name] = el.value || 'on';
-    } else if (el.type === 'radio') {
-      if (el.checked) fields[el.name] = el.value;
-    } else {
-      fields[el.name] = el.value;
-    }
-  });
-  return fields;
-}
-
-async function postItem(item, newObjectId) {
-  // Use FormData (multipart/form-data) to match what the browser sends,
-  // which is required for Django to correctly process the image inline formset.
-  const formData = new FormData();
-  Object.entries(item.fields).forEach(([k, v]) => formData.append(k, v));
-  formData.set('csrfmiddlewaretoken', item.csrf);
-  formData.set('object_id', String(newObjectId));
-  formData.set('_save', 'Save');
-
-  console.log(`Slot ${item.slot}: POSTing to ${item.postUrl} with object_id=${newObjectId}`);
-
-  const res = await fetch(item.postUrl, {
-    method: 'POST',
-    body: formData,   // no Content-Type header — browser sets multipart boundary automatically
-    credentials: 'include',
-    redirect: 'follow',
-  });
-
-  console.log(`Slot ${item.slot}: response status=${res.status} url=${res.url}`);
-
-  // On 500 log Django's error page
-  if (res.status === 500) {
-    const html = await res.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const summary = doc.querySelector('pre.exception_value')?.textContent?.trim()
-                 || doc.querySelector('#summary td')?.textContent?.trim()
-                 || doc.querySelector('h1')?.textContent?.trim()
-                 || '(no detail)';
-    console.error(`Slot ${item.slot} 500 — ${summary}`);
-    throw new Error(`Slot ${item.slot}: server 500 — ${summary.slice(0, 120)}`);
-  }
-
-  // Django redirects to the list on success; staying on the edit URL = validation error
-  const itemId = item.postUrl.match(/\/(\d+)\/?$/)?.[1];
-  if (itemId && res.url.includes(`/${itemId}/`)) {
-    const html = await res.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const errEl = doc.querySelector('.errornote, .errorlist li');
-    throw new Error(errEl
-      ? `Slot ${item.slot}: ${errEl.textContent.trim()}`
-      : `Slot ${item.slot} save failed (stayed on edit page). Check console for details.`);
+    clearPlan();
+    setStatus(overlay, `✗ ${err.message}`, 'error');
   }
 }
 
-// ── Overlay UI ───────────────────────────────────────────────────────────────
+function advanceCascade(plan) {
+  if (plan.nextIndex >= plan.items.length) {
+    clearPlan();
+    const overlay = createOverlay();
+    setStatus(overlay, `✓ Done — post ${plan.newPostId} is now in slot 1.`, 'success');
+    setTimeout(() => overlay.remove(), 5000);
+    return;
+  }
+
+  const overlay = createOverlay();
+  const completed = plan.nextIndex;
+  setStatus(overlay,
+    completed === 0
+      ? `Navigating to slot 1 of ${plan.items.length}…`
+      : `Slot ${completed} saved — navigating to slot ${plan.nextIndex + 1}…`
+  );
+  setTimeout(() => { window.location.href = plan.items[plan.nextIndex].editUrl; }, 600);
+}
+
+// ── Edit page ─────────────────────────────────────────────────────────────────
+
+function handleEditPage() {
+  const plan = readPlan();
+  if (!plan) return;
+
+  const item = plan.items[plan.nextIndex];
+  if (!item) return;
+
+  // Confirm we're on the right item's edit page
+  const expectedId = item.editUrl.match(/\/(\d+)\//)?.[1];
+  if (!expectedId || !window.location.pathname.includes(`/${expectedId}/`)) return;
+
+  // Wait for Grappelli JS to finish initialising before touching the form
+  setTimeout(() => applyAndSave(item, plan), 1000);
+}
+
+function applyAndSave(item, plan) {
+  const overlay = createOverlay();
+  setStatus(overlay, `Slot ${item.slot}: setting post ID to ${item.newObjectId}…`);
+
+  try {
+    const objectIdField = document.querySelector('[name="object_id"]');
+    if (!objectIdField) throw new Error('object_id field not found.');
+
+    objectIdField.removeAttribute('readonly');
+    objectIdField.removeAttribute('disabled');
+    objectIdField.value = String(item.newObjectId);
+
+    // Advance the plan BEFORE submitting so the list page knows what's next
+    plan.nextIndex++;
+    savePlan(plan);
+
+    // Click Save — real browser form submission (sec-fetch-mode: navigate)
+    const saveBtn = document.querySelector('[name="_save"]');
+    if (!saveBtn) throw new Error('Save button not found.');
+    saveBtn.click();
+
+  } catch (err) {
+    clearPlan();
+    setStatus(overlay, `✗ ${err.message}`, 'error');
+  }
+}
+
+// ── SessionStorage helpers ────────────────────────────────────────────────────
+
+function savePlan(plan)  { sessionStorage.setItem(CASCADE_KEY, JSON.stringify(plan)); }
+function readPlan()      { try { return JSON.parse(sessionStorage.getItem(CASCADE_KEY)); } catch { return null; } }
+function clearPlan()     { sessionStorage.removeItem(CASCADE_KEY); }
+
+// ── Overlay UI ────────────────────────────────────────────────────────────────
 
 function createOverlay() {
+  document.getElementById('skybox-push-overlay')?.remove();
   const div = document.createElement('div');
   div.id = 'skybox-push-overlay';
   div.innerHTML = `
