@@ -342,8 +342,13 @@ async function runApply() {
 
     // 7. Notify via Slack
     const titles = posts.slice(0, applied).map(p => p.title);
+    const subject = failed > 0 && applied === 0
+      ? `Earthbox update failed (${failed} slots failed)`
+      : failed > 0
+      ? `Earthbox: ${titles.join(' | ')} (${failed} failed)`
+      : `Earthbox: ${titles.join(' | ')}`;
     await sendSlackEmail(
-      `Earthbox: ${titles.join(' | ')}`,
+      subject,
       '',
       env
     );
