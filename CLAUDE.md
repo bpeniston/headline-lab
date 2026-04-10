@@ -9,8 +9,28 @@ that adds tools to the Athena CMS shared by the **GE360** family of
 publications. Currently deployed for Defense One; being extended to the full
 family.
 
-Four features
+Five features
 -------------
+
+### Post Editor (`server/add-post.html`, `content/main.js`)
+
+Standalone page at `navybook.com/D1/seo/add-post.html`. A clean two-panel
+writing UI (better than Athena's Django admin) for drafting posts before they
+enter the CMS.
+
+**Left pane:** Headline (auto-generates slug), subheadline, Quill rich-text
+editor, endnote (collapsible). **Right sidebar:** publish date/time, expiration,
+highlight label, tags, flags (sponsored, evergreen, suppress options), canonical
+URL, video URL. Autosaves to `localStorage`.
+
+**"Open in CMS" flow:** encodes all field data as base64 JSON → opens
+`admin.govexec.com/athena/post_manager/post/add/#prefill=<base64>` → extension's
+`checkPrefill()` in `main.js` detects the hash, decodes it, and populates all
+Athena form fields (including CKEditor content via `setData()`). Shows a brief
+confirmation banner. Hash is cleared from URL after population.
+
+**Fields NOT pre-filled** (require Grappelli autocomplete in Athena): author,
+primary category, topics, featured image.
 
 ### UI Tweaks (`content/main.js`, `styles/tweaks.css`)
 
