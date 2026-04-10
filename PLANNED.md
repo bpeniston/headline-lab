@@ -1,22 +1,13 @@
 # Athena Tools — Planned Features
 
 ## Earthbox auto-updater
-Populate the 5 editorial Earthbox slots with top GA4 articles, scored by `month_views + week_views + day_views` (same weighting as Trending Topics). Runs as a launchd job on the Air at 5:30am (30 min after Trending).
+✓ **Deployed 2026-04-10.** Runs as a launchd job on the Air at 5:30am nightly.
 
-**Scripts:**
-- `server/earthbox-posts.php` — GA4 queries, title scraping, sponsored filtering, returns top 6
-- `scripts/apply-earthbox.js` — Playwright apply script (--setup, --dry-run flags)
-- `scripts/com.navybook.earthbox-apply.plist` — launchd plist
-
-**Candidate filtering — exclude:**
-- Homepage, topic landers (`/topic/` in path), non-article paths
-- Sponsored/native-ad posts — detect via `_is_sponsored_content` checkbox (not `title_override`)
-
-**Notes:**
-- Post ID extracted from GA4 page path (5–7 digit number, e.g. `/policy/2024/03/title/123456/`)
+**Key implementation notes:**
+- POST requires `_save`, tracking pixel formset management form, and `suppress_label` preserved from GET
 - `image_override` deleted on each save so post's own featured image is used
-- No Grappelli autocomplete needed — post ID already known from GA4
-- Article oref: `oref=d1-earthbox-post`
+- Sponsored wall detected via `_is_sponsored_content` checkbox (not `title_override`)
+- Post ID extracted from GA4 page path (5–7 digit number)
 
 ## Expand to full GE360 family (Trending Topics)
 Currently only Defense One is configured. Each additional pub needs:

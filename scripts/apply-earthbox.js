@@ -258,6 +258,9 @@ async function runApply() {
           const imgId  = doc.querySelector('[name="image_override-0-id"]')?.value || '';
           const hasImg = !!imgId;
 
+          // Read suppress_label checkbox state to preserve it
+          const suppressLabel = doc.querySelector('[name="suppress_label"]')?.checked;
+
           // Step 2: POST the updated form
           const fd = new FormData();
           fd.append('csrfmiddlewaretoken', csrf);
@@ -272,7 +275,7 @@ async function runApply() {
           fd.append('url_override',        '');
           fd.append('title_override',      '');
           fd.append('label_override',      '');
-          // suppress_label: omit to leave as-is
+          if (suppressLabel) fd.append('suppress_label', 'on');
 
           // Image override formset — delete the existing image so the
           // post's own featured image is used instead
@@ -284,10 +287,26 @@ async function runApply() {
             fd.append('image_override-0-DELETE', 'on');
           }
 
+          // Tracking pixel inline formset — required management form
+          fd.append('base-trackingpixel-content_type-object_id-TOTAL_FORMS',   '1');
+          fd.append('base-trackingpixel-content_type-object_id-INITIAL_FORMS', '0');
+          fd.append('base-trackingpixel-content_type-object_id-MAX_NUM_FORMS', '1');
+          fd.append('base-trackingpixel-content_type-object_id-0-pixel_html',  '');
+          fd.append('base-trackingpixel-content_type-object_id-0-id',          '');
+
+          fd.append('_save', 'Save');
+
           const saveRes = await fetch(editUrl, {
             method: 'POST', body: fd, credentials: 'include',
           });
-          if (!saveRes.ok) return { error: `POST returned ${saveRes.status}` };
+          if (!saveRes.ok) {
+            const errText = await saveRes.text().catch(() => '');
+            // Extract Django error message from HTML if present
+            const errMatch = errText.match(/<pre class="exception_value">([\s\S]*?)<\/pre>/) ||
+                             errText.match(/<title>(.*?)<\/title>/);
+            const detail = errMatch ? errMatch[1].trim().slice(0, 300) : errText.slice(0, 300);
+            return { error: `POST returned ${saveRes.status}: ${detail}` };
+          }
 
           // Success: Django redirects to the list page (no item ID in URL)
           const landed = saveRes.url;
