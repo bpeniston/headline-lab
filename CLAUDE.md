@@ -1,175 +1,148 @@
-# Athena Tools — Claude Project Context
+Athena Tools — Claude Project Context
+=====================================
 
-## What this project is
-A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`) that adds tools to the Athena CMS shared by the **GE360** family of publications (see below). Currently deployed for Defense One; being extended to the full family.
+What this project is
+--------------------
 
-## Four features
+A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`)
+that adds tools to the Athena CMS shared by the **GE360** family of
+publications. Currently deployed for Defense One; being extended to the full
+family.
+
+Four features
+-------------
 
 ### UI Tweaks (`content/main.js`, `styles/tweaks.css`)
-Runs on all CMS post editor pages. Reorders form fields, groups date/status into a cleaner bar.
+
+Runs on all CMS post editor pages. Reorders form fields, groups date/status into
+a cleaner bar.
 
 ### Headline Lab (`content/main.js`, `seo-api.php`)
-On the CMS post editor: reads article body → calls `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO headline/subhed/slug options.
+
+On the CMS post editor: reads article body → calls
+`navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO
+headline/subhed/slug options.
 
 ### Skybox Push (`content/skybox.js`, `styles/skybox.css`)
-Works on all five GE360 publication sites. Bookmarklet detects which pub you're on and opens that pub's skybox admin page.
 
-- Triggered by a bookmarklet on any article page across all five pubs
-- Bookmarklet detects the pub from `location.hostname` and opens the correct CMS skybox list page with `#push=POSTID`
-- Content script cascades slots 1–5: each article shifts down one slot, new article lands in slot 1
-- Override fields (URL, Title, Label) travel with their article; slot 1 gets a clean slate
-- Slot 6 (ad) is never touched (script only reads slots 1–5)
-- **Sponsored slots act as a wall**: if `title_override` starts with `"Sponsored:"`, that slot and everything below it is untouched; cascade stops just before it
-- Uses real browser navigation + `saveBtn.click()` per slot — fetch() POST rejected by Athena server (requires `sec-fetch-mode: navigate`)
-- State carried across page navigations via `sessionStorage`
+Bookmarklet on any GE360 article page opens that pub's skybox admin with
+`#push=POSTID`. Content script cascades slots 1–5 (slot 6 is an ad, never
+touched). Override fields travel with their article; slot 1 gets a clean slate.
+State carried via `sessionStorage`. Uses real browser navigation +
+`saveBtn.click()` — fetch() POST is rejected by Athena (requires
+`sec-fetch-mode: navigate`).
 
-**CMS skybox paths by pub:**
-| Publication | CMS skybox list path |
-|---|---|
-| Defense One | `/athena/curate/defenseoneskyboxitem/` |
-| GovExec | `/athena/curate/govexecskyboxitem/` |
-| Nextgov | `/athena/curate/nextgovskyboxitem/` |
-| Route Fifty | `/athena/curate/routefiftyskyboxitem/` |
-| Washington Technology | `/athena/curate/wtskyboxitem/` |
+**Sponsored wall:** if `title_override` starts with `"Sponsored:"`, that slot
+and everything below is untouched.
 
-**Bookmarklet** (save as a browser bookmark with this URL):
-```
-javascript:(function(){var h=location.hostname;var map={'defenseone.com':'defenseoneskyboxitem','govexec.com':'govexecskyboxitem','nextgov.com':'nextgovskyboxitem','route-fifty.com':'routefiftyskyboxitem','washingtontechnology.com':'wtskyboxitem'};var model;for(var k in map){if(h===k||h.endsWith('.'+k)){model=map[k];break;}}if(!model){alert('Not on a supported GE360 publication page.');return;}var m=location.pathname.match(/\/(\d{5,7})\/?$/);if(!m){alert('No post ID found — make sure you\'re on an article page.');return;}window.open('https://admin.govexec.com/athena/curate/'+model+'/#push='+m[1]);})();
-```
-
-**Skybox item edit form fields:** `content_type` (22 = Post), `object_id` (post ID integer), `status` (live), `live_date_0`/`live_date_1` (split date/time), `expiration_date_0`/`expiration_date_1`, `url_override`, `title_override`, `label_override`, `suppress_label` (checkbox), `image_override-*` (inline formset)
+**Skybox item edit form fields:** `content_type` (22 = Post), `object_id`,
+`status`, `live_date_0/1`, `expiration_date_0/1`, `url_override`,
+`title_override`, `label_override`, `suppress_label`, `image_override-*`
 
 ### Trending Topics (`content/trending.js`, `styles/trending.css`, `server/trending-topics.php`)
-On the D1-Trending items list page (`admin.govexec.com/athena/curate/defenseonetrendingitem/`):
-- Calls `navybook.com/D1/seo/trending-topics.php`
-- Backend queries GA4 Data API (OAuth), scrapes top articles for `/topic/{slug}/?oref=d1-article-topics` tags
-- Scores: month_views + week_views + day_views per topic
-- Returns top 7; user reviews and clicks Apply
-- Extension POSTs form updates to each Live item's edit page via Grappelli autocomplete
 
-**Nightly auto-apply launched: 2026-04-08.** `scripts/apply-trending.js`, running as a launchd job on the M1 MacBook Air at 5:00am. Uses a saved Playwright browser session to avoid re-doing 2FA nightly. Skips sponsored slots. Sends a Slack notification (topic list in subject line) on success, or a re-login alert if the session has expired. See SETUP.md for full details.
+On the D1-Trending items list page: calls `trending-topics.php` → GA4 Data API
+(OAuth) → scrapes article topic tags → scores `month_views + week_views +
+day_views` → returns top 7 for review → POSTs updates via Grappelli
+autocomplete.
 
-## GE360 Publication Family
+**Nightly auto-apply (launched 2026-04-08):** `scripts/apply-trending.js` runs
+as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
+nightly 2FA). Skips sponsored slots. Sends Slack notification on success or
+re-login alert if session expired. See SETUP.md.
 
-The newsroom operates five publications under the **GE360** umbrella, all running the Athena CMS at `admin.govexec.com`.
+GE360 Publication Family
+------------------------
 
-| Publication | Site URL | Pub key | CMS Trending path |
-|---|---|---|---|
-| Defense One | defenseone.com | `defenseone` | `/athena/curate/defenseonetrendingitem/` |
-| GovExec | govexec.com | `govexec` | `/athena/curate/govexectrendingitem/` |
-| Nextgov | nextgov.com | `nextgov` | `/athena/curate/nextgovtrendingitem/` |
-| Route Fifty | route-fifty.com | `routefifty` | `/athena/curate/routefiftytrendingtopicitem/` |
-| Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/` |
+All five pubs run Athena CMS at `admin.govexec.com`.
 
-**Known per-publication details (Defense One only so far):**
-- GA4 property: `353836589` (account `395628`)
-- Article topic oref: `oref=d1-article-topics`
-- Grappelli autocomplete model: `app_label=post_manager&model_name=defenseonetopic`
-- CMS content_type for Topic: `382`
+| Publication           | Site URL                 | Pub key                | CMS Trending path                             | CMS Skybox path                        | CMS Earthbox path                        | Earthbox model PK |
+|-----------------------|--------------------------|------------------------|-----------------------------------------------|----------------------------------------|------------------------------------------|-------------------|
+| Defense One           | defenseone.com           | `defenseone`           | `/athena/curate/defenseonetrendingitem/`      | `/athena/curate/defenseoneskyboxitem/` | `/athena/curate/defenseoneearthboxitem/` | 548               |
+| GovExec               | govexec.com              | `govexec`              | `/athena/curate/govexectrendingitem/`         | `/athena/curate/govexecskyboxitem/`    | `/athena/curate/govexecearthboxitem/`    | 501               |
+| Nextgov               | nextgov.com              | `nextgov`              | `/athena/curate/nextgovtrendingitem/`         | `/athena/curate/nextgovskyboxitem/`    | `/athena/curate/nextgovearthboxitem/`    | 494               |
+| Route Fifty           | route-fifty.com          | `routefifty`           | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
+| Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
 
-**Pending for GovExec, Nextgov, Route Fifty, Washington Technology:**
-- GA4 property IDs (need GA4 access permissions)
-- Grappelli model names (get from autocomplete field on each pub's trending item edit page)
-- Article topic oref values (likely `oref={pub}-article-topics`; confirm by inspecting a live article page per pub)
-- content_type integer for Topic (may differ per pub; get from edit page form)
+**Defense One specifics (only pub fully configured so far):** - GA4 property:
+`353836589` (account `395628`) — do NOT use `529112613` (extension's own
+analytics) - Article topic oref: `oref=d1-article-topics`; article tags appear
+twice in DOM (desktop/mobile) — deduplicate by slug - Grappelli autocomplete
+model: `app_label=post_manager&model_name=defenseonetopic` - CMS content_type
+for Topic: `382`; for Post: `22`
 
-**Sponsored topic slots:**
-Some Trending slots are sold to advertisers; their `title_override` text begins with `"Sponsored:"`. The auto-apply function must **skip** any slot currently holding a sponsored topic and leave it unchanged.
+**Other pubs still need:** GA4 property IDs, Grappelli model names, topic oref
+values, content_type integers. (Pattern is likely `oref={pub}-article-topics`;
+confirm by inspecting a live article page.)
 
-## Key technical details
+Key technical details
+---------------------
 
-**CMS / Grappelli**
-- Athena CMS is Django + Grappelli admin at `admin.govexec.com`
-- D1-Trending item edit form fields: `content_type` (382 = Topic), `object_id` (integer), `status`, `live_date`, `expiration_date`, `url`, `title_override`
-- Grappelli autocomplete: `GET /grappelli/lookup/autocomplete/?term={name}&app_label=post_manager&model_name=defenseonetopic&query_string=t=id`
-  Returns: `[{"value": 32, "label": "Iran (Defense One)"}]`
+**CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli
+autocomplete: `GET
+/grappelli/lookup/autocomplete/?term={name}&app_label=post_manager&model_name=defenseonetopic&query_string=t=id`
+Returns: `[{"value": 32, "label": "Iran (Defense One)"}]` - D1-Trending edit
+form fields: `content_type` (382), `object_id`, `status`, `live_date`,
+`expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type`
+(22 = Post), `object_id` (post ID), `status`, `live_date_0/1`, override fields,
+`_is_sponsored_content` checkbox (use this — not `title_override` — to detect
+sponsored wall slots). `image_override` deleted on save so post's featured image
+is used.
 
-**GA4**
-- Defense One editorial property ID: `353836589` (account `395628`)
-- Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on the server
-- Do NOT use property `529112613` — that's the extension's own analytics
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server -
+Scoring: `score = month_views + week_views + day_views`
 
-**Article topics HTML**
-- `<a href="/topic/{slug}/?oref=d1-article-topics">Label</a>` inside `<article>`
-- Tags appear twice in DOM (desktop/mobile) — deduplicate by slug
+Repo & deploy
+-------------
 
-## Repo & deploy
-- Local (MBP): `~/Documents/devstuff/headline-lab`
-- Local (Air): `~/headline-lab` (cloned; used for cron automation scripts)
-- GitHub: `https://github.com/bpeniston/headline-lab`
-- Server: `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/`
-- Deploy: `git push` then run `deploy` alias in Terminal
-- Upload PHP directly: `scp server/FILE.php bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/seo/FILE.php`
-- Reload extension: `chrome://extensions` → Athena Tools → ↺
+-   Local (MBP): `~/Documents/devstuff/headline-lab`
 
-## Server cache files (all in `/home/bradwu/`)
-- `ga4-oauth.json` — OAuth credentials
-- `trending-main-cache.json` — 1hr scored results cache
-- `trending-article-cache.json` — 24hr article→topics cache
-- `trending-topicname-cache.json` — 7-day slug→display name cache
-- `earthbox-cache.json` — 1hr scored article results cache
-- `earthbox-title-cache.json` — 24hr article title + sponsored-flag cache
-- `headline-lab-usage.log` — usage log
+-   Local (Air): `~/headline-lab` (used for automation scripts)
 
-## Secrets & credentials
-- DreamHost SSH: passwordless from both MBP (`bradwu@pdx1-shared-a1-08.dreamhost.com`) and Air (SSH key installed)
-- CMS credentials: stored in `~/headline-lab/.env` on the Air (never in GitHub)
-- GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost server
+-   GitHub: `https://github.com/bpeniston/headline-lab`
 
-## Extension manifest
-- Version: 1.4.0
-- Permissions: `storage`, `alarms`, `notifications`
-- Host permissions: `admin.govexec.com`, `www.navybook.com`
-- Background: `background.js` service worker (minimal; automation lives on the Air)
-- Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
-- Content script 2: `admin.govexec.com/athena/curate/defenseonetrendingitem*` → `trending.js` + `trending.css`
-- Content script 3: all five pub `*skyboxitem/*` paths → `skybox.js` + `skybox.css`
+-   Server: `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/`
 
-## Earthbox auto-updater (planned)
-Populate the 5 editorial Earthbox slots with the most-read article pages, scored by GA4 traffic (same day/week/month weighting as Trending Topics). Earthboxes appear at the bottom of articles as a row of section/story thumbnails.
+-   Deploy: `git push` then run `deploy` alias
 
-**Scoring logic:** identical to Trending Topics — `score = month_views + week_views + day_views` (recency-weighted). Query GA4 `pagePath` dimension with `screenPageViews` metric for `defenseone.com`. Extract post ID from the URL path (5–7 digit number, e.g. `/policy/2024/03/title/123456/`).
+-   Upload PHP directly: `scp server/FILE.php
+    bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/seo/FILE.php`
 
-**Candidate filtering — exclude:**
-- Homepage (`/` or bare domain)
-- Topic lander pages (`/topic/` in path)
-- Sponsored/native-ad posts (detectable by URL pattern or post metadata — TBD)
-- Any non-article path (search, tag, about, etc.)
+-   Reload extension: `chrome://extensions` → Athena Tools → ↺
 
-**Article oref:** `oref=d1-earthbox-post` (already used in live earthbox links — GA4 click data available under this filter)
+Secrets & credentials
+---------------------
 
-**CMS form fields (confirmed from edit page inspection):**
-- `content_type` — dropdown; set to `22` (Post Manager - Post) for article slots. Currently slots hold Topics (`382` = Defense One Topic); the auto-updater will switch them to Posts.
-- `object_id` — integer; the post ID extracted from the GA4 page path
-- `status` — set to `live`
-- `live_date_0` / `live_date_1` — split date/time (keep existing or set to now)
-- `url_override`, `title_override`, `label_override`, `suppress_label` — override fields (clear for auto-applied slots)
-- `_is_sponsored_content` — checkbox; **sponsored slot detection** (not title_override — use this to identify the wall slot)
-- Autocomplete type: **Grappelli generic** (`[content_type, object_id]` pair), same as Trending Topics
+-   DreamHost SSH: passwordless from MBP and Air
 
-**Architecture:** Playwright script on the Air (same pattern as `apply-trending.js`) — POSTs to each edit page via `fetch()` inside `page.evaluate()`. Post ID is already known from GA4 so no Grappelli autocomplete lookup needed. Existing `image_override` is deleted on each save so the post's own featured image is used.
+-   CMS credentials: `~/headline-lab/.env` on the Air (never in GitHub)
 
-**Scripts:**
-- `server/earthbox-posts.php` — GA4 queries, title scraping, sponsored filtering, returns top 6
-- `scripts/apply-earthbox.js` — Playwright apply script (--setup, --dry-run flags)
-- `scripts/com.navybook.earthbox-apply.plist` — launchd job, runs 5:30am daily (30 min after Trending)
+-   GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost
 
-**Cache files (server):** `earthbox-cache.json` (1hr), `earthbox-title-cache.json` (24hr)
+-   Monthly stats token: `/home/bradwu/.headline-lab-config.ini`
 
-**CMS paths (all confirmed from MODEL_URL_ARRAY):**
-| Publication | CMS earthbox list path | Model PK |
-|---|---|---|
-| Defense One | `/athena/curate/defenseoneearthboxitem/` | 548 |
-| GovExec | `/athena/curate/govexecearthboxitem/` | 501 |
-| Nextgov | `/athena/curate/nextgovearthboxitem/` | 494 |
-| Route Fifty | `/athena/curate/routefiftyearthboxitem/` | 510 |
-| Washington Technology | `/athena/curate/wtearthboxitem/` | 621 |
+Extension manifest
+------------------
 
-**Sponsored slot wall:** read `_is_sponsored_content` checkbox on each slot during planning; skip (preserve) any checked slot — same wall logic as Skybox.
+-   Version: 1.4.0 \| Permissions: `storage`, `alarms`, `notifications` \| Host
+    permissions: `admin.govexec.com`, `www.navybook.com`
 
-## Trending Topics impact measurement
-- **Baseline established: 2026-04-08** (day automation launched)
-- Pre-automation monthly pageviews on `oref=d1-article-topics` links (Oct 2025–Mar 2026): avg **3,005/month**
-- **Automated monthly report** fires 6am on the 1st of each month via `scripts/monthly-report.js` on the Air — fetches previous month's count from `monthly-stats.php` on DreamHost, compares to baseline, sends Slack email
-- `monthly-stats.php` is protected by `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` (not in GitHub)
-- To pull data manually: SSH to DreamHost, use GA4 OAuth at `/home/bradwu/ga4-oauth.json`, query property `353836589`, dimension `yearMonth`, metric `screenPageViews`, filter `fullPageUrl` contains `oref=d1-article-topics`
+-   Background: `background.js` service worker (minimal; automation lives on the
+    Air)
+
+-   Content script 1: all `admin.govexec.com/*` → `main.js` + `tweaks.css`
+
+-   Content script 2: `defenseonetrendingitem*` → `trending.js` + `trending.css`
+
+-   Content script 3: all five pub `*skyboxitem/*` → `skybox.js` + `skybox.css`
+
+Earthbox auto-updater (in development)
+--------------------------------------
+
+Playwright script on the Air (`scripts/apply-earthbox.js`, same pattern as
+`apply-trending.js`) populates 5 editorial Earthbox slots with top GA4 articles.
+Runs via launchd at 5:30am. Server-side: `server/earthbox-posts.php`. Sponsored
+wall uses `_is_sponsored_content` checkbox. See PLANNED.md for full spec.
+
+## Planned features
+see PLANNED.md
