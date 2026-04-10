@@ -10,6 +10,7 @@
   injectHeaderButton();
   injectPanel();
   waitForCKEditor(function() { updateBtnState(); });
+  checkPrefill();
 
   // ============================================================
   // DOM TWEAKS
@@ -302,6 +303,105 @@
   }
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ============================================================
+  // PREFILL FROM POST EDITOR
+  // Triggered when the add-post page is opened with #prefill=<base64>
+  // from navybook.com/D1/seo/post-editor.html
+  // ============================================================
+  function checkPrefill() {
+    if (!location.pathname.startsWith('/athena/post_manager/post/')) return;
+    var hash = location.hash;
+    if (!hash.startsWith('#prefill=')) return;
+
+    var encoded = hash.slice('#prefill='.length);
+    var data;
+    try {
+      data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    } catch(e) { return; }
+
+    // Clear the hash so it doesn't persist on reload
+    history.replaceState(null, '', location.pathname + location.search);
+
+    function setVal(id, val) {
+      var el = document.getElementById(id);
+      if (el && val !== undefined && val !== null && val !== '') el.value = val;
+    }
+    function setChk(id, val) {
+      var el = document.getElementById(id);
+      if (el && val !== undefined) el.checked = !!val;
+    }
+
+    setVal('id_title', data.title);
+    setVal('id_slug', data.slug);
+    setVal('id_subheader', data.subhed);
+
+    if (data.status) {
+      var statusEl = document.getElementById('id_status');
+      if (statusEl) statusEl.value = data.status;
+    }
+
+    if (data.pub_date) {
+      setVal('id_date_published_0', data.pub_date);
+      setVal('id_date_published_1', (data.pub_time || '00:00') + ':00');
+    }
+    if (data.exp_date) {
+      setVal('id_expiration_date_0', data.exp_date);
+      setVal('id_expiration_date_1', (data.exp_time || '00:00') + ':00');
+    }
+
+    setVal('id_endnote', data.endnote);
+    setVal('id_canonical_url', data.canonical_url);
+    setVal('id_video', data.video);
+
+    if (data.highlight_tag !== undefined) {
+      var hlEl = document.getElementById('id_highlight_tag');
+      if (hlEl) hlEl.value = data.highlight_tag || '';
+    }
+
+    setChk('id_is_sponsored',                  data.is_sponsored);
+    setChk('id_is_evergreen',                  data.is_evergreen);
+    setChk('id_suppress_from_river',           data.suppress_from_river);
+    setChk('id_suppress_from_insights_river',  data.suppress_from_insights);
+    setChk('id_suppress_from_google_search',   data.suppress_from_google);
+
+    // Trigger slug auto-update from title (Athena uses jQuery slugify)
+    var titleEl = document.getElementById('id_title');
+    if (titleEl) {
+      titleEl.dispatchEvent(new Event('change', { bubbles: true }));
+      titleEl.dispatchEvent(new Event('input',  { bubbles: true }));
+    }
+
+    // Set CKEditor content (waits for editor to be ready)
+    if (data.content) {
+      waitForCKEditor(function() {
+        try { CKEDITOR.instances['id_content'].setData(data.content); } catch(e) {}
+        updateBtnState();
+      });
+    }
+
+    // Tags textarea (Grappelli widget — best-effort)
+    if (data.tags) {
+      var tagsEl = document.querySelector('textarea[name="tags"]');
+      if (tagsEl) tagsEl.value = data.tags;
+    }
+
+    // Success banner
+    var banner = document.createElement('div');
+    banner.style.cssText = [
+      'position:fixed', 'top:14px', 'left:50%', 'transform:translateX(-50%)',
+      'background:#2d7dd2', 'color:#fff', 'padding:9px 22px',
+      'border-radius:6px', 'font-size:13px', 'font-weight:600',
+      'z-index:99999', 'box-shadow:0 3px 10px rgba(0,0,0,0.25)',
+      'pointer-events:none', 'transition:opacity 0.4s',
+    ].join(';');
+    banner.textContent = '\u2713 Post fields pre-filled from Post Editor';
+    document.body.appendChild(banner);
+    setTimeout(function() {
+      banner.style.opacity = '0';
+      setTimeout(function() { banner.remove(); }, 400);
+    }, 3000);
   }
 
 })();
