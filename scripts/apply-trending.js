@@ -28,6 +28,7 @@ const API_URL       = 'https://www.navybook.com/D1/seo/trending-topics.php';
 const CMS_BASE      = 'https://admin.govexec.com';
 const LIST_URL      = `${CMS_BASE}/athena/curate/defenseonetrendingitem/`;
 const SLACK_EMAIL   = 'u5q8h4r0o7x8o9l7@govexec.slack.com';
+const LABEL         = 'Topics';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
@@ -147,6 +148,7 @@ async function runApply() {
 
   // 1. Check session file exists
   if (!fs.existsSync(SESSION_FILE)) {
+    await sendSlackEmail(`${LABEL}: Problem`, `No session file found at ${SESSION_FILE}. Run with --setup first.`, env);
     die(`No session file found at ${SESSION_FILE}. Run with --setup first.`);
   }
 
@@ -156,6 +158,7 @@ async function runApply() {
   try {
     topics = await fetchTopics();
   } catch (e) {
+    await sendSlackEmail(`${LABEL}: Problem`, `API fetch failed: ${e.message}`, env);
     die(`API fetch failed: ${e.message}`);
   }
   log(`Got ${topics.length} recommendations: ${topics.map(t => t.label).join(', ')}`);
@@ -179,7 +182,7 @@ async function runApply() {
     // Detect session expiry — redirected to login
     if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') || page.url().includes('/sso/')) {
       await sendSlackEmail(
-        'Action required: The Air is logged out of the CMS',
+        `${LABEL}: Problem`,
         'The Air is logged out of the CMS.\n\nUse the Screen Sharing app to access the Air: vnc://100.117.250.37\n\nThen in Terminal:\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup',
         env
       );
@@ -214,13 +217,17 @@ async function runApply() {
 
     if (!liveItems.length) {
       log('No editable slots found — nothing to update.');
+      await sendSlackEmail(`${LABEL}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env);
       return;
     }
 
     // 6. Apply each topic
-    const count   = Math.min(liveItems.length, topics.length);
-    let applied   = 0;
-    let failed    = 0;
+    const count     = Math.min(liveItems.length, topics.length);
+    const oldLabels = liveItems.slice(0, count).map(i => i.title);
+    const newLabels = topics.slice(0, count).map(t => t.label);
+    let applied     = 0;
+    let failed      = 0;
+    const errors    = [];
 
     for (let i = 0; i < count; i++) {
       const item  = liveItems[i];
@@ -284,6 +291,7 @@ async function runApply() {
         applied++;
       } catch (err) {
         log(`  ✗ Failed for item ${item.id}: ${err.message}`);
+        errors.push(`Slot ${item.id}: ${err.message}`);
         failed++;
       }
     }
@@ -293,13 +301,12 @@ async function runApply() {
 
     log(`=== Done: ${applied} applied, ${failed} failed, ${sponsoredCount} sponsored skipped ===`);
 
-    // 8. Notify via Slack email
-    const appliedLabels = topics.slice(0, count).map(t => t.label);
-    await sendSlackEmail(
-      appliedLabels.join(' | '),
-      '',
-      env
-    );
+    // 8. Notify via Slack
+    const unchanged = failed === 0 && newLabels.every((l, i) => l === oldLabels[i]);
+    const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
+    let body        = `New: ${newLabels.join(', ')}\nOld: ${oldLabels.join(', ')}`;
+    if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
+    await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
   } finally {
     await browser.close();

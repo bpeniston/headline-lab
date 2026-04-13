@@ -70,11 +70,14 @@ This document describes the physical machines, services, and configurations that
 | Trending main cache | `/home/bradwu/trending-main-cache.json` | 1hr scored topic results |
 | Trending article cache | `/home/bradwu/trending-article-cache.json` | 24hr per-article topic cache |
 | Trending name cache | `/home/bradwu/trending-topicname-cache.json` | 7-day slug→display name cache |
+| Earthbox main cache | `/home/bradwu/earthbox-cache.json` | 1hr scored post results |
+| Earthbox title cache | `/home/bradwu/earthbox-title-cache.json` | 24hr per-article title/sponsored cache |
 | Usage log | `/home/bradwu/headline-lab-usage.log` | Headline Lab usage |
 
 ### PHP endpoints (navybook.com/D1/seo/)
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
 - `trending-topics.php` — Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON
+- `earthbox-posts.php` — Earthbox: queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON
 - `stats.php` — Returns usage log counts
 
 ---
@@ -128,6 +131,7 @@ This document describes the physical machines, services, and configurations that
 | Job | Schedule | Plist | Script | Log |
 |---|---|---|---|---|
 | D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
+| D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` | ⚠️ plist not yet installed on Air |
 | Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
 
 To reload a plist after changes:
@@ -147,11 +151,27 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 3. Parses D1 Trending Items list — skips any slot whose title starts with `"Sponsored:"`
 4. For each editable Live slot: GETs edit page for CSRF, resolves topic via Grappelli autocomplete, POSTs form
 5. Re-saves session to keep cookies fresh
-6. Sends Slack email via Gmail SMTP — topic list in subject line (`Drones | Army | Iran | …`)
+6. Sends Slack email via Gmail SMTP — subject: `Topics: Changes`, `Topics: Unchanged`, or `Topics: Problem`; body: `New: …` / `Old: …` (or error detail if Problem)
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
 **Currently Defense One only.** Will extend to other GE360 pubs once GA4 property IDs and Grappelli model names are confirmed.
+
+---
+
+### Job: Earthbox auto-apply (`apply-earthbox.js`)
+
+**Flow:**
+1. Fetches top GA4 articles from `navybook.com/D1/seo/earthbox-posts.php` (scores: month + week + day views; filters sponsored articles)
+2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
+3. Parses D1 Earthbox Items list — skips any slot where `_is_sponsored_content` is checked
+4. For each editable Live slot: GETs edit page for CSRF and current state, POSTs update (content_type=22, object_id=post_id, clears image_override so post's own image is used)
+5. Re-saves session to keep cookies fresh
+6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: `New: …` / `Old: …` (or error detail if Problem)
+
+**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
+
+**⚠️ Status: launchd plist not yet installed on Air.** Install steps in PLANNED.md.
 
 ---
 

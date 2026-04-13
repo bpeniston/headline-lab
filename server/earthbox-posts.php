@@ -197,7 +197,8 @@ function ga4_top_pages(string $token, string $property,
 function extract_title(string $html): string {
     if (!$html) return '';
     $dom = new DOMDocument();
-    @$dom->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    // Prefix forces DOMDocument to treat content as UTF-8 (avoids mangled chars)
+    @$dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
     foreach ($dom->getElementsByTagName('h1') as $h1) {
         $text = trim($h1->textContent);
         if ($text && strlen($text) > 10) return $text;
@@ -214,10 +215,11 @@ function extract_title(string $html): string {
 /** Detect sponsored/branded content from article HTML. */
 function is_sponsored(string $html): bool {
     if (!$html) return false;
+    // Note: do NOT match the broad class=".*sponsored.*" pattern — D1 nav
+    // includes skybox-item-sponsored and sponsored-nav-link on every page.
     return str_contains($html, 'sponsor-content')
         || str_contains($html, 'brandlab')
-        || str_contains($html, '"sponsored":true')
-        || (bool)preg_match('/class="[^"]*\bsponsored\b/i', $html);
+        || str_contains($html, '"sponsored":true');
 }
 
 /** Last-resort: derive a readable title from the URL path slug. */

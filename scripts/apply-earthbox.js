@@ -32,6 +32,7 @@ const API_URL      = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
 const CMS_BASE     = 'https://admin.govexec.com';
 const LIST_URL     = `${CMS_BASE}/athena/curate/defenseoneearthboxitem/`;
 const SLACK_EMAIL  = 'u5q8h4r0o7x8o9l7@govexec.slack.com';
+const LABEL        = 'Earthbox';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
@@ -132,6 +133,7 @@ async function runApply() {
   const env = loadEnv();
 
   if (!fs.existsSync(SESSION_FILE)) {
+    await sendSlackEmail(`${LABEL}: Problem`, `No session file at ${SESSION_FILE}. Run with --setup first.`, env);
     die(`No session file at ${SESSION_FILE}. Run with --setup first.`);
   }
 
@@ -141,6 +143,7 @@ async function runApply() {
   try {
     posts = await fetchPosts();
   } catch (e) {
+    await sendSlackEmail(`${LABEL}: Problem`, `API fetch failed: ${e.message}`, env);
     die(`API fetch failed: ${e.message}`);
   }
   log(`Got ${posts.length} recommendations:`);
@@ -167,7 +170,7 @@ async function runApply() {
         page.url().includes('/saml/')           ||
         page.url().includes('/sso/')) {
       await sendSlackEmail(
-        'Action required: The Air is logged out of the CMS',
+        `${LABEL}: Problem`,
         'The Earthbox auto-apply script found an expired CMS session.\n\n' +
         'Use Screen Sharing to access the Air: vnc://100.117.250.37\n\n' +
         'Then in Terminal:\n\n' +
@@ -218,14 +221,18 @@ async function runApply() {
 
     if (!liveItems.length) {
       log('No editable slots found — nothing to update.');
+      await sendSlackEmail(`${LABEL}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env);
       return;
     }
 
     // 5. Apply each post to its slot
-    const count  = Math.min(liveItems.length, posts.length);
-    let applied  = 0;
-    let failed   = 0;
-    let skipped  = 0;
+    const count      = Math.min(liveItems.length, posts.length);
+    const oldTitles  = liveItems.slice(0, count).map(i => i.title);
+    const newTitles  = posts.slice(0, count).map(p => p.title);
+    let applied      = 0;
+    let failed       = 0;
+    let skipped      = 0;
+    const errors     = [];
 
     for (let i = 0; i < count; i++) {
       const item = liveItems[i];
@@ -330,6 +337,7 @@ async function runApply() {
 
       } catch (err) {
         log(`  ✗ Failed for slot ${item.id}: ${err.message}`);
+        errors.push(`Slot ${item.id}: ${err.message}`);
         failed++;
       }
     }
@@ -341,17 +349,11 @@ async function runApply() {
         `${skipped} skipped (sponsored), ${sponsoredCount} sponsor slots untouched ===`);
 
     // 7. Notify via Slack
-    const titles = posts.slice(0, applied).map(p => p.title);
-    const subject = failed > 0 && applied === 0
-      ? `Earthbox update failed (${failed} slots failed)`
-      : failed > 0
-      ? `Earthbox: ${titles.join(' | ')} (${failed} failed)`
-      : `Earthbox: ${titles.join(' | ')}`;
-    await sendSlackEmail(
-      subject,
-      '',
-      env
-    );
+    const unchanged = failed === 0 && newTitles.every((t, i) => t === oldTitles[i]);
+    const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
+    let body        = `New: ${newTitles.join(', ')}\nOld: ${oldTitles.join(', ')}`;
+    if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
+    await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
   } finally {
     await browser.close();

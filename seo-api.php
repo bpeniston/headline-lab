@@ -346,10 +346,17 @@ Generate exactly 6 headline + subhed + slug combinations. For each provide:
 HEADLINE RULES:
 - Must reflect the main point — draw only from LEDE FACTS above
 - Sentence case (capitalize only first word and proper nouns)
-- Ideal length: 50-60 characters
-- Front-load the most important keyword when natural
+- Ideal length: 50-65 characters
+- Place the primary keyword within the first 8 words of the headline
 - Use numbers only when the article explicitly supports them
 - Prefer active voice
+- Prefer named entities — specific officials, units, weapons programs, dollar figures — over generic nouns ("Pentagon budget cuts" not "defense spending reductions"; "F-35 maintenance contract" not "military aircraft deal")
+- If the primary subject (weapon system, military unit, program name, or acronym) could be confused with a non-defense meaning, include a clarifying qualifier ("Army Rangers" not "Rangers"; "Patriot missile system" not "Patriot")
+
+LANGUAGE RULES:
+- Write in terms people actually search — ask: "would a reader type this into Google?"
+- Avoid print-era cablese: mulls, eyes, taps, amid, probe, decries, slams, vows, inks, nabs, touts, bids, pens, floats
+- Use plain, conversational language: "considers" not "mulls"; "investigates" not "probes"; "signs" not "inks"
 
 SUBHED RULES:
 - Must NOT repeat any words or phrases from its paired headline
@@ -380,7 +387,7 @@ Format your response as a JSON array with this exact structure (no extra text, n
 PROMPT;
 
     // STEP 4: Generate headlines
-    $raw_text = call_claude($prompt, 1400, 0.3);
+    $raw_text = call_claude($prompt, 1400, 0.55);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
     $headlines = json_decode(trim($raw_text), true);
