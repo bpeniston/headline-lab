@@ -117,18 +117,6 @@ This document describes the physical machines, services, and configurations that
   node scripts/apply-trending.js --setup
   ```
 
-### Launchd job
-- **Plist:** `~/Library/LaunchAgents/com.navybook.trending-apply.plist`
-- **Source:** `scripts/com.navybook.trending-apply.plist` in repo
-- **Schedule:** 5:00am nightly
-- **Log:** `~/headline-lab/logs/trending-apply.log`
-- To reload after plist changes:
-  ```
-  launchctl unload ~/Library/LaunchAgents/com.navybook.trending-apply.plist
-  launchctl load ~/Library/LaunchAgents/com.navybook.trending-apply.plist
-  ```
-- To run manually: `launchctl start com.navybook.trending-apply`
-
 ### Launchd jobs
 
 | Job | Schedule | Plist | Script | Log |
@@ -168,10 +156,10 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 **Flow:**
 1. Fetches top GA4 articles from `navybook.com/D1/seo/earthbox-posts.php` (scores: month + week + day views; filters sponsored articles)
 2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
-3. Parses D1 Earthbox Items list — skips any slot where `_is_sponsored_content` is checked
-4. For each editable Live slot: GETs edit page for CSRF and current state, POSTs update (content_type=22, object_id=post_id, clears image_override so post's own image is used)
+3. Parses D1 Earthbox Items list — reads all Live slots (note: `_is_sponsored_content` column is not shown on the list page)
+4. For each Live slot: GETs edit page for CSRF and current state; skips if `_is_sponsored_content` checkbox is checked; otherwise POSTs update (content_type=22, object_id=post_id, clears image_override so post's own featured image is used)
 5. Re-saves session to keep cookies fresh
-6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: `New: …` / `Old: …` (or error detail if Problem)
+6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: bullet list of updated headlines (sponsored slots appear inline as `SPONSORED: …`); Problem messages include error detail
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
@@ -181,21 +169,7 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 
 The Air pings DreamHost every 10 minutes via curl → `heartbeat.php`, which writes the current Unix timestamp to `~/air-heartbeat.txt`. At 4:50am (10 min before the first nightly job), `air-check.py` on DreamHost checks the file age. If the last heartbeat is more than 20 minutes old, it sends a `Air: Problem` Slack alert with recovery instructions.
 
-**Install on Air (once reachable):**
-```bash
-cp ~/headline-lab/scripts/com.navybook.heartbeat.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.navybook.heartbeat.plist
-```
-
-**Install on DreamHost:**
-```bash
-# Deploy the PHP and Python files:
-scp server/heartbeat.php server/air-check.py bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/
-# Add cron via DreamHost panel or:
-ssh bradwu@pdx1-shared-a1-08.dreamhost.com
-crontab -e
-# Add: 50 4 * * * /usr/bin/python3 /home/bradwu/navybook.com/D1/seo/air-check.py
-```
+**Status:** fully installed and running. Air plist loaded, DreamHost cron active.
 
 ---
 
@@ -217,11 +191,7 @@ When the Air stops responding to SSH or VNC:
    cd ~/headline-lab && git pull
    ```
 
-**Tailscale note:** Both the App Store Tailscale (system extension) and a Homebrew formula are installed on the Air. Only the App Store version should run. To clean up the Homebrew formula when next on the Air:
-```bash
-brew uninstall tailscale
-```
-Do not start the Homebrew `tailscaled` daemon — it conflicts with the system extension.
+**Tailscale note:** Only the App Store version (system extension) is installed. The Homebrew formula was removed (April 2026).
 
 ---
 
