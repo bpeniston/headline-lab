@@ -222,9 +222,10 @@ async function runApply() {
     let applied      = 0;
     let failed       = 0;
     let skipped      = 0;
-    const errors     = [];
-    const appliedOld = [];   // titles of slots as they were before update
-    const appliedNew = [];   // titles of posts written to those slots
+    const errors          = [];
+    const appliedOld      = [];   // titles of slots as they were before update
+    const appliedNew      = [];   // titles of posts written to those slots
+    const sponsoredTitles = [];   // titles of sponsored slots (preserved, never touched)
 
     for (let i = 0; i < count; i++) {
       const item = liveItems[i];
@@ -320,6 +321,7 @@ async function runApply() {
         if (result.error) throw new Error(result.error);
         if (result.skipped) {
           log(`  ↷ Skipped slot ${item.id} (${result.reason})`);
+          sponsoredTitles.push(item.title);
           skipped++;
           continue;
         }
@@ -351,6 +353,7 @@ async function runApply() {
     } else {
       body = `NEW:\n\n${bullets(appliedNew)}\n\nOLD:\n\n${bullets(appliedOld)}`;
     }
+    if (sponsoredTitles.length) body += `\n\nSPONSORED (unchanged):\n\n${bullets(sponsoredTitles)}`;
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
