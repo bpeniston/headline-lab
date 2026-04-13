@@ -184,10 +184,11 @@ async function runApply() {
 
     log('Session valid — on Earthbox Items list page.');
 
-    // 4. Read the list to find Live, non-sponsored slots
-    const { items: liveItems, sponsoredCount } = await page.evaluate(() => {
+    // 4. Read the list to find all Live slots.
+    // Note: Athena's Earthbox list page does not include the _is_sponsored_content
+    // column, so sponsored detection must happen on the individual edit page (step 5).
+    const liveItems = await page.evaluate(() => {
       const items = [];
-      let sponsoredCount = 0;
 
       document.querySelectorAll('#result_list tbody tr').forEach(row => {
         const cells  = Array.from(row.querySelectorAll('td'));
@@ -199,28 +200,16 @@ async function runApply() {
           ?.match(/\/defenseoneearthboxitem\/(\d+)\//);
         if (!idMatch) return;
 
-        // Sponsored indicator: find the _is_sponsored_content column and check
-        // multiple rendering patterns (Django admin varies: svg icon, gif icon, or plain text)
-        const sponsoredCell = cells.find(td =>
-          td.classList.contains('field-_is_sponsored_content'));
-        const isSponsored = sponsoredCell && (
-          sponsoredCell.querySelector('img[alt="True"]')     !== null ||
-          sponsoredCell.querySelector('img[src*="icon-yes"]') !== null ||
-          sponsoredCell.textContent.trim() === 'True'
-        );
-
-        if (isSponsored) { sponsoredCount++; return; }
-
         items.push({
           id:    idMatch[1],
           title: (editLink?.textContent || '').trim(),
         });
       });
 
-      return { items, sponsoredCount };
+      return items;
     });
 
-    log(`Found ${liveItems.length} editable Live slots, ${sponsoredCount} sponsored (skipped).`);
+    log(`Found ${liveItems.length} Live slots.`);
 
     if (!liveItems.length) {
       log('No editable slots found — nothing to update.');
@@ -350,8 +339,7 @@ async function runApply() {
     // 6. Persist updated session cookies
     await context.storageState({ path: SESSION_FILE });
 
-    log(`=== Done: ${applied} applied, ${failed} failed, ` +
-        `${skipped} skipped (sponsored), ${sponsoredCount} sponsor slots untouched ===`);
+    log(`=== Done: ${applied} applied, ${failed} failed, ${skipped} skipped (sponsored) ===`);
 
     // 7. Notify via Slack
     const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
