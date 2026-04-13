@@ -222,10 +222,11 @@ async function runApply() {
     let applied      = 0;
     let failed       = 0;
     let skipped      = 0;
-    const errors          = [];
-    const appliedOld      = [];   // titles of slots as they were before update
-    const appliedNew      = [];   // titles of posts written to those slots
-    const sponsoredTitles = [];   // titles of sponsored slots (preserved, never touched)
+    const errors     = [];
+    const displayOld = [];   // one entry per slot in order; sponsored prefixed
+    const displayNew = [];   // one entry per slot in order; sponsored prefixed
+    const appliedOld = [];   // applied slots only — used for unchanged comparison
+    const appliedNew = [];   // applied slots only — used for unchanged comparison
 
     for (let i = 0; i < count; i++) {
       const item = liveItems[i];
@@ -321,12 +322,16 @@ async function runApply() {
         if (result.error) throw new Error(result.error);
         if (result.skipped) {
           log(`  ↷ Skipped slot ${item.id} (${result.reason})`);
-          sponsoredTitles.push(item.title);
+          const label = `SPONSORED: ${item.title}`;
+          displayOld.push(label);
+          displayNew.push(label);
           skipped++;
           continue;
         }
 
         log(`  ✓ Applied "${post.title}"`);
+        displayOld.push(item.title);
+        displayNew.push(post.title);
         appliedOld.push(item.title);
         appliedNew.push(post.title);
         applied++;
@@ -349,11 +354,10 @@ async function runApply() {
     const bullets   = titles => titles.map(t => `* ${t}`).join('\n');
     let body;
     if (unchanged) {
-      body = `UNCHANGED:\n\n${bullets(appliedNew)}`;
+      body = `UNCHANGED:\n\n${bullets(displayNew)}`;
     } else {
-      body = `NEW:\n\n${bullets(appliedNew)}\n\nOLD:\n\n${bullets(appliedOld)}`;
+      body = `NEW:\n\n${bullets(displayNew)}\n\nOLD:\n\n${bullets(displayOld)}`;
     }
-    if (sponsoredTitles.length) body += `\n\nSPONSORED (unchanged):\n\n${bullets(sponsoredTitles)}`;
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
