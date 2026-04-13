@@ -199,11 +199,14 @@ async function runApply() {
           ?.match(/\/defenseoneearthboxitem\/(\d+)\//);
         if (!idMatch) return;
 
-        // Sponsored indicator: look for a True checkmark image in the row
-        // (the _is_sponsored_content column renders as ✓ or an icon)
-        const isSponsored = cells.some(td =>
-          td.querySelector('img[alt="True"]') !== null ||
-          td.classList.contains('field-_is_sponsored_content') && td.textContent.includes('✓')
+        // Sponsored indicator: find the _is_sponsored_content column and check
+        // multiple rendering patterns (Django admin varies: svg icon, gif icon, or plain text)
+        const sponsoredCell = cells.find(td =>
+          td.classList.contains('field-_is_sponsored_content'));
+        const isSponsored = sponsoredCell && (
+          sponsoredCell.querySelector('img[alt="True"]')     !== null ||
+          sponsoredCell.querySelector('img[src*="icon-yes"]') !== null ||
+          sponsoredCell.textContent.trim() === 'True'
         );
 
         if (isSponsored) { sponsoredCount++; return; }
@@ -227,12 +230,12 @@ async function runApply() {
 
     // 5. Apply each post to its slot
     const count      = Math.min(liveItems.length, posts.length);
-    const oldTitles  = liveItems.slice(0, count).map(i => i.title);
-    const newTitles  = posts.slice(0, count).map(p => p.title);
     let applied      = 0;
     let failed       = 0;
     let skipped      = 0;
     const errors     = [];
+    const appliedOld = [];   // titles of slots as they were before update
+    const appliedNew = [];   // titles of posts written to those slots
 
     for (let i = 0; i < count; i++) {
       const item = liveItems[i];
@@ -333,6 +336,8 @@ async function runApply() {
         }
 
         log(`  ✓ Applied "${post.title}"`);
+        appliedOld.push(item.title);
+        appliedNew.push(post.title);
         applied++;
 
       } catch (err) {
@@ -349,14 +354,14 @@ async function runApply() {
         `${skipped} skipped (sponsored), ${sponsoredCount} sponsor slots untouched ===`);
 
     // 7. Notify via Slack
-    const unchanged = failed === 0 && newTitles.every((t, i) => t === oldTitles[i]);
+    const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
     const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
     const bullets   = titles => titles.map(t => `* ${t}`).join('\n');
     let body;
     if (unchanged) {
-      body = `UNCHANGED:\n\n${bullets(newTitles)}`;
+      body = `UNCHANGED:\n\n${bullets(appliedNew)}`;
     } else {
-      body = `NEW:\n\n${bullets(newTitles)}\n\nOLD:\n\n${bullets(oldTitles)}`;
+      body = `NEW:\n\n${bullets(appliedNew)}\n\nOLD:\n\n${bullets(appliedOld)}`;
     }
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);
