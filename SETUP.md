@@ -135,7 +135,7 @@ This document describes the physical machines, services, and configurations that
 |---|---|---|---|---|
 | Air heartbeat | Every 10 min | `com.navybook.heartbeat.plist` | `scripts/heartbeat.sh` | `logs/heartbeat.log` |
 | D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
-| D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` | ⚠️ plist not yet installed on Air |
+| D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` |
 | Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
 
 To reload a plist after changes:
@@ -174,8 +174,6 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: `New: …` / `Old: …` (or error detail if Problem)
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
-
-**⚠️ Status: launchd plist not yet installed on Air.** Install steps in PLANNED.md.
 
 ---
 
