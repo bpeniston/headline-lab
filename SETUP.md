@@ -61,6 +61,7 @@ This document describes the physical machines, services, and configurations that
 | D1 Daily Digest | 4:00am weekdays | `~/d1_scripts/` | Digest email to bpeniston@defenseone.com |
 | D1 Auto-Decline | 4:30am weekdays | `~/d1_scripts/` | Auto-decline script |
 | dfnbot | 2:30pm weekdays | `~/venvs/venv1/` | Email to brad@navybook.com |
+| Air heartbeat check | 4:50am nightly | `~/navybook.com/D1/seo/air-check.py` | Sends `Air: Problem` Slack alert if heartbeat stale |
 
 ### Key files on DreamHost
 
@@ -73,11 +74,13 @@ This document describes the physical machines, services, and configurations that
 | Earthbox main cache | `/home/bradwu/earthbox-cache.json` | 1hr scored post results |
 | Earthbox title cache | `/home/bradwu/earthbox-title-cache.json` | 24hr per-article title/sponsored cache |
 | Usage log | `/home/bradwu/headline-lab-usage.log` | Headline Lab usage |
+| Air heartbeat | `/home/bradwu/air-heartbeat.txt` | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
 
 ### PHP endpoints (navybook.com/D1/seo/)
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
 - `trending-topics.php` — Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON
 - `earthbox-posts.php` — Earthbox: queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON
+- `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
 
 ---
@@ -130,6 +133,7 @@ This document describes the physical machines, services, and configurations that
 
 | Job | Schedule | Plist | Script | Log |
 |---|---|---|---|---|
+| Air heartbeat | Every 10 min | `com.navybook.heartbeat.plist` | `scripts/heartbeat.sh` | `logs/heartbeat.log` |
 | D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
 | D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` | ⚠️ plist not yet installed on Air |
 | Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
@@ -172,6 +176,54 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
 **⚠️ Status: launchd plist not yet installed on Air.** Install steps in PLANNED.md.
+
+---
+
+### Job: Air heartbeat (`heartbeat.sh` + `air-check.py`)
+
+The Air pings DreamHost every 10 minutes via curl → `heartbeat.php`, which writes the current Unix timestamp to `~/air-heartbeat.txt`. At 4:50am (10 min before the first nightly job), `air-check.py` on DreamHost checks the file age. If the last heartbeat is more than 20 minutes old, it sends a `Air: Problem` Slack alert with recovery instructions.
+
+**Install on Air (once reachable):**
+```bash
+cp ~/headline-lab/scripts/com.navybook.heartbeat.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.navybook.heartbeat.plist
+```
+
+**Install on DreamHost:**
+```bash
+# Deploy the PHP and Python files:
+scp server/heartbeat.php server/air-check.py bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/
+# Add cron via DreamHost panel or:
+ssh bradwu@pdx1-shared-a1-08.dreamhost.com
+crontab -e
+# Add: 50 4 * * * /usr/bin/python3 /home/bradwu/navybook.com/D1/seo/air-check.py
+```
+
+---
+
+### Air recovery checklist
+
+When the Air stops responding to SSH or VNC:
+
+1. **Check Tailscale:** `login.tailscale.com/admin/machines` — is `blotchy-macbook` green?
+   - If offline: the Air lost network, crashed, or Tailscale dropped
+   - If online but SSH fails: Remote Login was turned off (common after macOS update)
+2. **Try VNC first:** `open vnc://100.117.250.37` — sometimes VNC works when SSH doesn't
+3. **On Air, check Tailscale:** menu bar icon → if "Logged Out", sign back in
+   - Note: VPN on the MBP blocks Tailscale's coordination server — turn it off first
+4. **Check Sharing settings:** System Settings → General → Sharing → Remote Login ON
+5. **Restart Tailscale if stuck:** quit from menu bar, reopen from Applications
+6. **Once SSH is back:**
+   ```bash
+   ssh air   # uses alias in ~/.ssh/config
+   cd ~/headline-lab && git pull
+   ```
+
+**Tailscale note:** Both the App Store Tailscale (system extension) and a Homebrew formula are installed on the Air. Only the App Store version should run. To clean up the Homebrew formula when next on the Air:
+```bash
+brew uninstall tailscale
+```
+Do not start the Homebrew `tailscaled` daemon — it conflicts with the system extension.
 
 ---
 
