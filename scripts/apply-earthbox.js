@@ -351,7 +351,13 @@ async function runApply() {
     // 7. Notify via Slack
     const unchanged = failed === 0 && newTitles.every((t, i) => t === oldTitles[i]);
     const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
-    let body        = `New: ${newTitles.join(', ')}\nOld: ${oldTitles.join(', ')}`;
+    const bullets   = titles => titles.map(t => `* ${t}`).join('\n');
+    let body;
+    if (unchanged) {
+      body = `UNCHANGED:\n\n${bullets(newTitles)}`;
+    } else {
+      body = `NEW:\n\n${bullets(newTitles)}\n\nOLD:\n\n${bullets(oldTitles)}`;
+    }
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
