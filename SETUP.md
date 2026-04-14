@@ -80,6 +80,8 @@ This document describes the physical machines, services, and configurations that
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
 - `trending-topics.php` — Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON
 - `earthbox-posts.php` — Earthbox: queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON
+- `monthly-stats.php` — Returns previous month's `oref=d1-article-topics` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
+- `earthbox-stats.php` — Returns previous month's `oref=d1-earthbox-post` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
 - `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
 
@@ -197,12 +199,20 @@ When the Air stops responding to SSH or VNC:
 
 ### Job: Monthly click report (`monthly-report.js`)
 
-Runs 6:00am on the 1st of each month. Calls `navybook.com/D1/seo/monthly-stats.php` (protected by secret token in `~/.headline-lab-config.ini` on DreamHost), which queries GA4 for previous month's pageviews on URLs containing `oref=d1-article-topics`.
+Runs 6:00am on the 1st of each month. Fetches both Topics and Earthbox click counts from GA4 (via `monthly-stats.php` and `earthbox-stats.php`) and sends a single combined Slack message.
 
-Sends a Slack email comparing the result to the pre-automation baseline:
-- **Baseline:** 3,005/month avg (Oct 2025–Mar 2026)
-- **Subject:** `D1 Trending Topics — [Month Year]: [N] clicks`
-- **Body:** total + `+/-N (+/-X%) vs Oct 2025–Mar 2026 avg of 3,005`
+- **Subject:** `D1 Monthly Report — [Month Year]`
+- **Body:**
+  ```
+  Trending Topics nav clicks: N
+  +/-N (+/-X%) vs Oct 2025–Mar 2026 avg of 3,005
+
+  Earthbox clicks: N
+  (auto-update launched Apr 2026 — baseline TBD)
+  ```
+- **Topics baseline:** 3,005/month avg (Oct 2025–Mar 2026, pre-automation)
+- **Earthbox baseline:** TBD — run `node scripts/earthbox-baseline.js` on the Air to calculate from Oct 2025–Mar 2026 GA4 data; then update `EARTHBOX_BASELINE` in `monthly-report.js`
+- **GA4 orefs:** `oref=d1-article-topics` (Trending Topics nav), `oref=d1-earthbox-post` (Earthbox widget on article pages)
 
 **Secret:** `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` on DreamHost (not in GitHub).
 

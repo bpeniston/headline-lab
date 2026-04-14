@@ -68,8 +68,9 @@ autocomplete.
 
 **Nightly auto-apply (launched 2026-04-08):** `scripts/apply-trending.js` runs
 as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
-nightly 2FA). Skips sponsored slots. Sends Slack notification on success or
-re-login alert if session expired. See SETUP.md.
+nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
+`Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
+(comma-separated). Re-login alert sent if session expired. See SETUP.md.
 
 GE360 Publication Family
 ------------------------
@@ -110,7 +111,9 @@ sponsored wall slots). `image_override` deleted on save so post's featured image
 is used.
 
 **GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server -
-Scoring: `score = month_views + week_views + day_views`
+Scoring: `score = month_views + week_views + day_views` - Click tracking orefs:
+`oref=d1-article-topics` (Trending Topics nav links), `oref=d1-earthbox-post`
+(Earthbox widget links on article pages)
 
 Repo & deploy
 -------------
@@ -156,13 +159,18 @@ Extension manifest
 
 -   Content script 3: all five pub `*skyboxitem/*` → `skybox.js` + `skybox.css`
 
-Earthbox auto-updater (in development)
---------------------------------------
+Earthbox auto-updater (live, launched 2026-04-13)
+-------------------------------------------------
 
 Playwright script on the Air (`scripts/apply-earthbox.js`, same pattern as
-`apply-trending.js`) populates 5 editorial Earthbox slots with top GA4 articles.
+`apply-trending.js`) populates editorial Earthbox slots with top GA4 articles.
 Runs via launchd at 5:30am. Server-side: `server/earthbox-posts.php`. Sponsored
-wall uses `_is_sponsored_content` checkbox. See PLANNED.md for full spec.
+wall detected via `_is_sponsored_content` checkbox on the individual edit form
+(the CMS list page does not expose this column). Sends Slack notification:
+subject `Earthbox: Changes|Unchanged|Problem`, body bullet list with sponsored
+slots inline as `SPONSORED: …`. GA4 click tracking via `oref=d1-earthbox-post`
+(confirmed present on D1 article pages); monthly baseline being established
+via `scripts/earthbox-baseline.js`. See SETUP.md.
 
 ## Planned features
 see PLANNED.md
