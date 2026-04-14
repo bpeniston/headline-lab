@@ -200,12 +200,11 @@ async function runApply() {
         const isLive = cells.some(td => td.textContent.trim() === 'Live');
         if (!isLive) return;
 
-        const editLink = row.querySelector('a[href*="/defenseonetrendingitem/"]');
+        const editLink = row.querySelector('th a[href*="/defenseonetrendingitem/"]');
         const idMatch  = editLink?.getAttribute('href')?.match(/\/defenseonetrendingitem\/(\d+)\//);
         if (!idMatch) return;
 
-        const titleCell = row.querySelector('td table td:last-child') || editLink;
-        const title     = (titleCell?.textContent || '').trim();
+        const title = (editLink?.textContent || '').trim();
 
         if (title.startsWith('Sponsored:')) { sponsoredCount++; return; }
         items.push({ id: idMatch[1], title });
