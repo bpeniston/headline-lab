@@ -2,11 +2,13 @@
 // =============================================================
 // scripts/monthly-report.js
 // Runs on the 1st of each month via launchd.
-// Fetches previous month's Trending Topics nav click count from
-// GA4, compares to pre-automation baseline, and sends a summary
-// to Slackbot via Gmail SMTP.
+// Fetches previous month's click counts from GA4 for:
+//   - Trending Topics nav links (oref=d1-article-topics)
+//   - Earthbox article links   (oref=d1-earthbox-post)
+// Sends a combined summary to Slackbot via Gmail SMTP.
 //
-// Baseline (Oct 2025–Mar 2026, pre-automation): 3,005/month avg
+// Topics baseline (Oct 2025–Mar 2026, pre-automation): 3,005/month avg
+// Earthbox baseline: TBD (auto-update launched Apr 2026)
 // =============================================================
 
 'use strict';
@@ -15,12 +17,13 @@ const fs      = require('fs');
 const path    = require('path');
 const https   = require('https');
 
-const STATS_URL      = 'https://www.navybook.com/D1/seo/monthly-stats.php';
-const STATS_TOKEN    = 'e46ac3a0976b1fb6a6e14cf61f5bfb1438dc8768412e7dc7';
-const BASELINE_AVG   = 3005;
-const BASELINE_LABEL = 'Oct 2025–Mar 2026 avg';
-const SLACK_EMAIL    = 'u5q8h4r0o7x8o9l7@govexec.slack.com';
-const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'monthly-report.log');
+const TOPICS_STATS_URL   = 'https://www.navybook.com/D1/seo/monthly-stats.php';
+const EARTHBOX_STATS_URL = 'https://www.navybook.com/D1/seo/earthbox-stats.php';
+const STATS_TOKEN        = 'e46ac3a0976b1fb6a6e14cf61f5bfb1438dc8768412e7dc7';
+const TOPICS_BASELINE    = 3005;
+const TOPICS_BASELINE_LABEL = 'Oct 2025–Mar 2026 avg';
+const SLACK_EMAIL        = 'u5q8h4r0o7x8o9l7@govexec.slack.com';
+const LOG_FILE           = path.join(process.env.HOME, 'headline-lab', 'logs', 'monthly-report.log');
 
 // ── Logging ───────────────────────────────────────────────────
 fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
@@ -43,9 +46,9 @@ function loadEnv() {
 }
 
 // ── Fetch monthly stats from DreamHost ───────────────────────
-function fetchStats() {
+function fetchStats(url) {
   return new Promise((resolve, reject) => {
-    https.get(`${STATS_URL}?token=${STATS_TOKEN}`, res => {
+    https.get(`${url}?token=${STATS_TOKEN}`, res => {
       let body = '';
       res.on('data', c => body += c);
       res.on('end', () => {
@@ -84,28 +87,44 @@ async function sendEmail(subject, body, env) {
 
 // ── Main ──────────────────────────────────────────────────────
 (async () => {
-  log('=== Monthly Trending Topics report ===');
+  log('=== Monthly report ===');
   const env = loadEnv();
 
-  let stats;
+  let topicsStats, earthboxStats;
   try {
-    stats = await fetchStats();
+    [topicsStats, earthboxStats] = await Promise.all([
+      fetchStats(TOPICS_STATS_URL),
+      fetchStats(EARTHBOX_STATS_URL),
+    ]);
   } catch (e) {
     log(`Failed to fetch stats: ${e.message}`);
     logStream.end();
     process.exit(1);
   }
 
-  const { month, views } = stats;
-  const diff    = views - BASELINE_AVG;
-  const pct     = Math.round((diff / BASELINE_AVG) * 100);
-  const sign    = diff >= 0 ? '+' : '';
-  const vs      = `${sign}${diff.toLocaleString()} (${sign}${pct}%) vs ${BASELINE_LABEL} of ${BASELINE_AVG.toLocaleString()}`;
+  const { month } = topicsStats;
 
-  log(`${month}: ${views.toLocaleString()} views. ${vs}`);
+  // Topics line
+  const tViews = topicsStats.views;
+  const tDiff  = tViews - TOPICS_BASELINE;
+  const tPct   = Math.round((tDiff / TOPICS_BASELINE) * 100);
+  const tSign  = tDiff >= 0 ? '+' : '';
+  const tVs    = `${tSign}${tDiff.toLocaleString()} (${tSign}${tPct}%) vs ${TOPICS_BASELINE_LABEL} of ${TOPICS_BASELINE.toLocaleString()}`;
 
-  const subject = `D1 Trending Topics — ${month}: ${views.toLocaleString()} clicks`;
-  const body    = `${month}: ${views.toLocaleString()} clicks on Trending Topics nav links\n${vs}`;
+  // Earthbox line
+  const eViews = earthboxStats.views;
+
+  log(`Topics: ${tViews.toLocaleString()} clicks. ${tVs}`);
+  log(`Earthbox: ${eViews.toLocaleString()} clicks.`);
+
+  const subject = `D1 Monthly Report — ${month}`;
+  const body    = [
+    `Trending Topics nav clicks: ${tViews.toLocaleString()}`,
+    tVs,
+    '',
+    `Earthbox clicks: ${eViews.toLocaleString()}`,
+    '(auto-update launched Apr 2026 — baseline TBD)',
+  ].join('\n');
 
   await sendEmail(subject, body, env);
   logStream.end();
