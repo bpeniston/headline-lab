@@ -13,13 +13,6 @@ header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: https://admin.govexec.com');
 header('Access-Control-Allow-Methods: GET');
 
-$referer = $_SERVER['HTTP_REFERER'] ?? '';
-if (!str_starts_with($referer, 'https://admin.govexec.com/')) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Forbidden']);
-    exit;
-}
-
 // ── Config ────────────────────────────────────────────────────
 $CREDS_FILE      = '/home/bradwu/ga4-oauth.json';
 $GA4_PROPERTY    = '353836589';
@@ -31,6 +24,9 @@ $ARTICLE_TTL     = 86400;   // 24 hours — article→topics mapping
 $TOPICNAME_TTL   = 604800;  // 7 days  — slug→display name mapping
 $BASE_URL        = 'https://www.defenseone.com';
 $TOP_N           = 7;
+
+// Topics to never surface as Trending (slugs or display names, case-insensitive)
+$EXCLUDED_TOPICS = ['commentary'];
 $MAX_MONTH       = 80;      // top N article pages from month query
 $MAX_WEEK        = 40;      // top N from week query
 $MAX_DAY         = 20;      // top N from day query
@@ -168,6 +164,10 @@ foreach ($all_paths as $path => $views) {
         // Resolve display name
         $display = $label
             ?: ($name_cache[$slug] ?? slug_to_title($slug));
+
+        // Skip excluded topics
+        if (in_array(strtolower($slug), $EXCLUDED_TOPICS) ||
+            in_array(strtolower($display), $EXCLUDED_TOPICS)) continue;
 
         if (!isset($topic_scores[$slug])) {
             $topic_scores[$slug] = [
