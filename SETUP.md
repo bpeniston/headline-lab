@@ -149,6 +149,8 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
+**Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` (line ~29) lists slugs/display names that are never surfaced, regardless of score. Currently: `['commentary']`. Add slugs or display names (case-insensitive) to extend.
+
 **Currently Defense One only.** Will extend to other GE360 pubs once GA4 property IDs and Grappelli model names are confirmed.
 
 ---

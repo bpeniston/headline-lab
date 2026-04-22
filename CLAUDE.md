@@ -72,6 +72,9 @@ nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
 `Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
 (comma-separated). Re-login alert sent if session expired. See SETUP.md.
 
+**Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` filters slugs/display
+names from recommendations regardless of score. Currently: `['commentary']`.
+
 GE360 Publication Family
 ------------------------
 

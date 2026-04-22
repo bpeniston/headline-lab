@@ -41,11 +41,16 @@ if (!$access_token) {
     exit;
 }
 
-// ── Date range: previous calendar month ──────────────────────
-$first_of_this_month = date('Y-m-01');
-$last_month_end      = date('Y-m-d', strtotime($first_of_this_month . ' -1 day'));
-$last_month_start    = date('Y-m-01', strtotime($last_month_end));
-$month_label         = date('F Y', strtotime($last_month_end));
+// ── Date range: previous calendar month, or explicit start/end ──
+if (!empty($_GET['start']) && !empty($_GET['end'])) {
+    $last_month_start = $_GET['start'];
+    $last_month_end   = $_GET['end'];
+} else {
+    $first_of_this_month = date('Y-m-01');
+    $last_month_end      = date('Y-m-d', strtotime($first_of_this_month . ' -1 day'));
+    $last_month_start    = date('Y-m-01', strtotime($last_month_end));
+}
+$month_label = date('F Y', strtotime($last_month_start));
 
 // ── GA4 query ─────────────────────────────────────────────────
 $payload = json_encode([
