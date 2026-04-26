@@ -70,7 +70,10 @@ autocomplete.
 as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
 nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
 `Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
-(comma-separated). Re-login alert sent if session expired. See SETUP.md.
+(comma-separated; items new to the list are bolded). Re-login alert sent if
+session expired. Proactive `Topics: Session expiring soon` warning sent 5 days
+before expected expiry; timeout duration self-calibrates after first observed
+expiry (tracked in `~/.session-meta.json` on the Air). See SETUP.md.
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` filters slugs/display
 names from recommendations regardless of score. Currently: `['commentary']`.
@@ -171,9 +174,11 @@ Runs via launchd at 5:30am. Server-side: `server/earthbox-posts.php`. Sponsored
 wall detected via `_is_sponsored_content` checkbox on the individual edit form
 (the CMS list page does not expose this column). Sends Slack notification:
 subject `Earthbox: Changes|Unchanged|Problem`, body bullet list with sponsored
-slots inline as `SPONSORED: …`. GA4 click tracking via `oref=d1-earthbox-post`
-(confirmed present on D1 article pages); monthly baseline being established
-via `scripts/earthbox-baseline.js`. See SETUP.md.
+slots inline as `SPONSORED: …` (items new to the list are bolded). Proactive
+`Earthbox: Session expiring soon` warning shares the same self-calibrating
+timeout logic as `apply-trending.js`. GA4 click tracking via
+`oref=d1-earthbox-post` (confirmed present on D1 article pages); monthly
+baseline being established via `scripts/earthbox-baseline.js`. See SETUP.md.
 
 ## Planned features
 see PLANNED.md

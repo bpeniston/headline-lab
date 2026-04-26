@@ -111,13 +111,20 @@ This document describes the physical machines, services, and configurations that
 ### CMS session (`~/headline-lab/.cms-session.json`)
 - Playwright browser session saved after manual login (including 2FA)
 - Reused by the nightly script so it never needs to log in fresh
-- Expires every few weeks; when it does the script sends a Slack alert with re-login instructions
+- CMS hard-resets sessions periodically (observed ~30 days; exact interval recorded in `.session-meta.json` after first expiry)
 - To refresh: open Screen Sharing (`vnc://100.117.250.37`), open Terminal, run:
   ```
   export PATH=/opt/homebrew/bin:$PATH
   cd ~/headline-lab
   node scripts/apply-trending.js --setup
   ```
+
+### Session metadata (`~/headline-lab/.session-meta.json`)
+- Tracks `loginDate` (set on each `--setup` run), `knownTimeoutDays` (learned on first observed expiry), `lastWarningSent` (deduplicates warnings across both nightly scripts)
+- Both nightly scripts warn via Slack 5 days before the expected expiry (`knownTimeoutDays - 5`; defaults to day 25 until the timeout is observed)
+- On first expiry, the scripts record the actual elapsed days as `knownTimeoutDays` so future warnings self-calibrate
+- Not committed to GitHub (Air-local, like `.cms-session.json`)
+- **Session expiry detection:** checks page title for "log in" / "sign in" in addition to URL patterns, so any login-page redirect is caught correctly
 
 ### Launchd jobs
 
@@ -145,7 +152,8 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 3. Parses D1 Trending Items list — skips any slot whose title starts with `"Sponsored:"`
 4. For each editable Live slot: GETs edit page for CSRF, resolves topic via Grappelli autocomplete, POSTs form
 5. Re-saves session to keep cookies fresh
-6. Sends Slack email via Gmail SMTP — subject: `Topics: Changes`, `Topics: Unchanged`, or `Topics: Problem`; body: `New: …` / `Old: …` (or error detail if Problem)
+6. Sends Slack email via Gmail SMTP — subject: `Topics: Changes`, `Topics: Unchanged`, or `Topics: Problem`; body: `New: …` / `Old: …` (items new to the list are bolded with `*text*`); or error detail if Problem
+7. If session age ≥ warning threshold, sends a `Topics: Session expiring soon` Slack message (once per day, deduped with Earthbox via `.session-meta.json`)
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
@@ -163,7 +171,8 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 3. Parses D1 Earthbox Items list — reads all Live slots (note: `_is_sponsored_content` column is not shown on the list page)
 4. For each Live slot: GETs edit page for CSRF and current state; skips if `_is_sponsored_content` checkbox is checked; otherwise POSTs update (content_type=22, object_id=post_id, clears image_override so post's own featured image is used)
 5. Re-saves session to keep cookies fresh
-6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: bullet list of updated headlines (sponsored slots appear inline as `SPONSORED: …`); Problem messages include error detail
+6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: bullet list of updated headlines (sponsored slots appear inline as `SPONSORED: …`; items new to the list are bolded with `*text*`); Problem messages include error detail
+7. If session age ≥ warning threshold, sends a `Earthbox: Session expiring soon` Slack message (once per day, deduped with Topics via `.session-meta.json`)
 
 **Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
 
