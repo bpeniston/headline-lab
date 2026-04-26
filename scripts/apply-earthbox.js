@@ -395,12 +395,13 @@ async function runApply() {
     // 7. Notify via Slack
     const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
     const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
-    const bullets   = titles => titles.map(t => `* ${t}`).join('\n');
+    const oldSet    = new Set(displayOld);
+    const bullets   = (titles, bold) => titles.map(t => `* ${bold && !oldSet.has(t) ? `*${t}*` : t}`).join('\n');
     let body;
     if (unchanged) {
-      body = `UNCHANGED:\n\n${bullets(displayNew)}`;
+      body = `UNCHANGED:\n\n${bullets(displayNew, false)}`;
     } else {
-      body = `NEW:\n\n${bullets(displayNew)}\n\nOLD:\n\n${bullets(displayOld)}`;
+      body = `NEW:\n\n${bullets(displayNew, true)}\n\nOLD:\n\n${bullets(displayOld, false)}`;
     }
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);

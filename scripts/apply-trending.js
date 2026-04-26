@@ -344,7 +344,9 @@ async function runApply() {
     // 8. Notify via Slack
     const unchanged = failed === 0 && newLabels.every((l, i) => l === oldLabels[i]);
     const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
-    let body        = `New: ${newLabels.join(', ')}\nOld: ${oldLabels.join(', ')}`;
+    const oldSet    = new Set(oldLabels);
+    const formattedNew = newLabels.map(l => oldSet.has(l) ? l : `*${l}*`);
+    let body        = `New: ${formattedNew.join(', ')}\nOld: ${oldLabels.join(', ')}`;
     if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
     await sendSlackEmail(`${LABEL}: ${status}`, body, env);
 
