@@ -23,6 +23,7 @@ const https        = require('https');
 
 // ── Config ────────────────────────────────────────────────────
 const SESSION_FILE  = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
+const META_FILE     = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
 const LOG_FILE      = path.join(process.env.HOME, 'headline-lab', 'logs', 'trending-apply.log');
 const API_URL       = 'https://www.navybook.com/D1/seo/trending-topics.php';
 const CMS_BASE      = 'https://admin.govexec.com';
@@ -32,6 +33,17 @@ const LABEL         = 'Topics';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
+
+// ── Session metadata (login date + learned timeout) ───────────
+function loadMeta() {
+  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return {}; }
+}
+function saveMeta(meta) {
+  fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+}
+function daysSince(isoDate) {
+  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);
+}
 
 // ── Logging ───────────────────────────────────────────────────
 fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
@@ -122,6 +134,10 @@ async function runSetup() {
   await context.storageState({ path: SESSION_FILE });
   await browser.close();
 
+  // Record login date; preserve knownTimeoutDays if already learned
+  const meta = loadMeta();
+  saveMeta({ ...meta, loginDate: new Date().toISOString(), lastWarningSent: null });
+
   console.log(`\nSession saved to ${SESSION_FILE}`);
   console.log('You can now run the script without --setup for nightly updates.');
   console.log('Re-run --setup if the session expires (usually after a few weeks).');
@@ -182,6 +198,13 @@ async function runApply() {
     // Detect session expiry — redirected to login (any login page variant)
     const trendingTitle = await page.title();
     if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') || page.url().includes('/sso/') || page.url().includes('/login/') || trendingTitle.toLowerCase().includes('log in') || trendingTitle.toLowerCase().includes('sign in')) {
+      // Learn the timeout duration on first observed expiry
+      const meta = loadMeta();
+      if (meta.loginDate && !meta.knownTimeoutDays) {
+        const elapsed = daysSince(meta.loginDate);
+        log(`Session expired after ${elapsed} days — saving as known timeout.`);
+        saveMeta({ ...meta, knownTimeoutDays: elapsed });
+      }
       await sendSlackEmail(
         `${LABEL}: Problem`,
         'The Air is logged out of the CMS.\n\nUse the Screen Sharing app to access the Air: vnc://100.117.250.37\n\nThen in Terminal:\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup',
@@ -191,6 +214,23 @@ async function runApply() {
     }
 
     log('Session valid — on Trending Items list page.');
+
+    // Warn if session is approaching its known (or assumed) expiry
+    const meta        = loadMeta();
+    const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
+    const timeoutDays = meta.knownTimeoutDays || 30;
+    const warnAt      = timeoutDays - 5;
+    const todayStr    = new Date().toISOString().slice(0, 10);
+    if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
+      saveMeta({ ...meta, lastWarningSent: todayStr });
+      const daysLeft = timeoutDays - elapsed;
+      await sendSlackEmail(
+        `${LABEL}: Session expiring soon`,
+        `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup`,
+        env
+      );
+      log(`Session age warning sent (${elapsed} days old, timeout expected at ~${timeoutDays}).`);
+    }
 
     // 5. Find Live non-sponsored slots
     const { items: liveItems, sponsoredCount } = await page.evaluate(() => {

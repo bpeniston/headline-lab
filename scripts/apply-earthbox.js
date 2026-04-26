@@ -27,6 +27,7 @@ const https        = require('https');
 
 // ── Config ────────────────────────────────────────────────────
 const SESSION_FILE = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
+const META_FILE    = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
 const LOG_FILE     = path.join(process.env.HOME, 'headline-lab', 'logs', 'earthbox-apply.log');
 const API_URL      = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
 const CMS_BASE     = 'https://admin.govexec.com';
@@ -51,6 +52,17 @@ function die(msg) {
   log(`FATAL: ${msg}`);
   logStream.end();
   process.exit(1);
+}
+
+// ── Session metadata (login date + learned timeout) ───────────
+function loadMeta() {
+  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return {}; }
+}
+function saveMeta(meta) {
+  fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+}
+function daysSince(isoDate) {
+  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);
 }
 
 // ── Slack notification ────────────────────────────────────────
@@ -110,6 +122,10 @@ async function runSetup() {
 
   await context.storageState({ path: SESSION_FILE });
   await browser.close();
+
+  const meta = loadMeta();
+  saveMeta({ ...meta, loginDate: new Date().toISOString(), lastWarningSent: null });
+
   console.log(`\nSession saved to ${SESSION_FILE}`);
   console.log('This session is shared with apply-trending.js.');
   logStream.end();
@@ -173,6 +189,13 @@ async function runApply() {
         page.url().includes('/login/')          ||
         earthboxTitle.toLowerCase().includes('log in') ||
         earthboxTitle.toLowerCase().includes('sign in')) {
+      // Learn the timeout duration on first observed expiry
+      const meta = loadMeta();
+      if (meta.loginDate && !meta.knownTimeoutDays) {
+        const elapsed = daysSince(meta.loginDate);
+        log(`Session expired after ${elapsed} days — saving as known timeout.`);
+        saveMeta({ ...meta, knownTimeoutDays: elapsed });
+      }
       await sendSlackEmail(
         `${LABEL}: Problem`,
         'The Earthbox auto-apply script found an expired CMS session.\n\n' +
@@ -187,6 +210,23 @@ async function runApply() {
     }
 
     log('Session valid — on Earthbox Items list page.');
+
+    // Warn if session is approaching its known (or assumed) expiry
+    const meta        = loadMeta();
+    const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
+    const timeoutDays = meta.knownTimeoutDays || 30;
+    const warnAt      = timeoutDays - 5;
+    const todayStr    = new Date().toISOString().slice(0, 10);
+    if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
+      saveMeta({ ...meta, lastWarningSent: todayStr });
+      const daysLeft = timeoutDays - elapsed;
+      await sendSlackEmail(
+        `${LABEL}: Session expiring soon`,
+        `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup`,
+        env
+      );
+      log(`Session age warning sent (${elapsed} days old, timeout expected at ~${timeoutDays}).`);
+    }
 
     // 4. Read the list to find all Live slots.
     // Note: Athena's Earthbox list page does not include the _is_sponsored_content
