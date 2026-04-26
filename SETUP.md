@@ -80,10 +80,55 @@ This document describes the physical machines, services, and configurations that
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
 - `trending-topics.php` — Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON
 - `earthbox-posts.php` — Earthbox: queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON
+- `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `/home/bradwu/pub-config-cache.json`
 - `monthly-stats.php` — Returns previous month's `oref=d1-article-topics` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
 - `earthbox-stats.php` — Returns previous month's `oref=d1-earthbox-post` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
 - `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
+
+### Publication config Google Sheet
+
+Columns (row 1 = headers, one publication per subsequent row):
+
+| Column | Example (D1) | Notes |
+|---|---|---|
+| `pub_name` | Defense One | Display name for logs |
+| `pub_key` | defenseone | Short identifier, no spaces |
+| `trending_enabled` | TRUE | TRUE or FALSE |
+| `earthbox_enabled` | TRUE | TRUE or FALSE |
+| `trending_cms_path` | `/athena/curate/defenseonetrendingitem/` | Path on admin.govexec.com |
+| `earthbox_cms_path` | `/athena/curate/defenseoneearthboxitem/` | Path on admin.govexec.com |
+| `ga4_property_id` | 353836589 | Integer only |
+| `grappelli_topic_model` | defenseonetopic | Used in Grappelli autocomplete |
+| `topic_content_type` | 382 | Django content_type int for this pub's Topic model |
+| `slack_email` | u5q8...@govexec.slack.com | Slack channel email for notifications |
+| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL |
+| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL |
+
+**Validation:** `pub-config.php` checks that all headers exist, booleans are TRUE/FALSE, integers are integers, and API URLs are valid. Errors are returned in the `errors` array and logged by the scripts; affected rows are skipped. A renamed or deleted column header produces a fatal error (stops all pubs) rather than silently skipping data.
+
+#### One-time setup
+
+1. **Create the Google Sheet** with the columns above. Name the sheet tab `Pubs`. Fill in the D1 row.
+
+2. **Create a GCP service account:**
+   - Go to console.cloud.google.com → APIs & Services → Credentials → Create credentials → Service account
+   - Name it something like `headline-lab-sheets-reader`
+   - Grant it no roles (read-only sheet access is granted by sharing, not IAM)
+   - Download the JSON key
+
+3. **Enable the Sheets API** in the same GCP project (APIs & Services → Enable APIs → Google Sheets API)
+
+4. **Share the sheet** with the service account's email (shown in the JSON key as `client_email`). View-only access is sufficient.
+
+5. **Upload the key to DreamHost:**
+   ```
+   scp sheets-service-account.json bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/sheets-service-account.json
+   ```
+
+6. **Set the Sheet ID in `pub-config.php`:** Replace `REPLACE_WITH_SHEET_ID` with the ID from the sheet URL (`docs.google.com/spreadsheets/d/SHEET_ID/edit`). Deploy with `git push && deploy`.
+
+7. **Test:** `curl https://www.navybook.com/D1/seo/pub-config.php` — should return `{"pubs":[...],"errors":[]}`
 
 ---
 
