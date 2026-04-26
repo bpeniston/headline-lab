@@ -165,10 +165,14 @@ async function runApply() {
     // 3. Load the Earthbox list page
     await page.goto(LIST_URL, { waitUntil: 'domcontentloaded' });
 
-    // Detect session expiry
+    // Detect session expiry (any login page variant)
+    const earthboxTitle = await page.title();
     if (page.url().includes('/accounts/login/') ||
         page.url().includes('/saml/')           ||
-        page.url().includes('/sso/')) {
+        page.url().includes('/sso/')            ||
+        page.url().includes('/login/')          ||
+        earthboxTitle.toLowerCase().includes('log in') ||
+        earthboxTitle.toLowerCase().includes('sign in')) {
       await sendSlackEmail(
         `${LABEL}: Problem`,
         'The Earthbox auto-apply script found an expired CMS session.\n\n' +

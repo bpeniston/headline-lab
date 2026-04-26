@@ -179,8 +179,9 @@ async function runApply() {
     // 4. Load list page
     await page.goto(LIST_URL, { waitUntil: 'domcontentloaded' });
 
-    // Detect session expiry — redirected to login
-    if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') || page.url().includes('/sso/')) {
+    // Detect session expiry — redirected to login (any login page variant)
+    const trendingTitle = await page.title();
+    if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') || page.url().includes('/sso/') || page.url().includes('/login/') || trendingTitle.toLowerCase().includes('log in') || trendingTitle.toLowerCase().includes('sign in')) {
       await sendSlackEmail(
         `${LABEL}: Problem`,
         'The Air is logged out of the CMS.\n\nUse the Screen Sharing app to access the Air: vnc://100.117.250.37\n\nThen in Terminal:\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup',
