@@ -8,15 +8,15 @@ header('Content-Type: application/json');
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:L');
+define('SHEET_RANGE', 'Pubs!A:M');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
 $REQUIRED_COLUMNS = [
     'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled',
     'trending_cms_path', 'earthbox_cms_path', 'ga4_property_id',
-    'grappelli_topic_model', 'topic_content_type', 'slack_email',
-    'trending_api_url', 'earthbox_api_url',
+    'grappelli_topic_model', 'topic_content_type', 'slack_channel',
+    'slack_email', 'trending_api_url', 'earthbox_api_url',
 ];
 
 // ── Cache ──────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ function parseRows($rows, $requiredCols) {
 
         // Required string fields
         foreach (['pub_name', 'pub_key', 'trending_cms_path', 'earthbox_cms_path',
-                  'grappelli_topic_model', 'slack_email',
+                  'grappelli_topic_model', 'slack_channel', 'slack_email',
                   'trending_api_url', 'earthbox_api_url'] as $col) {
             if ($r[$col] === '') $rowErrors[] = "missing $col";
         }
