@@ -83,33 +83,34 @@ GE360 Publication Family
 
 All five pubs run Athena CMS at `admin.govexec.com`.
 
-| Publication           | Site URL                 | Pub key                | CMS Trending path                             | CMS Skybox path                        | CMS Earthbox path                        | Earthbox model PK |
-|-----------------------|--------------------------|------------------------|-----------------------------------------------|----------------------------------------|------------------------------------------|-------------------|
-| Defense One           | defenseone.com           | `defenseone`           | `/athena/curate/defenseonetrendingitem/`      | `/athena/curate/defenseoneskyboxitem/` | `/athena/curate/defenseoneearthboxitem/` | 548               |
-| GovExec               | govexec.com              | `govexec`              | `/athena/curate/govexectrendingitem/`         | `/athena/curate/govexecskyboxitem/`    | `/athena/curate/govexecearthboxitem/`    | 501               |
-| Nextgov               | nextgov.com              | `nextgov`              | `/athena/curate/nextgovtrendingitem/`         | `/athena/curate/nextgovskyboxitem/`    | `/athena/curate/nextgovearthboxitem/`    | 494               |
-| Route Fifty           | route-fifty.com          | `routefifty`           | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
-| Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
+| Publication           | Site URL                 | Pub key (sheet)  | CMS Trending path                             | CMS Skybox path                        | CMS Earthbox path                        | Earthbox model PK |
+|-----------------------|--------------------------|------------------|-----------------------------------------------|----------------------------------------|------------------------------------------|-------------------|
+| Defense One           | defenseone.com           | `defenseone`     | `/athena/curate/defenseonetrendingitem/`      | `/athena/curate/defenseoneskyboxitem/` | `/athena/curate/defenseoneearthboxitem/` | 548               |
+| GovExec               | govexec.com              | `govexec`        | `/athena/curate/govexectrendingitem/`         | `/athena/curate/govexecskyboxitem/`    | `/athena/curate/govexecearthboxitem/`    | 501               |
+| Nextgov               | nextgov.com              | `nextgov`        | `/athena/curate/nextgovtrendingitem/`         | `/athena/curate/nextgovskyboxitem/`    | `/athena/curate/nextgovearthboxitem/`    | 494               |
+| Route Fifty           | route-fifty.com          | `routefifty`     | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
+| Washington Technology | washingtontechnology.com | `washtech`       | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
 
 Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row (including `base_url` and `topic_oref`), then set `trending_enabled`/`earthbox_enabled` to TRUE — no new PHP files needed, the shared endpoints handle all pubs via `?pub={pub_key}`.
 
-**Per-pub values needed for each pub** (confirmed vs. still needed):
+**Per-pub configuration status:**
 
-| Pub | GA4 Property | Article topic oref | Grappelli app_label | Grappelli model | topic_content_type | Status |
-|---|---|---|---|---|---|---|
-| Defense One | `353836589` (acct `395628`) | `oref=d1-article-topics` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled; earthbox_oref=`wt-earthbox-post` confirmed; baselines set (topics 1,699/mo, earthbox 459/mo); still needed: topic_content_type, slack_channel, slack_email, trending_api_url, earthbox_api_url, base_url, automation_start_date |
-| GovExec | TBD | likely `oref=govexec-article-topics` | TBD | TBD | TBD | not started |
-| Nextgov | TBD | likely `oref=nextgov-article-topics` | TBD | TBD | TBD | not started |
-| Route Fifty | TBD | likely `oref=routefifty-article-topics` | TBD | TBD | TBD | not started |
+| Pub | GA4 Property | topic_oref | earthbox_oref | app_label | model | content_type | Sheet status |
+|---|---|---|---|---|---|---|---|
+| Defense One | `353836589` | `d1-article-topics` | `d1-earthbox-post` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
+| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `core` | `topic` | TBD | disabled — needs topic_content_type, slack, base_url |
+| GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | disabled — needs slack only |
+| Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | disabled — needs slack only |
+| Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | disabled — needs slack only |
 
-**Key learnings from D1 and WT discovery:**
-- D1 topics use `app_label=post_manager`, but WT uses `app_label=core` — do NOT assume `post_manager` for new pubs; always confirm via Network tab on the CMS Topics autocomplete field
-- `grappelli_topic_model` pattern is NOT consistent: D1 = `defenseonetopic`, WT = `topic` — inspect each pub
-- `topic_content_type` is a Django integer that varies per pub/app — find it by watching the POST form data when saving a Trending item in the CMS, or by checking `admin.govexec.com/admin/contenttypes/contenttype/` if you have superuser access
-- Article topic oref pattern `oref={pub}-article-topics` holds for D1 and WT (confirmed); likely holds for others but verify by inspecting a live article page
-- D1 note: article tags appear twice in DOM (desktop/mobile) — deduplicate by slug. Check if this applies to other pubs.
+**Key learnings:**
+- `grappelli_app_label`: WT uses `core`; all others confirmed as `post_manager` — always verify via Network tab
+- `grappelli_topic_model`: D1=`defenseonetopic`, GE=`govexectopic`, NG=`nextgovtopic`; WT and RF both use plain `topic`
+- `topic_content_type` varies per pub — find via the `content_type` select on a trending item edit page
+- `oref` pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` holds for all 5 pubs (confirmed)
+- D1 article tags appear twice in DOM (desktop/mobile) — deduplicate by slug; verify for each new pub
 - DO NOT use GA4 property `529112613` — that's the extension's own analytics, not a pub property
+- Route Fifty's `topic_content_type` 164 was unconfirmed (item had no pre-selected topic) — verify when saving a real trending item
 
 **Defense One GA4:** account `395628`, property `353836589`
 
@@ -118,7 +119,7 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs stored in sheet (`topic_oref`, `earthbox_oref`) — used by both `trending-topics.php` (article scraping) and `pub-stats.php` (monthly click counts). D1: `d1-article-topics` / `d1-earthbox-post`. WT: `wt-article-topics` / `wt-earthbox-post`. Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo.
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo. GE/NG/RF baselines TBD pending first full automation month.
 
 Repo & deploy
 -------------

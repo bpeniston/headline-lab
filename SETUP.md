@@ -103,8 +103,6 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 | `topic_content_type` | 382 | Django content_type int for this pub's Topic model — find via CMS POST form data on save |
 | `slack_channel` | #edit-d1-aggs-n-stuff | Human-readable Slack channel name (for reference) |
 | `slack_email` | u5q8...@govexec.slack.com | Slack channel email address for notifications |
-| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL to the shared trending API endpoint (same for all pubs; `?pub=` appended at runtime) |
-| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL to the shared earthbox API endpoint (same for all pubs; `?pub=` appended at runtime) |
 | `base_url` | `https://www.defenseone.com` | Public-facing site URL (no trailing slash) — used to build article scrape URLs |
 | `topic_oref` | `d1-article-topics` | oref value on topic nav links in article HTML — used to identify topic tags during scraping |
 | `earthbox_oref` | `d1-earthbox-post` | oref value on Earthbox widget links in article HTML — used to count monthly Earthbox clicks in GA4. Confirm by inspecting a live article page |
@@ -113,11 +111,25 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 | `earthbox_baseline` | `1795` | Pre-automation monthly avg for Earthbox widget clicks (integer). Leave blank if not yet calculated |
 
 **To add a new pub:**
-1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until the PHP backend is ready
-2. Confirm `grappelli_topic_model` and `grappelli_app_label` by watching the Network tab when typing in the CMS Topics autocomplete field on a post from that pub
-3. Find `topic_content_type` by watching the POST form data when saving a Trending item in the CMS
-4. Fill in `base_url` and `topic_oref` in the sheet row — the shared `trending-topics.php` and `earthbox-posts.php` endpoints handle all pubs via `?pub={pub_key}`; no new PHP files needed
-5. Flip `trending_enabled`/`earthbox_enabled` to TRUE — picked up at the next nightly run
+1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until ready
+2. Confirm `grappelli_topic_model` and `grappelli_app_label`: open a CMS trending item edit page for that pub, type in the Topics autocomplete field, inspect the Network request to `/grappelli/lookup/autocomplete/`
+3. Find `topic_content_type`: read the `content_type` select value on that same edit page (or watch POST on save)
+4. Confirm `topic_oref` and `earthbox_oref` by inspecting a live article page — pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` has held for all 5 pubs
+5. Calculate baselines via `pub-stats.php?pub=X&type=topics&start=...&end=...` over 6 pre-automation months
+6. Set `automation_start_date` when flipping enabled to TRUE
+7. No new PHP files needed — shared endpoints handle all pubs via `?pub={pub_key}`
+
+**Confirmed per-pub values (all in sheet):**
+
+| Pub | pub_key | GA4 property | app_label | model | content_type | topic_oref | earthbox_oref | Sheet status |
+|---|---|---|---|---|---|---|---|---|
+| Defense One | `defenseone` | `353836589` | `post_manager` | `defenseonetopic` | `382` | `d1-article-topics` | `d1-earthbox-post` | ✓ live |
+| Washington Technology | `washtech` | `358726868` | `core` | `topic` | TBD | `wt-article-topics` | `wt-earthbox-post` | disabled — needs content_type, slack, base_url |
+| GovExec | `govexec` | `353164424` | `post_manager` | `govexectopic` | `505` | `ge-article-topics` | `ge-earthbox-post` | disabled — needs slack |
+| Nextgov | `nextgov` | `353764914` | `post_manager` | `nextgovtopic` | `496` | `ng-article-topics` | `ng-earthbox-post` | disabled — needs slack |
+| Route Fifty | `routefifty` | `353766084` | `post_manager` | `topic` | `164`* | `rf-article-topics` | `rf-earthbox-post` | disabled — needs slack |
+
+*Route Fifty `topic_content_type` 164 was read from an empty trending item — confirm when a real topic is saved.
 
 **Validation:** `pub-config.php` checks that all headers exist, booleans are TRUE/FALSE, integers are integers, and API URLs are valid. Errors are returned in the `errors` array and logged by the scripts; affected rows are skipped. A renamed or deleted column header produces a fatal error (stops all pubs) rather than silently skipping data.
 
