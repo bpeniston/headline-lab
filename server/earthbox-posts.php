@@ -1,15 +1,13 @@
 <?php
 // =============================================================
-// earthbox-posts.php — Defense One Earthbox Posts API
+// earthbox-posts.php — GE360 Earthbox Posts API
 // Upload to: navybook.com/D1/seo/earthbox-posts.php
 //
 // Queries GA4 for top article pages (day / week / month),
 // extracts post IDs and titles, weights by recency, and
 // returns the top 6 articles as JSON.
 //
-// Scoring: score = month_views + week_views + day_views
-// Filters: must have 5–7 digit post ID in path; no /topic/ landers;
-//          no sponsored/brandlab posts (detected from page HTML).
+// Usage: earthbox-posts.php?pub=defenseone  (defaults to defenseone)
 // =============================================================
 
 header('Content-Type: application/json');
@@ -25,14 +23,25 @@ if ($referer && !str_starts_with($referer, 'https://admin.govexec.com/')) {
     exit;
 }
 
+define('PUB_CONFIG_INCLUDED', true);
+require_once __DIR__ . '/pub-config.php';
+
+// ── Resolve pub config ────────────────────────────────────────
+$pub_key = preg_replace('/[^a-z0-9]/', '', strtolower($_GET['pub'] ?? 'defenseone'));
+$pub = find_pub($pub_key);
+if (!$pub) {
+    http_response_code(400);
+    die(json_encode(['error' => "Unknown or invalid pub: $pub_key"]));
+}
+
 // ── Config ────────────────────────────────────────────────────
 $CREDS_FILE  = '/home/bradwu/ga4-oauth.json';
-$GA4_PROPERTY = '353836589';
-$CACHE_FILE  = '/home/bradwu/earthbox-cache.json';
-$TITLE_CACHE = '/home/bradwu/earthbox-title-cache.json';
+$GA4_PROPERTY = (string) $pub['ga4_property_id'];
+$BASE_URL    = rtrim($pub['base_url'], '/');
+$CACHE_FILE  = "/home/bradwu/earthbox-cache-{$pub_key}.json";
+$TITLE_CACHE = "/home/bradwu/earthbox-title-cache-{$pub_key}.json";
 $CACHE_TTL   = 3600;    // 1 hour
 $TITLE_TTL   = 86400;   // 24 hours
-$BASE_URL    = 'https://www.defenseone.com';
 $TOP_N       = 6;       // 5 editorial slots + 1 backup
 $MAX_MONTH   = 80;
 $MAX_WEEK    = 40;
@@ -68,7 +77,6 @@ $month_pages = ga4_top_pages($access_token, $GA4_PROPERTY, '30daysAgo', 'today',
 $week_pages  = ga4_top_pages($access_token, $GA4_PROPERTY, '7daysAgo',  'today', $MAX_WEEK);
 $day_pages   = ga4_top_pages($access_token, $GA4_PROPERTY, '1daysAgo',  'today', $MAX_DAY);
 
-// Merge; score = month + week + day (recency-weighted)
 $all_paths = [];
 foreach ($month_pages as $path => $views) $all_paths[$path]['month'] = $views;
 foreach ($week_pages  as $path => $views) $all_paths[$path]['week']  = $views;
@@ -82,13 +90,8 @@ foreach ($all_paths as $path => &$v) {
 }
 unset($v);
 
-// Remove any paths without a valid numeric post ID
 $all_paths = array_filter($all_paths, fn($v) => $v['post_id'] !== null);
-
-// Sort by score descending
 uasort($all_paths, fn($a, $b) => $b['score'] <=> $a['score']);
-
-// Take a generous buffer of candidates to allow for filtering
 $candidates = array_slice($all_paths, 0, $TOP_N * 4, true);
 
 // ── 4. Fetch article titles and check for sponsored content ───
@@ -107,7 +110,7 @@ foreach (array_keys($candidates) as $path) {
 
 if ($to_fetch) {
     $html_map = curl_multi_get($to_fetch, [
-        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; D1EarthboxBot/1.0)',
+        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; GE360EarthboxBot/1.0)',
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT        => 12,
     ]);
@@ -153,8 +156,6 @@ echo json_encode($output);
 // HELPERS
 // =============================================================
 
-/** Query GA4 for top article page paths.
- *  Filters to paths with a 5–7-digit post ID; excludes /topic/ landers. */
 function ga4_top_pages(string $token, string $property,
                        string $start, string $end, int $limit): array {
     $url  = "https://analyticsdata.googleapis.com/v1beta/properties/{$property}:runReport";
@@ -184,7 +185,6 @@ function ga4_top_pages(string $token, string $property,
     foreach ($data['rows'] ?? [] as $row) {
         $path  = $row['dimensionValues'][0]['value'];
         $views = (int)($row['metricValues'][0]['value'] ?? 0);
-        // Must end with 5–7-digit post ID; must not be a topic lander
         if (preg_match('#/\d{5,7}/?$#', $path) && strpos($path, '/topic/') === false) {
             $pages[$path] = $views;
             if (count($pages) >= $limit) break;
@@ -193,17 +193,14 @@ function ga4_top_pages(string $token, string $property,
     return $pages;
 }
 
-/** Extract the article headline from page HTML. */
 function extract_title(string $html): string {
     if (!$html) return '';
     $dom = new DOMDocument();
-    // Prefix forces DOMDocument to treat content as UTF-8 (avoids mangled chars)
     @$dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING);
     foreach ($dom->getElementsByTagName('h1') as $h1) {
         $text = trim($h1->textContent);
         if ($text && strlen($text) > 10) return $text;
     }
-    // Fall back to <title>, stripping site name suffix
     foreach ($dom->getElementsByTagName('title') as $t) {
         $text = preg_replace('/\s*[-|·].*$/u', '', $t->textContent);
         $text = trim($text);
@@ -212,7 +209,6 @@ function extract_title(string $html): string {
     return '';
 }
 
-/** Detect sponsored/branded content from article HTML. */
 function is_sponsored(string $html): bool {
     if (!$html) return false;
     // Note: do NOT match the broad class=".*sponsored.*" pattern — D1 nav
@@ -222,19 +218,17 @@ function is_sponsored(string $html): bool {
         || str_contains($html, '"sponsored":true');
 }
 
-/** Last-resort: derive a readable title from the URL path slug. */
 function path_to_title(string $path): string {
     $parts = array_filter(explode('/', $path));
     foreach (array_reverse($parts) as $part) {
-        if (preg_match('/^\d+$/', $part)) continue;  // skip numeric ID
-        if (preg_match('/^\d{4}$/', $part)) continue; // skip year
+        if (preg_match('/^\d+$/', $part)) continue;
+        if (preg_match('/^\d{4}$/', $part)) continue;
         if (strlen($part) <= 2) continue;
         return ucwords(str_replace('-', ' ', $part));
     }
     return 'Article';
 }
 
-/** POST form-encoded data, return decoded JSON. */
 function http_post(string $url, array $fields): array {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -248,7 +242,6 @@ function http_post(string $url, array $fields): array {
     return json_decode($res, true) ?? [];
 }
 
-/** Fetch multiple URLs in parallel. Returns [ url => html ] */
 function curl_multi_get(array $urls, array $extra_opts = []): array {
     $mh = curl_multi_init();
     $handles = [];

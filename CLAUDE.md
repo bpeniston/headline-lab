@@ -91,14 +91,14 @@ All five pubs run Athena CMS at `admin.govexec.com`.
 | Route Fifty           | route-fifty.com          | `routefifty`           | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
 | Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
 
-Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row, set `trending_enabled`/`earthbox_enabled` to TRUE when its PHP backend endpoints are ready.
+Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row (including `base_url` and `topic_oref`), then set `trending_enabled`/`earthbox_enabled` to TRUE — no new PHP files needed, the shared endpoints handle all pubs via `?pub={pub_key}`.
 
 **Per-pub values needed for each pub** (confirmed vs. still needed):
 
 | Pub | GA4 Property | Article topic oref | Grappelli app_label | Grappelli model | topic_content_type | Status |
 |---|---|---|---|---|---|---|
 | Defense One | `353836589` (acct `395628`) | `oref=d1-article-topics` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled |
+| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled; base_url + topic_oref filled, topic_content_type + slack + API URLs still needed |
 | GovExec | TBD | likely `oref=govexec-article-topics` | TBD | TBD | TBD | not started |
 | Nextgov | TBD | likely `oref=nextgov-article-topics` | TBD | TBD | TBD | not started |
 | Route Fifty | TBD | likely `oref=routefifty-article-topics` | TBD | TBD | TBD | not started |
@@ -118,10 +118,7 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server -
-Scoring: `score = month_views + week_views + day_views` - Click tracking orefs:
-`oref=d1-article-topics` (Trending Topics nav links), `oref=d1-earthbox-post`
-(Earthbox widget links on article pages)
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs: `oref=d1-article-topics` (Trending Topics nav links), `oref=d1-earthbox-post` (Earthbox widget links on article pages) — per-pub topic oref stored in `topic_oref` sheet column, used by `trending-topics.php` to identify topic tags during article scraping
 
 Repo & deploy
 -------------

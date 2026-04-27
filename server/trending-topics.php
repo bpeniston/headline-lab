@@ -1,11 +1,13 @@
 <?php
 // =============================================================
-// trending-topics.php — Defense One Trending Topics API
+// trending-topics.php — GE360 Trending Topics API
 // Upload to: navybook.com/D1/seo/trending-topics.php
 //
 // Queries GA4 for top article pages (day / week / month),
 // scrapes topic tags from each article, weights by recency,
 // and returns the top 7 topics as JSON.
+//
+// Usage: trending-topics.php?pub=defenseone  (defaults to defenseone)
 // =============================================================
 
 header('Content-Type: application/json');
@@ -13,23 +15,34 @@ header('X-Content-Type-Options: nosniff');
 header('Access-Control-Allow-Origin: https://admin.govexec.com');
 header('Access-Control-Allow-Methods: GET');
 
-// ── Config ────────────────────────────────────────────────────
-$CREDS_FILE      = '/home/bradwu/ga4-oauth.json';
-$GA4_PROPERTY    = '353836589';
-$MAIN_CACHE      = '/home/bradwu/trending-main-cache.json';
-$ARTICLE_CACHE   = '/home/bradwu/trending-article-cache.json';
-$TOPIC_NAME_CACHE= '/home/bradwu/trending-topicname-cache.json';
-$MAIN_CACHE_TTL  = 3600;    // 1 hour  — re-run GA4 + scrape
-$ARTICLE_TTL     = 86400;   // 24 hours — article→topics mapping
-$TOPICNAME_TTL   = 604800;  // 7 days  — slug→display name mapping
-$BASE_URL        = 'https://www.defenseone.com';
-$TOP_N           = 7;
+define('PUB_CONFIG_INCLUDED', true);
+require_once __DIR__ . '/pub-config.php';
 
-// Topics to never surface as Trending (slugs or display names, case-insensitive)
+// ── Resolve pub config ────────────────────────────────────────
+$pub_key = preg_replace('/[^a-z0-9]/', '', strtolower($_GET['pub'] ?? 'defenseone'));
+$pub = find_pub($pub_key);
+if (!$pub) {
+    http_response_code(400);
+    die(json_encode(['error' => "Unknown or invalid pub: $pub_key"]));
+}
+
+// ── Config ────────────────────────────────────────────────────
+$CREDS_FILE       = '/home/bradwu/ga4-oauth.json';
+$GA4_PROPERTY     = (string) $pub['ga4_property_id'];
+$BASE_URL         = rtrim($pub['base_url'], '/');
+$TOPIC_OREF       = $pub['topic_oref'];
+$MAIN_CACHE       = "/home/bradwu/trending-main-cache-{$pub_key}.json";
+$ARTICLE_CACHE    = "/home/bradwu/trending-article-cache-{$pub_key}.json";
+$TOPIC_NAME_CACHE = "/home/bradwu/trending-topicname-cache-{$pub_key}.json";
+$MAIN_CACHE_TTL   = 3600;    // 1 hour  — re-run GA4 + scrape
+$ARTICLE_TTL      = 86400;   // 24 hours — article→topics mapping
+$TOPICNAME_TTL    = 604800;  // 7 days  — slug→display name mapping
+$TOP_N            = 7;
+
 $EXCLUDED_TOPICS = ['commentary'];
-$MAX_MONTH       = 80;      // top N article pages from month query
-$MAX_WEEK        = 40;      // top N from week query
-$MAX_DAY         = 20;      // top N from day query
+$MAX_MONTH       = 80;
+$MAX_WEEK        = 40;
+$MAX_DAY         = 20;
 
 // ── 1. Main cache check ───────────────────────────────────────
 if (isset($_GET['nocache'])) {
@@ -59,25 +72,15 @@ if (!$access_token) {
 }
 
 // ── 3. Three GA4 queries (month / week / day) ─────────────────
-// Each returns top article paths for that window with pageview counts.
-// We merge the results; a path's score = month_views + week_views + day_views.
 $month_pages = ga4_top_pages($access_token, $GA4_PROPERTY, '30daysAgo', 'today', $MAX_MONTH);
 $week_pages  = ga4_top_pages($access_token, $GA4_PROPERTY, '7daysAgo',  'today', $MAX_WEEK);
 $day_pages   = ga4_top_pages($access_token, $GA4_PROPERTY, '1daysAgo',  'today', $MAX_DAY);
 
-// Merge into a single path → [month, week, day] map
 $all_paths = [];
-foreach ($month_pages as $path => $views) {
-    $all_paths[$path]['month'] = $views;
-}
-foreach ($week_pages as $path => $views) {
-    $all_paths[$path]['week'] = $views;
-}
-foreach ($day_pages as $path => $views) {
-    $all_paths[$path]['day'] = $views;
-}
+foreach ($month_pages as $path => $views) $all_paths[$path]['month'] = $views;
+foreach ($week_pages  as $path => $views) $all_paths[$path]['week']  = $views;
+foreach ($day_pages   as $path => $views) $all_paths[$path]['day']   = $views;
 
-// Fill in missing windows with 0
 foreach ($all_paths as $path => &$v) {
     $v += ['month' => 0, 'week' => 0, 'day' => 0];
     $v['score'] = $v['month'] + $v['week'] + $v['day'];
@@ -89,7 +92,6 @@ $article_cache = file_exists($ARTICLE_CACHE)
     ? (json_decode(file_get_contents($ARTICLE_CACHE), true) ?? [])
     : [];
 
-// Identify which URLs need a fresh scrape
 $to_fetch = [];
 foreach ($all_paths as $path => $_) {
     $url = $BASE_URL . $path;
@@ -99,24 +101,22 @@ foreach ($all_paths as $path => $_) {
     }
 }
 
-// Parallel fetch
 if ($to_fetch) {
     $html_map = curl_multi_get($to_fetch, [
-        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; D1TrendingBot/1.0)',
+        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; GE360TrendingBot/1.0)',
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT        => 12,
     ]);
     foreach ($html_map as $url => $html) {
         $article_cache[$url] = [
             'ts'     => time(),
-            'topics' => extract_topics($html),
+            'topics' => extract_topics($html, $TOPIC_OREF),
         ];
     }
     file_put_contents($ARTICLE_CACHE, json_encode($article_cache));
 }
 
 // ── 5. Resolve display names for any unknown slugs ─────────────
-// If link text was empty on the article page, fetch the topic landing page.
 $name_cache = file_exists($TOPIC_NAME_CACHE)
     ? (json_decode(file_get_contents($TOPIC_NAME_CACHE), true) ?? [])
     : [];
@@ -138,10 +138,9 @@ if ($slugs_needing_names) {
         $topic_urls[$slug] = $BASE_URL . '/topic/' . $slug . '/';
     }
     $topic_html = curl_multi_get(array_values($topic_urls), [
-        CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; D1TrendingBot/1.0)',
+        CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; GE360TrendingBot/1.0)',
         CURLOPT_TIMEOUT   => 8,
     ]);
-    // Flip to slug → html
     $slug_url_map = array_flip($topic_urls);
     foreach ($topic_html as $url => $html) {
         $slug = $slug_url_map[$url] ?? null;
@@ -161,11 +160,8 @@ foreach ($all_paths as $path => $views) {
     if (!$topics) continue;
 
     foreach ($topics as $slug => $label) {
-        // Resolve display name
-        $display = $label
-            ?: ($name_cache[$slug] ?? slug_to_title($slug));
+        $display = $label ?: ($name_cache[$slug] ?? slug_to_title($slug));
 
-        // Skip excluded topics
         if (in_array(strtolower($slug), $EXCLUDED_TOPICS) ||
             in_array(strtolower($display), $EXCLUDED_TOPICS)) continue;
 
@@ -173,10 +169,7 @@ foreach ($all_paths as $path => $views) {
             $topic_scores[$slug] = [
                 'slug'  => $slug,
                 'label' => $display,
-                'month' => 0,
-                'week'  => 0,
-                'day'   => 0,
-                'score' => 0,
+                'month' => 0, 'week' => 0, 'day' => 0, 'score' => 0,
             ];
         }
         $topic_scores[$slug]['month'] += $views['month'];
@@ -186,15 +179,11 @@ foreach ($all_paths as $path => $views) {
     }
 }
 
-// Sort by score, take top 7
 usort($topic_scores, fn($a, $b) => $b['score'] <=> $a['score']);
 $top_topics = array_slice($topic_scores, 0, $TOP_N);
 
 // ── 7. Build and cache response ────────────────────────────────
-$result = [
-    'topics'       => $top_topics,
-    'generated_at' => date('c'),
-];
+$result = ['topics' => $top_topics, 'generated_at' => date('c')];
 file_put_contents($MAIN_CACHE, json_encode(['ts' => time(), 'data' => $result]));
 echo json_encode($result);
 
@@ -203,8 +192,6 @@ echo json_encode($result);
 // HELPERS
 // =============================================================
 
-/** Query GA4 for top article page paths in a date range.
- *  Returns [ pagePath => pageviews ] filtered to article URLs. */
 function ga4_top_pages(string $token, string $property,
                        string $start, string $end, int $limit): array {
     $url  = "https://analyticsdata.googleapis.com/v1beta/properties/{$property}:runReport";
@@ -213,9 +200,8 @@ function ga4_top_pages(string $token, string $property,
         'dimensions' => [['name' => 'pagePath']],
         'metrics'    => [['name' => 'screenPageViews']],
         'orderBys'   => [['metric' => ['metricName' => 'screenPageViews'], 'desc' => true]],
-        'limit'      => $limit * 3, // fetch extra to account for non-article pages
+        'limit'      => $limit * 3,
     ];
-
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
@@ -235,7 +221,6 @@ function ga4_top_pages(string $token, string $property,
     foreach ($data['rows'] ?? [] as $row) {
         $path  = $row['dimensionValues'][0]['value'];
         $views = (int)($row['metricValues'][0]['value'] ?? 0);
-        // Filter: D1 article URLs end with a 5–6-digit numeric ID
         if (preg_match('#/\d{5,6}/?$#', $path)) {
             $pages[$path] = $views;
             if (count($pages) >= $limit) break;
@@ -244,7 +229,6 @@ function ga4_top_pages(string $token, string $property,
     return $pages;
 }
 
-/** POST form-encoded data, return decoded JSON. */
 function http_post(string $url, array $fields): array {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -258,17 +242,15 @@ function http_post(string $url, array $fields): array {
     return json_decode($res, true) ?? [];
 }
 
-/** Fetch multiple URLs in parallel. Returns [ url => html ] */
 function curl_multi_get(array $urls, array $extra_opts = []): array {
     $mh = curl_multi_init();
     $handles = [];
     foreach ($urls as $url) {
         $ch = curl_init($url);
-        $opts = $extra_opts + [
+        curl_setopt_array($ch, $extra_opts + [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 10,
-        ];
-        curl_setopt_array($ch, $opts);
+        ]);
         curl_multi_add_handle($mh, $ch);
         $handles[$url] = $ch;
     }
@@ -288,41 +270,32 @@ function curl_multi_get(array $urls, array $extra_opts = []): array {
     return $results;
 }
 
-/** Extract topic slugs + labels from article HTML.
- *  Looks for <a href="/topic/{slug}/?oref=d1-article-topics">Label</a> */
-function extract_topics(string $html): array {
+/** Extract topic slugs + labels from article HTML using pub-specific oref. */
+function extract_topics(string $html, string $oref): array {
     if (!$html) return [];
     $topics = [];
     $dom    = new DOMDocument();
     @$dom->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
     foreach ($dom->getElementsByTagName('a') as $a) {
         $href = $a->getAttribute('href');
-        if (strpos($href, 'oref=d1-article-topics') === false) continue;
+        if (strpos($href, 'oref=' . $oref) === false) continue;
         if (!preg_match('#/topic/([^/?]+)#', $href, $m)) continue;
         $slug  = $m[1];
         $label = trim($a->textContent);
-        if ($slug) {
-            // Store label even if empty; we'll resolve later
-            $topics[$slug] = $label ?: null;
-        }
+        if ($slug) $topics[$slug] = $label ?: null;
     }
     return $topics;
 }
 
-/** Extract the page heading from topic landing-page HTML. */
 function extract_heading(string $html): string {
     if (!$html) return '';
     $dom = new DOMDocument();
     @$dom->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
-    // Try <h1> first
-    $h1s = $dom->getElementsByTagName('h1');
-    foreach ($h1s as $h1) {
+    foreach ($dom->getElementsByTagName('h1') as $h1) {
         $text = trim($h1->textContent);
         if ($text) return $text;
     }
-    // Fall back to <title>, stripping site suffix
-    $titles = $dom->getElementsByTagName('title');
-    foreach ($titles as $t) {
+    foreach ($dom->getElementsByTagName('title') as $t) {
         $text = preg_replace('/\s*[-|].*$/u', '', $t->textContent);
         $text = trim($text);
         if ($text) return $text;
@@ -330,7 +303,6 @@ function extract_heading(string $html): string {
     return '';
 }
 
-/** Last-resort: convert slug to Title Case. */
 function slug_to_title(string $slug): string {
     return ucwords(str_replace('-', ' ', $slug));
 }

@@ -68,19 +68,19 @@ This document describes the physical machines, services, and configurations that
 | File | Path | Purpose |
 |---|---|---|
 | GA4 OAuth credentials | `/home/bradwu/ga4-oauth.json` | Defense One GA4 API access |
-| Trending main cache | `/home/bradwu/trending-main-cache.json` | 1hr scored topic results |
-| Trending article cache | `/home/bradwu/trending-article-cache.json` | 24hr per-article topic cache |
-| Trending name cache | `/home/bradwu/trending-topicname-cache.json` | 7-day slug→display name cache |
-| Earthbox main cache | `/home/bradwu/earthbox-cache.json` | 1hr scored post results |
-| Earthbox title cache | `/home/bradwu/earthbox-title-cache.json` | 24hr per-article title/sponsored cache |
+| Trending main cache | `/home/bradwu/trending-main-cache-{pubkey}.json` | 1hr scored topic results (one file per pub) |
+| Trending article cache | `/home/bradwu/trending-article-cache-{pubkey}.json` | 24hr per-article topic cache (one file per pub) |
+| Trending name cache | `/home/bradwu/trending-topicname-cache-{pubkey}.json` | 7-day slug→display name cache (one file per pub) |
+| Earthbox main cache | `/home/bradwu/earthbox-cache-{pubkey}.json` | 1hr scored post results (one file per pub) |
+| Earthbox title cache | `/home/bradwu/earthbox-title-cache-{pubkey}.json` | 24hr per-article title/sponsored cache (one file per pub) |
 | Usage log | `/home/bradwu/headline-lab-usage.log` | Headline Lab usage |
 | Air heartbeat | `/home/bradwu/air-heartbeat.txt` | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
 
 ### PHP endpoints (navybook.com/D1/seo/)
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
-- `trending-topics.php` — Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON
-- `earthbox-posts.php` — Earthbox: queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON
-- `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `/home/bradwu/pub-config-cache.json`
+- `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
+- `earthbox-posts.php` — Earthbox: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub cache files: `earthbox-cache-{pubkey}.json`, `earthbox-title-cache-{pubkey}.json`
+- `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `/home/bradwu/pub-config-cache.json`. Can be `require_once`'d by other PHP files (define `PUB_CONFIG_INCLUDED` first) to use `get_pub_configs()` / `find_pub($pubKey)` directly without an HTTP round-trip
 - `monthly-stats.php` — Returns previous month's `oref=d1-article-topics` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
 - `earthbox-stats.php` — Returns previous month's `oref=d1-earthbox-post` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
 - `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
@@ -104,14 +104,16 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 | `topic_content_type` | 382 | Django content_type int for this pub's Topic model — find via CMS POST form data on save |
 | `slack_channel` | #edit-d1-aggs-n-stuff | Human-readable Slack channel name (for reference) |
 | `slack_email` | u5q8...@govexec.slack.com | Slack channel email address for notifications |
-| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL to this pub's trending API endpoint |
-| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL to this pub's earthbox API endpoint |
+| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL to the shared trending API endpoint (same for all pubs; `?pub=` appended at runtime) |
+| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL to the shared earthbox API endpoint (same for all pubs; `?pub=` appended at runtime) |
+| `base_url` | `https://www.defenseone.com` | Public-facing site URL (no trailing slash) — used to build article scrape URLs |
+| `topic_oref` | `d1-article-topics` | oref value on topic nav links in article HTML — used to identify topic tags during scraping |
 
 **To add a new pub:**
 1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until the PHP backend is ready
 2. Confirm `grappelli_topic_model` and `grappelli_app_label` by watching the Network tab when typing in the CMS Topics autocomplete field on a post from that pub
 3. Find `topic_content_type` by watching the POST form data when saving a Trending item in the CMS
-4. Build the pub's `trending-topics.php` and `earthbox-posts.php` equivalents (or extend existing endpoints with a `?pub=` param)
+4. Fill in `base_url` and `topic_oref` in the sheet row — the shared `trending-topics.php` and `earthbox-posts.php` endpoints handle all pubs via `?pub={pub_key}`; no new PHP files needed
 5. Flip `trending_enabled`/`earthbox_enabled` to TRUE — picked up at the next nightly run
 
 **Validation:** `pub-config.php` checks that all headers exist, booleans are TRUE/FALSE, integers are integers, and API URLs are valid. Errors are returned in the `errors` array and logged by the scripts; affected rows are skipped. A renamed or deleted column header produces a fatal error (stops all pubs) rather than silently skipping data.
@@ -213,14 +215,14 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` (line ~29) lists slugs/display names that are never surfaced, regardless of score. Currently: `['commentary']`. Add slugs or display names (case-insensitive) to extend.
 
-**Currently Defense One only.** Will extend to other GE360 pubs once GA4 property IDs and Grappelli model names are confirmed.
+**Multi-pub:** Script loops over all `trending_enabled` pubs from the Google Sheet. Each pub's topics are fetched from `trending-topics.php?pub={pub_key}`, which reads all per-pub config (GA4 property, base URL, topic oref) from the sheet at runtime.
 
 ---
 
 ### Job: Earthbox auto-apply (`apply-earthbox.js`)
 
 **Flow:**
-1. Fetches top GA4 articles from `navybook.com/D1/seo/earthbox-posts.php` (scores: month + week + day views; filters sponsored articles)
+1. Fetches top GA4 articles from `navybook.com/D1/seo/earthbox-posts.php?pub={pub_key}` for each enabled pub (scores: month + week + day views; filters sponsored articles)
 2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
 3. Parses D1 Earthbox Items list — reads all Live slots (note: `_is_sponsored_content` column is not shown on the list page)
 4. For each Live slot: GETs edit page for CSRF and current state; skips if `_is_sponsored_content` checkbox is checked; otherwise POSTs update (content_type=22, object_id=post_id, clears image_override so post's own featured image is used)

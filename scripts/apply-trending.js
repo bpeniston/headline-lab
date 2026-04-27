@@ -295,7 +295,7 @@ async function runApply() {
   for (const pub of pubs) {
     log(`Fetching topics for ${pub.pub_name}…`);
     try {
-      const data = await fetchJSON(pub.trending_api_url);
+      const data = await fetchJSON(`${pub.trending_api_url}?pub=${pub.pub_key}`);
       if (data.error) throw new Error(data.error);
       pubTopics[pub.pub_key] = data.topics;
       log(`  Got ${data.topics.length}: ${data.topics.map(t => t.label).join(', ')}`);

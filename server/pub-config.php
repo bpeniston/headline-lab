@@ -2,22 +2,16 @@
 // pub-config.php — GE360 publication config from Google Sheet.
 // Returns: { "pubs": [...], "errors": [...] }
 // "errors" lists rows with bad data; scripts log them and skip invalid rows.
-// Used by apply-trending.js and apply-earthbox.js.
-
-header('Content-Type: application/json');
+// Used by apply-trending.js, apply-earthbox.js, trending-topics.php, earthbox-posts.php.
+//
+// Can be required by other PHP scripts; define PUB_CONFIG_INCLUDED before
+// require_once to suppress JSON output and use get_pub_configs() directly.
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:O');
+define('SHEET_RANGE', 'Pubs!A:P');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
-
-$REQUIRED_COLUMNS = [
-    'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled',
-    'trending_cms_path', 'earthbox_cms_path', 'ga4_property_id',
-    'grappelli_topic_model', 'grappelli_app_label', 'topic_content_type',
-    'slack_channel', 'slack_email', 'trending_api_url', 'earthbox_api_url',
-];
 
 // ── Cache ──────────────────────────────────────────────────────────────────
 function readCache() {
@@ -128,7 +122,8 @@ function parseRows($rows, $requiredCols) {
         // Required string fields
         foreach (['pub_name', 'pub_key', 'trending_cms_path', 'earthbox_cms_path',
                   'grappelli_topic_model', 'grappelli_app_label', 'slack_channel',
-                  'slack_email', 'trending_api_url', 'earthbox_api_url'] as $col) {
+                  'slack_email', 'trending_api_url', 'earthbox_api_url',
+                  'base_url', 'topic_oref'] as $col) {
             if ($r[$col] === '') $rowErrors[] = "missing $col";
         }
 
@@ -154,7 +149,7 @@ function parseRows($rows, $requiredCols) {
         }
 
         // URL fields
-        foreach (['trending_api_url', 'earthbox_api_url'] as $col) {
+        foreach (['trending_api_url', 'earthbox_api_url', 'base_url'] as $col) {
             if ($r[$col] !== '' && !filter_var($r[$col], FILTER_VALIDATE_URL)) {
                 $rowErrors[] = "$col is not a valid URL (got: \"{$r[$col]}\")";
             }
@@ -174,18 +169,41 @@ function parseRows($rows, $requiredCols) {
     return ['pubs' => $pubs, 'errors' => $errors];
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
-try {
+// ── Public API ─────────────────────────────────────────────────────────────
+/** Fetch and cache all pub configs. Returns { pubs, errors }. */
+function get_pub_configs(): array {
+    $required = [
+        'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled',
+        'trending_cms_path', 'earthbox_cms_path', 'ga4_property_id',
+        'grappelli_topic_model', 'grappelli_app_label', 'topic_content_type',
+        'slack_channel', 'slack_email', 'trending_api_url', 'earthbox_api_url',
+        'base_url', 'topic_oref',
+    ];
     $cached = readCache();
-    if ($cached) { echo json_encode($cached); exit; }
-
+    if ($cached) return $cached;
     $token  = getAccessToken();
     $values = fetchSheetValues($token);
-    $result = parseRows($values, $REQUIRED_COLUMNS);
+    $result = parseRows($values, $required);
     writeCache($result);
-    echo json_encode($result);
+    return $result;
+}
 
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+/** Find a single valid pub by pub_key. Returns the pub array or null. */
+function find_pub(string $pubKey): ?array {
+    $data = get_pub_configs();
+    foreach ($data['pubs'] as $pub) {
+        if ($pub['pub_key'] === $pubKey && $pub['_valid']) return $pub;
+    }
+    return null;
+}
+
+// ── Main (endpoint mode) ───────────────────────────────────────────────────
+if (!defined('PUB_CONFIG_INCLUDED')) {
+    header('Content-Type: application/json');
+    try {
+        echo json_encode(get_pub_configs());
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
 }

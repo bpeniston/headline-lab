@@ -335,7 +335,7 @@ async function runApply() {
   for (const pub of pubs) {
     log(`Fetching posts for ${pub.pub_name}…`);
     try {
-      const data = await fetchJSON(pub.earthbox_api_url);
+      const data = await fetchJSON(`${pub.earthbox_api_url}?pub=${pub.pub_key}`);
       if (data.error) throw new Error(data.error);
       pubPosts[pub.pub_key] = data.posts;
       log(`  Got ${data.posts.length} recommendations.`);
