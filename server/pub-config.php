@@ -108,7 +108,7 @@ function parseRows($rows, $requiredCols) {
     $pubs   = [];
     $errors = [];
 
-    for ($i = 1; $i < count($rows); $i++) {
+    for ($i = 2; $i < count($rows); $i++) {  // row 2 is reserved for column descriptions
         $row    = $rows[$i];
         $rowNum = $i + 1;
 
