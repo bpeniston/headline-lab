@@ -98,7 +98,7 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 | Pub | GA4 Property | Article topic oref | Grappelli app_label | Grappelli model | topic_content_type | Status |
 |---|---|---|---|---|---|---|
 | Defense One | `353836589` (acct `395628`) | `oref=d1-article-topics` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled; base_url + topic_oref filled, topic_content_type + slack + API URLs still needed |
+| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled; earthbox_oref=`wt-earthbox-post` confirmed; baselines set (topics 1,699/mo, earthbox 459/mo); still needed: topic_content_type, slack_channel, slack_email, trending_api_url, earthbox_api_url, base_url, automation_start_date |
 | GovExec | TBD | likely `oref=govexec-article-topics` | TBD | TBD | TBD | not started |
 | Nextgov | TBD | likely `oref=nextgov-article-topics` | TBD | TBD | TBD | not started |
 | Route Fifty | TBD | likely `oref=routefifty-article-topics` | TBD | TBD | TBD | not started |
@@ -118,7 +118,7 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs: `oref=d1-article-topics` (Trending Topics nav links), `oref=d1-earthbox-post` (Earthbox widget links on article pages) — per-pub topic oref stored in `topic_oref` sheet column, used by `trending-topics.php` to identify topic tags during article scraping
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs stored in sheet (`topic_oref`, `earthbox_oref`) — used by both `trending-topics.php` (article scraping) and `pub-stats.php` (monthly click counts). D1: `d1-article-topics` / `d1-earthbox-post`. WT: `wt-article-topics` / `wt-earthbox-post`. Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo.
 
 Repo & deploy
 -------------
