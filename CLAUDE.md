@@ -91,30 +91,32 @@ All five pubs run Athena CMS at `admin.govexec.com`.
 | Route Fifty           | route-fifty.com          | `routefifty`           | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
 | Washington Technology | washingtontechnology.com | `washingtontechnology` | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
 
-**Defense One specifics (only pub fully configured so far):** - GA4 property:
-`353836589` (account `395628`) — do NOT use `529112613` (extension's own
-analytics) - Article topic oref: `oref=d1-article-topics`; article tags appear
-twice in DOM (desktop/mobile) — deduplicate by slug - Grappelli autocomplete
-model: `app_label=post_manager&model_name=defenseonetopic` - CMS content_type
-for Topic: `382`; for Post: `22`
+Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row, set `trending_enabled`/`earthbox_enabled` to TRUE when its PHP backend endpoints are ready.
 
-**Other pubs still need:** GA4 property IDs, Grappelli model names, topic oref
-values, content_type integers. (Pattern is likely `oref={pub}-article-topics`;
-confirm by inspecting a live article page.)
+**Per-pub values needed for each pub** (confirmed vs. still needed):
+
+| Pub | GA4 Property | Article topic oref | Grappelli app_label | Grappelli model | topic_content_type | Status |
+|---|---|---|---|---|---|---|
+| Defense One | `353836589` (acct `395628`) | `oref=d1-article-topics` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
+| Washington Technology | `358726868` | `oref=wt-article-topics` | `core` | `topic` | TBD | in sheet, disabled |
+| GovExec | TBD | likely `oref=govexec-article-topics` | TBD | TBD | TBD | not started |
+| Nextgov | TBD | likely `oref=nextgov-article-topics` | TBD | TBD | TBD | not started |
+| Route Fifty | TBD | likely `oref=routefifty-article-topics` | TBD | TBD | TBD | not started |
+
+**Key learnings from D1 and WT discovery:**
+- D1 topics use `app_label=post_manager`, but WT uses `app_label=core` — do NOT assume `post_manager` for new pubs; always confirm via Network tab on the CMS Topics autocomplete field
+- `grappelli_topic_model` pattern is NOT consistent: D1 = `defenseonetopic`, WT = `topic` — inspect each pub
+- `topic_content_type` is a Django integer that varies per pub/app — find it by watching the POST form data when saving a Trending item in the CMS, or by checking `admin.govexec.com/admin/contenttypes/contenttype/` if you have superuser access
+- Article topic oref pattern `oref={pub}-article-topics` holds for D1 and WT (confirmed); likely holds for others but verify by inspecting a live article page
+- D1 note: article tags appear twice in DOM (desktop/mobile) — deduplicate by slug. Check if this applies to other pubs.
+- DO NOT use GA4 property `529112613` — that's the extension's own analytics, not a pub property
+
+**Defense One GA4:** account `395628`, property `353836589`
 
 Key technical details
 ---------------------
 
-**CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli
-autocomplete: `GET
-/grappelli/lookup/autocomplete/?term={name}&app_label=post_manager&model_name=defenseonetopic&query_string=t=id`
-Returns: `[{"value": 32, "label": "Iran (Defense One)"}]` - D1-Trending edit
-form fields: `content_type` (382), `object_id`, `status`, `live_date`,
-`expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type`
-(22 = Post), `object_id` (post ID), `status`, `live_date_0/1`, override fields,
-`_is_sponsored_content` checkbox (use this — not `title_override` — to detect
-sponsored wall slots). `image_override` deleted on save so post's featured image
-is used.
+**CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
 **GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server -
 Scoring: `score = month_views + week_views + day_views` - Click tracking orefs:

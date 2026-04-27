@@ -88,7 +88,7 @@ This document describes the physical machines, services, and configurations that
 
 ### Publication config Google Sheet
 
-Columns (row 1 = headers, one publication per subsequent row):
+Row 1 = column headers, row 2 = human-readable descriptions (skipped by script), row 3+ = one publication per row.
 
 | Column | Example (D1) | Notes |
 |---|---|---|
@@ -96,14 +96,23 @@ Columns (row 1 = headers, one publication per subsequent row):
 | `pub_key` | defenseone | Short identifier, no spaces |
 | `trending_enabled` | TRUE | TRUE or FALSE |
 | `earthbox_enabled` | TRUE | TRUE or FALSE |
-| `trending_cms_path` | `/athena/curate/defenseonetrendingitem/` | Path on admin.govexec.com |
-| `earthbox_cms_path` | `/athena/curate/defenseoneearthboxitem/` | Path on admin.govexec.com |
+| `trending_cms_path` | `/athena/curate/defenseonetrendingitem/` | Path on admin.govexec.com — must start with `/` |
+| `earthbox_cms_path` | `/athena/curate/defenseoneearthboxitem/` | Path on admin.govexec.com — must start with `/` |
 | `ga4_property_id` | 353836589 | Integer only |
-| `grappelli_topic_model` | defenseonetopic | Used in Grappelli autocomplete |
-| `topic_content_type` | 382 | Django content_type int for this pub's Topic model |
-| `slack_email` | u5q8...@govexec.slack.com | Slack channel email for notifications |
-| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL |
-| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL |
+| `grappelli_topic_model` | defenseonetopic | Varies per pub — confirm via Network tab on CMS Topics autocomplete |
+| `grappelli_app_label` | post_manager | Varies per pub — D1: `post_manager`, WT: `core`. Confirm via Network tab |
+| `topic_content_type` | 382 | Django content_type int for this pub's Topic model — find via CMS POST form data on save |
+| `slack_channel` | #edit-d1-aggs-n-stuff | Human-readable Slack channel name (for reference) |
+| `slack_email` | u5q8...@govexec.slack.com | Slack channel email address for notifications |
+| `trending_api_url` | `https://www.navybook.com/D1/seo/trending-topics.php` | Full URL to this pub's trending API endpoint |
+| `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL to this pub's earthbox API endpoint |
+
+**To add a new pub:**
+1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until the PHP backend is ready
+2. Confirm `grappelli_topic_model` and `grappelli_app_label` by watching the Network tab when typing in the CMS Topics autocomplete field on a post from that pub
+3. Find `topic_content_type` by watching the POST form data when saving a Trending item in the CMS
+4. Build the pub's `trending-topics.php` and `earthbox-posts.php` equivalents (or extend existing endpoints with a `?pub=` param)
+5. Flip `trending_enabled`/`earthbox_enabled` to TRUE — picked up at the next nightly run
 
 **Validation:** `pub-config.php` checks that all headers exist, booleans are TRUE/FALSE, integers are integers, and API URLs are valid. Errors are returned in the `errors` array and logged by the scripts; affected rows are skipped. A renamed or deleted column header produces a fatal error (stops all pubs) rather than silently skipping data.
 
