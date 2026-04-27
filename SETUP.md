@@ -81,8 +81,7 @@ This document describes the physical machines, services, and configurations that
 - `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
 - `earthbox-posts.php` — Earthbox: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub cache files: `earthbox-cache-{pubkey}.json`, `earthbox-title-cache-{pubkey}.json`
 - `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `/home/bradwu/pub-config-cache.json`. Can be `require_once`'d by other PHP files (define `PUB_CONFIG_INCLUDED` first) to use `get_pub_configs()` / `find_pub($pubKey)` directly without an HTTP round-trip
-- `monthly-stats.php` — Returns previous month's `oref=d1-article-topics` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
-- `earthbox-stats.php` — Returns previous month's `oref=d1-earthbox-post` pageviews from GA4; accepts optional `?start=` / `?end=` for historical queries
+- `pub-stats.php` — Returns one month's click counts for any pub; accepts `?pub={pubkey}&type=topics|earthbox&token=...` plus optional `?start=`/`?end=`. Replaces the old D1-only `monthly-stats.php` and `earthbox-stats.php`
 - `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
 
@@ -108,6 +107,10 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 | `earthbox_api_url` | `https://www.navybook.com/D1/seo/earthbox-posts.php` | Full URL to the shared earthbox API endpoint (same for all pubs; `?pub=` appended at runtime) |
 | `base_url` | `https://www.defenseone.com` | Public-facing site URL (no trailing slash) — used to build article scrape URLs |
 | `topic_oref` | `d1-article-topics` | oref value on topic nav links in article HTML — used to identify topic tags during scraping |
+| `earthbox_oref` | `d1-earthbox-post` | oref value on Earthbox widget links in article HTML — used to count monthly Earthbox clicks in GA4. Confirm by inspecting a live article page |
+| `automation_start_date` | `2026-04-08` | Date automation first went live for this pub (YYYY-MM-DD). Set when trending_enabled or earthbox_enabled is first flipped to TRUE |
+| `topics_baseline` | `3005` | Pre-automation monthly avg for Topics nav clicks (integer). Leave blank if not yet calculated — report will show "baseline not yet established" |
+| `earthbox_baseline` | `1795` | Pre-automation monthly avg for Earthbox widget clicks (integer). Leave blank if not yet calculated |
 
 **To add a new pub:**
 1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until the PHP backend is ready
@@ -266,20 +269,20 @@ When the Air stops responding to SSH or VNC:
 
 ### Job: Monthly click report (`monthly-report.js`)
 
-Runs 6:00am on the 1st of each month. Fetches both Topics and Earthbox click counts from GA4 (via `monthly-stats.php` and `earthbox-stats.php`) and sends a single combined Slack message.
+Runs 6:00am on the 1st of each month. Fetches Topics and Earthbox click counts from GA4 for every automation-enabled pub in the Google Sheet, then sends one combined email to `bpeniston@defenseone.com`.
 
-- **Subject:** `D1 Monthly Report — [Month Year]`
-- **Body:**
-  ```
-  Trending Topics nav clicks: N
-  +/-N (+/-X%) vs Oct 2025–Mar 2026 avg of 3,005
+- **Subject:** `GE360 Monthly Report — [Month Year]`
+- **Body:** One section per pub showing Topics and Earthbox clicks vs pre-automation baseline, followed by cross-pub totals (once more than one pub is active)
+- **Stats endpoint:** `pub-stats.php?pub={pubkey}&type=topics|earthbox` — reads `ga4_property_id`, `topic_oref`, and `earthbox_oref` from the sheet
+- **Baselines** (from sheet columns S/T, calculated from Oct 2025–Mar 2026 GA4 data):
 
-  Earthbox clicks: N
-  (auto-update launched Apr 2026 — baseline TBD)
-  ```
-- **Topics baseline:** 3,005/month avg (Oct 2025–Mar 2026, pre-automation)
-- **Earthbox baseline:** TBD — run `node scripts/earthbox-baseline.js` on the Air to calculate from Oct 2025–Mar 2026 GA4 data; then update `EARTHBOX_BASELINE` in `monthly-report.js`
-- **GA4 orefs:** `oref=d1-article-topics` (Trending Topics nav), `oref=d1-earthbox-post` (Earthbox widget on article pages)
+| Pub | Topics baseline | Earthbox baseline |
+|---|---|---|
+| Defense One | 3,005/mo | 1,795/mo |
+| Washington Technology | 1,699/mo | 459/mo |
+
+- A pub appears in the report when `trending_enabled` OR `earthbox_enabled` is TRUE and the row is valid
+- If baseline is 0/blank, report shows "baseline not yet established" instead of a comparison
 
 **Secret:** `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` on DreamHost (not in GitHub).
 
