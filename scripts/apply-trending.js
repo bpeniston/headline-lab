@@ -22,7 +22,8 @@ const https        = require('https');
 const SESSION_FILE   = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
 const META_FILE      = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
 const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'trending-apply.log');
-const PUB_CONFIG_URL = 'https://www.navybook.com/D1/seo/pub-config.php';
+const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
+const TRENDING_API_URL = 'https://www.navybook.com/D1/seo/trending-topics.php';
 const CMS_BASE       = 'https://admin.govexec.com';
 const LABEL          = 'Topics';
 
@@ -295,7 +296,7 @@ async function runApply() {
   for (const pub of pubs) {
     log(`Fetching topics for ${pub.pub_name}…`);
     try {
-      const data = await fetchJSON(`${pub.trending_api_url}?pub=${pub.pub_key}`);
+      const data = await fetchJSON(`${TRENDING_API_URL}?pub=${pub.pub_key}`);
       if (data.error) throw new Error(data.error);
       pubTopics[pub.pub_key] = data.topics;
       log(`  Got ${data.topics.length}: ${data.topics.map(t => t.label).join(', ')}`);

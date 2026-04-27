@@ -9,7 +9,7 @@
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:T');
+define('SHEET_RANGE', 'Pubs!A:R');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
@@ -122,8 +122,7 @@ function parseRows($rows, $requiredCols) {
         // Required string fields
         foreach (['pub_name', 'pub_key', 'trending_cms_path', 'earthbox_cms_path',
                   'grappelli_topic_model', 'grappelli_app_label', 'slack_channel',
-                  'slack_email', 'trending_api_url', 'earthbox_api_url',
-                  'base_url', 'topic_oref'] as $col) {
+                  'slack_email', 'base_url', 'topic_oref'] as $col) {
             if ($r[$col] === '') $rowErrors[] = "missing $col";
         }
 
@@ -149,7 +148,7 @@ function parseRows($rows, $requiredCols) {
         }
 
         // URL fields
-        foreach (['trending_api_url', 'earthbox_api_url', 'base_url'] as $col) {
+        foreach (['base_url'] as $col) {
             if ($r[$col] !== '' && !filter_var($r[$col], FILTER_VALIDATE_URL)) {
                 $rowErrors[] = "$col is not a valid URL (got: \"{$r[$col]}\")";
             }
@@ -176,7 +175,7 @@ function get_pub_configs(): array {
         'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled',
         'trending_cms_path', 'earthbox_cms_path', 'ga4_property_id',
         'grappelli_topic_model', 'grappelli_app_label', 'topic_content_type',
-        'slack_channel', 'slack_email', 'trending_api_url', 'earthbox_api_url',
+        'slack_channel', 'slack_email',
         'base_url', 'topic_oref',
     ];
     $cached = readCache();

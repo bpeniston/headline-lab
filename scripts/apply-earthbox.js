@@ -26,7 +26,8 @@ const https        = require('https');
 const SESSION_FILE   = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
 const META_FILE      = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
 const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'earthbox-apply.log');
-const PUB_CONFIG_URL = 'https://www.navybook.com/D1/seo/pub-config.php';
+const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
+const EARTHBOX_API_URL = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
 const CMS_BASE       = 'https://admin.govexec.com';
 const LABEL          = 'Earthbox';
 
@@ -335,7 +336,7 @@ async function runApply() {
   for (const pub of pubs) {
     log(`Fetching posts for ${pub.pub_name}…`);
     try {
-      const data = await fetchJSON(`${pub.earthbox_api_url}?pub=${pub.pub_key}`);
+      const data = await fetchJSON(`${EARTHBOX_API_URL}?pub=${pub.pub_key}`);
       if (data.error) throw new Error(data.error);
       pubPosts[pub.pub_key] = data.posts;
       log(`  Got ${data.posts.length} recommendations.`);
