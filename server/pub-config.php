@@ -9,7 +9,7 @@
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:P');
+define('SHEET_RANGE', 'Pubs!A:T');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
