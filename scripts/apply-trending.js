@@ -196,7 +196,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
       const editUrl = `${CMS_BASE}/athena/curate/${itemSlug}/${item.id}/`;
 
       const result = await page.evaluate(
-        async ({ editUrl, topicLabel, cmsBase, grappelliModel, topicContentType }) => {
+        async ({ editUrl, topicLabel, cmsBase, grappelliModel, grappelliAppLabel, topicContentType }) => {
           const pageRes = await fetch(editUrl, { credentials: 'include' });
           if (!pageRes.ok) return { error: `GET returned ${pageRes.status}` };
           const html = await pageRes.text();
@@ -211,7 +211,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
             .find(o => o.text.trim() === 'Live')?.value ?? 'live';
 
           const acUrl = `${cmsBase}/grappelli/lookup/autocomplete/?` +
-            `term=${encodeURIComponent(topicLabel)}&app_label=post_manager` +
+            `term=${encodeURIComponent(topicLabel)}&app_label=${grappelliAppLabel}` +
             `&model_name=${grappelliModel}&query_string=t=id`;
           const acRes  = await fetch(acUrl, { credentials: 'include' });
           if (!acRes.ok) return { error: `Grappelli returned ${acRes.status}` };
@@ -241,6 +241,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
         },
         { editUrl, topicLabel: topic.label, cmsBase: CMS_BASE,
           grappelliModel: pub.grappelli_topic_model,
+          grappelliAppLabel: pub.grappelli_app_label,
           topicContentType: pub.topic_content_type }
       );
 
