@@ -1,5 +1,8 @@
 # Athena Tools — Planned Features
 
+## GE360 daily updates page
+✓ **Deployed 2026-04-28.** `https://navybook.com/D1/updates/` — daily digest of nightly script results across all five pubs. Files: `server/updates/index.php`, `help.html`, `updates.css`, `server/save-update.php`.
+
 ## Earthbox auto-updater
 ✓ **Deployed 2026-04-10.** Runs as a launchd job on the Air at 5:30am nightly.
 

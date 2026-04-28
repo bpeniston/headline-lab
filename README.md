@@ -26,6 +26,16 @@ PHP endpoints on DreamHost shared hosting:
 | `pub-config.php` | Reads per-pub config from Google Sheet; 1-hour server-side cache |
 | `pub-stats.php` | Monthly GA4 stats per pub (topics + earthbox click orefs) |
 | `monthly-stats.php` | Aggregated monthly usage report |
+| `save-update.php` | Receives nightly script results (authenticated POST); writes to daily JSON |
+
+### 4. Daily Updates Page — `server/updates/`
+`https://navybook.com/D1/updates/` — a daily digest showing what the nightly scripts changed across all five pubs.
+
+| File | What it does |
+|---|---|
+| `updates/index.php` | Reads today's JSON + pub config; renders Topics/Earthbox per pub with status badges |
+| `updates/help.html` | Static explainer page linked from the main page |
+| `updates/updates.css` | Shared stylesheet (Playfair Display + IBM Plex, newspaper palette) |
 
 ### 3. Nightly Automation — `scripts/` (runs on M1 Air)
 Playwright scripts that apply CMS updates without interactive login (saved session).
@@ -83,6 +93,8 @@ Go to `chrome://extensions` → Athena Tools → ↺ reload button, then hard-re
 | Article topic cache | `/home/bradwu/trending-article-cache.json` | 24-hour per-article topic tag cache |
 | Topic name cache | `/home/bradwu/trending-topicname-cache.json` | 7-day slug→display name cache |
 | Usage log | `/home/bradwu/headline-lab-usage.log` | Tab-separated: timestamp, action, ip, json |
+| Updates shared secret | `/home/bradwu/.update-secret` | Single-line `UPDATE_SECRET=<hex>`; authenticates POSTs from apply scripts |
+| Daily updates data | `/home/bradwu/ge360-updates-YYYY-MM-DD.json` | Written by `save-update.php`; read by `updates/index.php` |
 
 | File | Path on Air | Purpose |
 |---|---|---|
@@ -131,12 +143,17 @@ M1 Air (launchd nightly jobs)
   ├── apply-trending.js (5:00am)
   │     ├── GET pub config → navybook.com/D1/seo/pub-config.php (Google Sheet)
   │     ├── GET topics → navybook.com/D1/seo/trending-topics.php (GA4 + scraper)
-  │     └── Playwright → admin.govexec.com trending items (Grappelli + form POST)
+  │     ├── Playwright → admin.govexec.com trending items (Grappelli + form POST)
+  │     └── POST results → navybook.com/D1/seo/save-update.php → daily JSON
   └── apply-earthbox.js (5:30am)
         ├── GET pub config → navybook.com/D1/seo/pub-config.php
         ├── GET posts → navybook.com/D1/seo/earthbox-posts.php (GA4 pageviews)
-        └── Playwright → admin.govexec.com earthbox items (form POST per slot)
-  Both scripts → Slack notification via Gmail SMTP email-to-channel
+        ├── Playwright → admin.govexec.com earthbox items (form POST per slot)
+        └── POST results → navybook.com/D1/seo/save-update.php → daily JSON
+  Both scripts → Slack notification via Gmail SMTP email-to-channel (with link to updates page)
+
+navybook.com/D1/updates/ (daily digest page)
+  └── reads daily JSON → renders Topics/Earthbox status for all pubs
 ```
 
 ---

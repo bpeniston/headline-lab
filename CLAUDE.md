@@ -68,7 +68,9 @@ autocomplete.
 
 **Nightly auto-apply (launched 2026-04-08):** `scripts/apply-trending.js` runs
 as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
-nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
+nightly 2FA). Skips sponsored slots — detected via `_is_sponsored_content`
+checkbox on the individual edit form (CMS list page titles are blank for some
+pubs; `title_override` check is unreliable). Sends Slack notification: subject
 `{PUB} Topics: Changed|Unchanged|Problem` (e.g. `D1 Topics: Changed`), body
 `New: T1, T2, …` / `Old: T1, T2, …` (comma-separated; items new to the list
 are bolded). Re-login alert sent if session expired. Proactive
@@ -79,7 +81,13 @@ timeout duration self-calibrates after first observed expiry (tracked in
 **Shared library:** `scripts/lib.js` contains all utilities shared between
 `apply-trending.js` and `apply-earthbox.js`: logger factory, session metadata,
 `.env` loader, Slack email, HTTP helpers, pub config fetch, `pubLabel()` helper,
-and `runSetup()`. API fetches run in parallel across pubs via `Promise.all`.
+`runSetup()`, `postForm()` (HTTPS POST helper), and `saveUpdate()`. API fetches
+run in parallel across pubs via `Promise.all`.
+
+`saveUpdate(pubKey, type, status, newItems, oldItems, errors, env, log)` — POSTs
+result data to `save-update.php` after each script run, using `UPDATE_SECRET`
+from `.env`. Skips gracefully if secret is absent. `sendSlackEmail` appends a
+footer link to `https://navybook.com/D1/updates/` on every notification.
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` filters slugs/display
 names from recommendations regardless of score. Currently: `['commentary']`.
@@ -156,6 +164,11 @@ Secrets & credentials
 
 -   Monthly stats token: `/home/bradwu/.headline-lab-config.ini`
 
+-   Updates shared secret: `/home/bradwu/.update-secret` on DreamHost (one line:
+    `UPDATE_SECRET=<hex>`). Mirrored as `UPDATE_SECRET` in `~/headline-lab/.env`
+    on the Air. Used by `save-update.php` to authenticate POSTs from the apply
+    scripts. Daily results written to `/home/bradwu/ge360-updates-YYYY-MM-DD.json`.
+
 Extension manifest
 ------------------
 
@@ -186,6 +199,24 @@ shares the same self-calibrating timeout logic as `apply-trending.js`. GA4
 click tracking via `oref=d1-earthbox-post` (confirmed present on D1 article
 pages); monthly baseline being established via `scripts/earthbox-baseline.js`.
 See SETUP.md. Live for D1 and WT as of 2026-04-28.
+
+## GE360 daily updates page (live, launched 2026-04-28)
+
+`https://navybook.com/D1/updates/` — a daily digest of what the nightly scripts
+changed. Files: `server/updates/index.php`, `server/updates/help.html`,
+`server/updates/updates.css`.
+
+- `save-update.php` (new server endpoint) accepts POSTs from `apply-trending.js`
+  and `apply-earthbox.js` (authenticated via `UPDATE_SECRET`) and writes results
+  to `/home/bradwu/ge360-updates-YYYY-MM-DD.json` with `flock` for concurrency.
+- `index.php` reads today's JSON + pub config; renders Topics/Earthbox sections
+  per pub with Changed/Unchanged/Problem badges; new items in a Changed run are
+  **bolded**; sponsored slots shown inline as `SPONSORED: …` (never bolded).
+  Active pubs sort first (alpha), inactive after.
+- `help.html` — static explainer page linked from the main page.
+- `updates.css` — shared stylesheet (Playfair Display + IBM Plex Mono/Sans,
+  newspaper-style palette). Bump `?v=N` on the `<link>` tag when deploying CSS
+  changes to bust browser cache.
 
 ## Planned features
 see PLANNED.md
