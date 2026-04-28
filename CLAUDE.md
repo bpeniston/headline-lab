@@ -6,8 +6,8 @@ What this project is
 
 A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`)
 that adds tools to the Athena CMS shared by the **GE360** family of
-publications. Currently deployed for Defense One; being extended to the full
-family.
+publications. Nightly automation live for Defense One and Washington Technology;
+GovExec, Nextgov, and Route Fifty pending Slack config only.
 
 Five features
 -------------
@@ -69,11 +69,17 @@ autocomplete.
 **Nightly auto-apply (launched 2026-04-08):** `scripts/apply-trending.js` runs
 as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
 nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
-`Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
-(comma-separated; items new to the list are bolded). Re-login alert sent if
-session expired. Proactive `Topics: Session expiring soon` warning sent 5 days
-before expected expiry; timeout duration self-calibrates after first observed
-expiry (tracked in `~/.session-meta.json` on the Air). See SETUP.md.
+`{PUB} Topics: Changed|Unchanged|Problem` (e.g. `D1 Topics: Changed`), body
+`New: T1, T2, …` / `Old: T1, T2, …` (comma-separated; items new to the list
+are bolded). Re-login alert sent if session expired. Proactive
+`Topics: Session expiring soon` warning sent 5 days before expected expiry;
+timeout duration self-calibrates after first observed expiry (tracked in
+`~/.session-meta.json` on the Air). See SETUP.md.
+
+**Shared library:** `scripts/lib.js` contains all utilities shared between
+`apply-trending.js` and `apply-earthbox.js`: logger factory, session metadata,
+`.env` loader, Slack email, HTTP helpers, pub config fetch, `pubLabel()` helper,
+and `runSetup()`. API fetches run in parallel across pubs via `Promise.all`.
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` filters slugs/display
 names from recommendations regardless of score. Currently: `['commentary']`.
@@ -98,14 +104,14 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 | Pub | GA4 Property | topic_oref | earthbox_oref | app_label | model | content_type | Sheet status |
 |---|---|---|---|---|---|---|---|
 | Defense One | `353836589` | `d1-article-topics` | `d1-earthbox-post` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `core` | `topic` | TBD | disabled — needs topic_content_type, slack, base_url |
+| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `post_manager` | `wttopic` | `642` | ✓ live |
 | GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | disabled — needs slack only |
 | Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | disabled — needs slack only |
 | Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | disabled — needs slack only |
 
 **Key learnings:**
-- `grappelli_app_label`: WT uses `core`; all others confirmed as `post_manager` — always verify via Network tab
-- `grappelli_topic_model`: D1=`defenseonetopic`, GE=`govexectopic`, NG=`nextgovtopic`; WT and RF both use plain `topic`
+- `grappelli_app_label`: all five pubs confirmed as `post_manager` — always verify via Network tab
+- `grappelli_topic_model`: D1=`defenseonetopic`, GE=`govexectopic`, NG=`nextgovtopic`, WT=`wttopic`; RF uses plain `topic`
 - `topic_content_type` varies per pub — find via the `content_type` select on a trending item edit page
 - `oref` pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` holds for all 5 pubs (confirmed)
 - D1 article tags appear twice in DOM (desktop/mobile) — deduplicate by slug; verify for each new pub
@@ -173,12 +179,13 @@ Playwright script on the Air (`scripts/apply-earthbox.js`, same pattern as
 Runs via launchd at 5:30am. Server-side: `server/earthbox-posts.php`. Sponsored
 wall detected via `_is_sponsored_content` checkbox on the individual edit form
 (the CMS list page does not expose this column). Sends Slack notification:
-subject `Earthbox: Changes|Unchanged|Problem`, body bullet list with sponsored
-slots inline as `SPONSORED: …` (items new to the list are bolded). Proactive
-`Earthbox: Session expiring soon` warning shares the same self-calibrating
-timeout logic as `apply-trending.js`. GA4 click tracking via
-`oref=d1-earthbox-post` (confirmed present on D1 article pages); monthly
-baseline being established via `scripts/earthbox-baseline.js`. See SETUP.md.
+subject `{PUB} Earthboxes: Changed|Unchanged|Problem` (e.g. `WT Earthboxes: Changed`),
+body bullet list with sponsored slots inline as `SPONSORED: …` (items new to
+the list are bolded). Proactive `Earthboxes: Session expiring soon` warning
+shares the same self-calibrating timeout logic as `apply-trending.js`. GA4
+click tracking via `oref=d1-earthbox-post` (confirmed present on D1 article
+pages); monthly baseline being established via `scripts/earthbox-baseline.js`.
+See SETUP.md. Live for D1 and WT as of 2026-04-28.
 
 ## Planned features
 see PLANNED.md

@@ -18,134 +18,24 @@
 'use strict';
 
 const { chromium } = require('playwright');
-const fs           = require('fs');
 const path         = require('path');
-const https        = require('https');
+const {
+  CMS_BASE, createLogger, loadMeta, saveMeta, daysSince,
+  loadEnv, sendSlackEmail, fetchJSON, fetchPubConfig,
+  pubLabel, runSetup,
+} = require('./lib');
 
 // ── Config ────────────────────────────────────────────────────
-const SESSION_FILE   = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
-const META_FILE      = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
-const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'earthbox-apply.log');
-const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
+const SESSION_FILE     = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
+const META_FILE        = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
+const LOG_FILE         = path.join(process.env.HOME, 'headline-lab', 'logs', 'earthbox-apply.log');
 const EARTHBOX_API_URL = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
-const CMS_BASE       = 'https://admin.govexec.com';
-const LABEL          = 'Earthbox';
+const LABEL            = 'Earthboxes';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
 
-// ── Session metadata (login date + learned timeout) ───────────
-function loadMeta() {
-  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return {}; }
-}
-function saveMeta(meta) {
-  fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
-}
-function daysSince(isoDate) {
-  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);
-}
-
-// ── Logging ───────────────────────────────────────────────────
-fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
-const logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
-
-function log(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}`;
-  console.log(line);
-  logStream.write(line + '\n');
-}
-function die(msg) {
-  log(`FATAL: ${msg}`);
-  logStream.end();
-  process.exit(1);
-}
-
-// ── Slack ─────────────────────────────────────────────────────
-async function sendSlackEmail(subject, body, env, slackEmail) {
-  try {
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: env.SMTP_USER, pass: env.SMTP_PASS.replace(/\s+/g, '') },
-    });
-    await transporter.sendMail({
-      from: `Athena Tools <${env.SMTP_USER}>`,
-      to:   slackEmail,
-      subject,
-      text: body,
-    });
-    log('Slack notification sent.');
-  } catch (e) {
-    log(`Slack email error: ${e.message}`);
-  }
-}
-
-// ── HTTP helpers ──────────────────────────────────────────────
-function fetchJSON(url) {
-  return new Promise((resolve, reject) => {
-    const sep = url.includes('?') ? '&' : '?';
-    https.get(`${url}${sep}bust=${Date.now()}`, res => {
-      let body = '';
-      res.on('data', c => body += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(body)); }
-        catch (e) { reject(new Error(`Invalid JSON from ${url}: ${e.message}`)); }
-      });
-    }).on('error', reject);
-  });
-}
-
-async function fetchPubConfig() {
-  const data = await fetchJSON(PUB_CONFIG_URL);
-  if (data.error) throw new Error(`pub-config.php: ${data.error}`);
-  return data;
-}
-
-// ── Load .env ─────────────────────────────────────────────────
-function loadEnv() {
-  const envFile = path.join(process.env.HOME, 'headline-lab', '.env');
-  if (!fs.existsSync(envFile)) die(`.env not found at ${envFile}`);
-  const env = {};
-  fs.readFileSync(envFile, 'utf8').split('\n').forEach(line => {
-    const m = line.match(/^([^#=]+)=(.*)$/);
-    if (m) env[m[1].trim()] = m[2].trim();
-  });
-  return env;
-}
-
-// ── Setup mode ────────────────────────────────────────────────
-async function runSetup() {
-  console.log('\n=== CMS Session Setup ===');
-  console.log('A browser window will open. Log in normally (including 2FA).');
-  console.log('Once you are logged into the CMS, come back here and press Enter.\n');
-
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
-  const page    = await context.newPage();
-  await page.goto(`${CMS_BASE}/athena/`);
-
-  await new Promise(resolve => {
-    process.stdin.resume();
-    process.stdin.setEncoding('utf8');
-    process.stdout.write('Press Enter once you are logged in to the CMS…');
-    process.stdin.once('data', () => resolve());
-  });
-
-  if (!page.url().includes('admin.govexec.com')) {
-    console.log(`Warning: current URL is ${page.url()} — expected admin.govexec.com.`);
-    console.log('Session saved anyway, but you may need to re-run --setup.');
-  }
-
-  await context.storageState({ path: SESSION_FILE });
-  await browser.close();
-
-  const meta = loadMeta();
-  saveMeta({ ...meta, loginDate: new Date().toISOString(), lastWarningSent: null });
-
-  console.log(`\nSession saved to ${SESSION_FILE}`);
-  console.log('This session is shared with apply-trending.js.');
-  logStream.end();
-}
+const { log, die, logStream } = createLogger(LOG_FILE);
 
 // ── Apply earthbox for one publication ────────────────────────
 async function applyEarthboxForPub(page, pub, posts, env) {
@@ -155,8 +45,8 @@ async function applyEarthboxForPub(page, pub, posts, env) {
 
   await page.goto(`${CMS_BASE}${pub.earthbox_cms_path}`, { waitUntil: 'domcontentloaded' });
 
-  // Note: Earthbox list page does not expose _is_sponsored_content —
-  // sponsored detection must happen on the individual edit page below.
+  // Earthbox list page does not expose _is_sponsored_content —
+  // sponsored detection happens on the individual edit page below.
   const liveItems = await page.evaluate(itemSlug => {
     const items = [];
     document.querySelectorAll('#result_list tbody tr').forEach(row => {
@@ -178,7 +68,7 @@ async function applyEarthboxForPub(page, pub, posts, env) {
 
   if (!liveItems.length) {
     log('  No editable slots found — nothing to update.');
-    await sendSlackEmail(`${LABEL}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env, pub.slack_email);
+    await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env, pub.slack_email, log);
     return;
   }
 
@@ -218,12 +108,15 @@ async function applyEarthboxForPub(page, pub, posts, env) {
         const imgId         = doc.querySelector('[name="image_override-0-id"]')?.value || '';
         const hasImg        = !!imgId;
         const suppressLabel = doc.querySelector('[name="suppress_label"]')?.checked;
+        const statusSelect  = doc.querySelector('select[name="status"]');
+        const liveVal       = Array.from(statusSelect?.options || [])
+          .find(o => o.text.trim() === 'Live')?.value ?? 'live';
 
         const fd = new FormData();
         fd.append('csrfmiddlewaretoken', csrf);
         fd.append('content_type',        '22');
         fd.append('object_id',           String(postId));
-        fd.append('status',              'live');
+        fd.append('status',              liveVal);
         fd.append('live_date_0',         liveDate0);
         fd.append('live_date_1',         liveDate1);
         fd.append('expiration_date_0',   '');
@@ -293,8 +186,9 @@ async function applyEarthboxForPub(page, pub, posts, env) {
 
   log(`  ${pub.pub_name}: ${applied} applied, ${failed} failed, ${skipped} skipped (sponsored)`);
 
+  // Sponsored slots excluded from unchanged detection — they're never updated.
   const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
-  const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changes';
+  const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
   const oldSet    = new Set(displayOld);
   const bullets   = (titles, bold) => titles.map(t => `* ${bold && !oldSet.has(t) ? `*${t}*` : t}`).join('\n');
   let body;
@@ -304,17 +198,14 @@ async function applyEarthboxForPub(page, pub, posts, env) {
     body = `NEW:\n\n${bullets(displayNew, true)}\n\nOLD:\n\n${bullets(displayOld, false)}`;
   }
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
-  await sendSlackEmail(`${LABEL}: ${status}`, body, env, pub.slack_email);
+  await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
 }
 
 // ── Main apply ────────────────────────────────────────────────
 async function runApply() {
   log(`=== Earthbox apply start${DRY_RUN ? ' (DRY RUN)' : ''} ===`);
-  const env = loadEnv();
-
-  if (!fs.existsSync(SESSION_FILE)) {
-    die('No session file found. Run with --setup first.');
-  }
+  let env;
+  try { env = loadEnv(); } catch (e) { die(e.message); }
 
   // 1. Fetch pub config
   log('Fetching pub config…');
@@ -331,9 +222,9 @@ async function runApply() {
   if (!pubs.length) die('No valid earthbox-enabled publications found in config.');
   log(`Enabled pubs: ${pubs.map(p => p.pub_name).join(', ')}`);
 
-  // 2. Fetch post recommendations for each pub
+  // 2. Fetch post recommendations (parallel)
   const pubPosts = {};
-  for (const pub of pubs) {
+  await Promise.all(pubs.map(async pub => {
     log(`Fetching posts for ${pub.pub_name}…`);
     try {
       const data = await fetchJSON(`${EARTHBOX_API_URL}?pub=${pub.pub_key}`);
@@ -344,13 +235,14 @@ async function runApply() {
         log(`    [${i+1}] ${p.title} (post_id=${p.post_id}, score=${p.score})`));
     } catch (e) {
       log(`  API fetch failed for ${pub.pub_name}: ${e.message}`);
-      await sendSlackEmail(`${LABEL}: Problem`, `API fetch failed: ${e.message}`, env, pub.slack_email);
+      await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, `API fetch failed: ${e.message}`, env, pub.slack_email, log);
       pubPosts[pub.pub_key] = null;
     }
-  }
+  }));
 
   if (DRY_RUN) {
     log('Dry run — skipping CMS update.');
+    log('=== Done ===');
     logStream.end();
     return;
   }
@@ -367,30 +259,30 @@ async function runApply() {
     if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') ||
         page.url().includes('/sso/')            || page.url().includes('/login/') ||
         pageTitle.toLowerCase().includes('log in') || pageTitle.toLowerCase().includes('sign in')) {
-      const meta = loadMeta();
+      const meta = loadMeta(META_FILE);
       if (meta.loginDate && !meta.knownTimeoutDays) {
         const elapsed = daysSince(meta.loginDate);
         log(`Session expired after ${elapsed} days — saving as known timeout.`);
-        saveMeta({ ...meta, knownTimeoutDays: elapsed });
+        saveMeta(META_FILE, { ...meta, knownTimeoutDays: elapsed });
       }
-      const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup';
-      for (const pub of pubs) await sendSlackEmail(`${LABEL}: Problem`, msg, env, pub.slack_email);
+      const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-earthbox.js --setup';
+      for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, msg, env, pub.slack_email, log);
       die('Session has expired — notifications sent.');
     }
 
     log('Session valid.');
 
     // 5. Session age warning (once, shared across all pubs)
-    const meta        = loadMeta();
+    const meta        = loadMeta(META_FILE);
     const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
     const timeoutDays = meta.knownTimeoutDays || 30;
     const warnAt      = timeoutDays - 5;
     const todayStr    = new Date().toISOString().slice(0, 10);
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
-      saveMeta({ ...meta, lastWarningSent: todayStr });
+      saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      const warnMsg  = `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup`;
-      await sendSlackEmail(`${LABEL}: Session expiring soon`, warnMsg, env, pubs[0].slack_email);
+      const warnMsg  = `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-earthbox.js --setup`;
+      await sendSlackEmail(`${LABEL}: Session expiring soon`, warnMsg, env, pubs[0].slack_email, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected at ~${timeoutDays}).`);
     }
 
@@ -413,7 +305,8 @@ async function runApply() {
 
 // ── Entry point ──────────────────────────────────────────────
 if (SETUP) {
-  runSetup().catch(e => { console.error(e); process.exit(1); });
+  runSetup({ chromium, sessionFile: SESSION_FILE, metaFile: META_FILE, log, logStream })
+    .catch(e => { console.error(e); process.exit(1); });
 } else {
   runApply().catch(e => {
     log(`Unhandled error: ${e.message}`);
