@@ -164,12 +164,17 @@ function renderEarthboxes(array $d): string {
 <body>
 
 <header>
-  <h1>GE360 automated updates for <?= htmlspecialchars($today) ?></h1>
+  <h1>GE360 automated updates</h1>
 </header>
 
 <div class="page">
 
-<p class="contact">Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a> · <a href="/D1/updates/help.html">What is this and how does it work?</a></p>
+<p class="date-line"><strong><?= htmlspecialchars($today) ?></strong></p>
+
+<p class="contact">
+  <a href="/D1/updates/help.html">What is this and how does it work?</a><br>
+  Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a>
+</p>
 
 <nav class="pub-nav">
 <?php
