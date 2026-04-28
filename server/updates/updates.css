@@ -98,7 +98,7 @@ header h1 {
 /* ── Top nav (index.php) ───────────────────────────────────── */
 .pub-nav {
   font-family: var(--mono);
-  font-size: 0.9em;
+  font-size: 1em;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -140,7 +140,7 @@ header h1 {
   align-items: baseline;
   gap: 8px;
   font-family: var(--mono);
-  font-size: 0.82em;
+  font-size: 0.9em;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -165,7 +165,7 @@ header h1 {
 /* ── Row label (New / Old) ─────────────────────────────────── */
 .row-label {
   font-family: var(--mono);
-  font-size: 0.78em;
+  font-size: 0.85em;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #aaa;

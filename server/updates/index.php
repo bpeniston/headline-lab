@@ -159,7 +159,7 @@ function renderEarthboxes(array $d): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GE360 automated updates — <?= htmlspecialchars($today) ?></title>
-  <link rel="stylesheet" href="updates.css?v=3">
+  <link rel="stylesheet" href="updates.css?v=4">
 </head>
 <body>
 
