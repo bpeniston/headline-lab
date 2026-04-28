@@ -29,7 +29,7 @@ if ($configRaw) {
 usort($pubs, fn($a, $b) => strcmp($a['pub_name'] ?? '', $b['pub_name'] ?? ''));
 
 // ── Helpers ───────────────────────────────────────────────────
-function boolVal($v): bool {
+function parseBool($v): bool {
     return filter_var($v ?? false, FILTER_VALIDATE_BOOLEAN);
 }
 
@@ -243,8 +243,8 @@ function renderEarthboxes(array $d): string {
     $key      = $pub['pub_key']  ?? '';
     $name     = $pub['pub_name'] ?? $key;
     if (!$name) continue;
-    $tEnabled = boolVal($pub['trending_enabled']  ?? false);
-    $eEnabled = boolVal($pub['earthbox_enabled']  ?? false);
+    $tEnabled = parseBool($pub['trending_enabled']  ?? false);
+    $eEnabled = parseBool($pub['earthbox_enabled']  ?? false);
     $tData    = $pubData[$key]['trending']  ?? null;
     $eData    = $pubData[$key]['earthbox']  ?? null;
   ?>
