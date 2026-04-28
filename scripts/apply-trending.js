@@ -151,7 +151,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
   const status       = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
   const oldSet       = new Set(oldLabels);
   const formattedNew = newLabels.map(l => oldSet.has(l) ? l : `*${l}*`);
-  let body           = `New: ${formattedNew.join(', ')}\nOld: ${oldLabels.join(', ')}`;
+  let body           = `NEW\n${formattedNew.join('\n')}\n\nOLD\n${oldLabels.join('\n')}`;
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
   await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
 }
