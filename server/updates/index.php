@@ -262,7 +262,7 @@ function renderEarthboxes(array $d): string {
     /* ── Topics ── */
     .topic-line {
       margin: 0;
-      font-size: 0.95em;
+      font-size: 1.425em;
     }
     .pipe { color: #bbb; }
 
@@ -271,7 +271,7 @@ function renderEarthboxes(array $d): string {
       list-style: none;
       padding: 0;
       margin: 0;
-      font-size: 0.95em;
+      font-size: 1.425em;
     }
     .eb-list li { padding: 1px 0; }
 
