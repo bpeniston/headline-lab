@@ -83,7 +83,7 @@ function fetchJSON(url) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(15000, () => req.destroy(new Error(`Request timeout: ${url}`)));
+    req.setTimeout(30000, () => req.destroy(new Error(`Request timeout: ${url}`)));
   });
 }
 
