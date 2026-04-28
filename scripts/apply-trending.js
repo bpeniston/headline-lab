@@ -70,12 +70,17 @@ async function applyTrendingForPub(page, pub, topics, env) {
     return;
   }
 
-  const count     = Math.min(liveItems.length, topics.length);
-  const oldLabels = liveItems.slice(0, count).map(i => i.title);
-  const newLabels = topics.slice(0, count).map(t => t.label);
-  let applied     = 0;
-  let failed      = 0;
-  const errors    = [];
+  const count        = Math.min(liveItems.length, topics.length);
+  const oldLabels    = liveItems.slice(0, count).map(i => i.title);
+  const newLabels    = topics.slice(0, count).map(t => t.label);
+  let applied        = 0;
+  let failed         = 0;
+  let skipped        = 0;
+  const errors       = [];
+  const displayOld   = [...oldLabels];
+  const displayNew   = [...newLabels];
+  const appliedOld   = [];
+  const appliedNew   = [];
 
   for (let i = 0; i < count; i++) {
     const item  = liveItems[i];
@@ -94,6 +99,10 @@ async function applyTrendingForPub(page, pub, topics, env) {
 
           const csrf = doc.querySelector('[name="csrfmiddlewaretoken"]')?.value;
           if (!csrf) return { error: 'No CSRF token found — session may have expired' };
+
+          if (doc.querySelector('[name="_is_sponsored_content"]')?.checked) {
+            return { skipped: true, reason: 'sponsored' };
+          }
 
           const liveDate     = doc.querySelector('[name="live_date"]')?.value || '';
           const statusSelect = doc.querySelector('select[name="status"]');
@@ -136,7 +145,17 @@ async function applyTrendingForPub(page, pub, topics, env) {
       );
 
       if (result.error) throw new Error(result.error);
+      if (result.skipped) {
+        log(`    ↷ Skipped slot ${item.id} (${result.reason})`);
+        const label = `SPONSORED: ${item.title || item.id}`;
+        displayOld[i] = label;
+        displayNew[i] = label;
+        skipped++;
+        continue;
+      }
       log(`    ✓ Applied "${topic.label}" (object_id=${result.objectId})`);
+      appliedOld.push(item.title);
+      appliedNew.push(topic.label);
       applied++;
     } catch (err) {
       log(`    ✗ Failed for item ${item.id}: ${err.message}`);
@@ -145,15 +164,20 @@ async function applyTrendingForPub(page, pub, topics, env) {
     }
   }
 
-  log(`  ${pub.pub_name}: ${applied} applied, ${failed} failed, ${sponsoredCount} sponsored skipped`);
+  log(`  ${pub.pub_name}: ${applied} applied, ${failed} failed, ${skipped} sponsored skipped`);
 
-  const unchanged    = failed === 0 && newLabels.every((l, i) => l === oldLabels[i]);
-  const status       = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
-  const oldSet   = new Set(oldLabels);
-  const numbered = (labels, markNew) => labels
+  const unchanged = failed === 0 && appliedNew.every((l, i) => l === appliedOld[i]);
+  const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
+  const oldSet    = new Set(displayOld);
+  const numbered  = (labels, markNew) => labels
     .map((l, i) => (markNew && !oldSet.has(l)) ? `>> ${i+1}. ${l}` : `${i+1}. ${l}`)
     .join('\n');
-  let body = `NEW:\n\n${numbered(newLabels, true)}\n\nOLD:\n\n${numbered(oldLabels, false)}`;
+  let body;
+  if (unchanged) {
+    body = `UNCHANGED:\n\n${numbered(displayNew, false)}`;
+  } else {
+    body = `NEW:\n\n${numbered(displayNew, true)}\n\nOLD:\n\n${numbered(displayOld, false)}`;
+  }
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
   await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
 }
