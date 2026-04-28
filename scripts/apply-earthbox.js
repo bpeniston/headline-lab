@@ -189,13 +189,15 @@ async function applyEarthboxForPub(page, pub, posts, env) {
   // Sponsored slots excluded from unchanged detection — they're never updated.
   const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
   const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
-  const oldSet    = new Set(displayOld);
-  const bullets   = (titles, bold) => titles.map(t => `* ${bold && !oldSet.has(t) ? `*${t}*` : t}`).join('\n');
+  const oldSet   = new Set(displayOld);
+  const numbered = (titles, markNew) => titles
+    .map((t, i) => (markNew && !oldSet.has(t)) ? `>> ${i+1}. ${t}` : `${i+1}. ${t}`)
+    .join('\n');
   let body;
   if (unchanged) {
-    body = `UNCHANGED:\n\n${bullets(displayNew, false)}`;
+    body = `UNCHANGED:\n\n${numbered(displayNew, false)}`;
   } else {
-    body = `NEW:\n\n${bullets(displayNew, true)}\n\nOLD:\n\n${bullets(displayOld, false)}`;
+    body = `NEW:\n\n${numbered(displayNew, true)}\n\nOLD:\n\n${numbered(displayOld, false)}`;
   }
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
   await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
