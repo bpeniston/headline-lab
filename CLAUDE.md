@@ -104,7 +104,7 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 | Pub | GA4 Property | topic_oref | earthbox_oref | app_label | model | content_type | Sheet status |
 |---|---|---|---|---|---|---|---|
 | Defense One | `353836589` | `d1-article-topics` | `d1-earthbox-post` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `post_manager` | `wttopic` | `642` | ✓ live |
+| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `post_manager` | `wttopic` | `657` | ✓ live |
 | GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | disabled — needs slack only |
 | Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | disabled — needs slack only |
 | Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | disabled — needs slack only |
