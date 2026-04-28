@@ -12,7 +12,7 @@ A Manifest V3 Chrome extension that injects into the Athena CMS (`admin.govexec.
 |---|---|---|
 | **UI Tweaks** | All CMS post editor pages | Reorders fields, groups date/status controls into a cleaner bar |
 | **Headline Lab** | CMS post editor | Reads article body → calls backend API → generates 6 SEO headline/subhed/slug options with rationale and competition check |
-| **Trending Topics** | D1-Trending items list page | Queries GA4, scrapes article topic tags, weights by recency, shows top 7 for review, applies them to the CMS automatically |
+| **Trending Topics** | Trending items list page (all enabled pubs) | Queries GA4, scrapes article topic tags, weights by recency, shows top 7 for review; nightly auto-apply at 5:00am |
 | **Skybox Push** | All five pubs' skybox list + edit pages | Bookmarklet on any article page cascades it into skybox slot 1; slots shift down; sponsored slots act as a wall |
 
 ### 2. Backend API — `navybook.com/D1/seo/`
@@ -22,7 +22,20 @@ PHP endpoints on DreamHost shared hosting:
 |---|---|
 | `seo-api.php` | Headline Lab: takes article text, calls Anthropic API, returns headlines |
 | `trending-topics.php` | Trending Topics: queries GA4, scrapes articles, scores topics, returns top 7 JSON |
-| `stats.php` | Returns usage log counts |
+| `earthbox-posts.php` | Earthbox: queries GA4 pageviews, returns top articles JSON |
+| `pub-config.php` | Reads per-pub config from Google Sheet; 1-hour server-side cache |
+| `pub-stats.php` | Monthly GA4 stats per pub (topics + earthbox click orefs) |
+| `monthly-stats.php` | Aggregated monthly usage report |
+
+### 3. Nightly Automation — `scripts/` (runs on M1 Air)
+Playwright scripts that apply CMS updates without interactive login (saved session).
+
+| Script | Schedule | What it does |
+|---|---|---|
+| `apply-trending.js` | 5:00am daily | Applies top 7 trending topics to each enabled pub's CMS trending list |
+| `apply-earthbox.js` | 5:30am daily | Applies top 6 GA4 articles to each enabled pub's editorial earthbox slots |
+
+Both scripts share utilities via `scripts/lib.js`. Per-pub config is read from the **GE360 Pub Config** Google Sheet at runtime. Slack notifications sent via email-to-Slack with subject `{PUB} Topics/Earthboxes: Changed|Unchanged|Problem`. Currently live for Defense One and Washington Technology.
 
 ---
 
@@ -64,13 +77,20 @@ Go to `chrome://extensions` → Athena Tools → ↺ reload button, then hard-re
 
 | File | Path on server | Purpose |
 |---|---|---|
-| GA4 OAuth credentials | `/home/bradwu/ga4-oauth.json` | Defense One GA4 API access (client_id, client_secret, refresh_token) |
+| GA4 OAuth credentials | `/home/bradwu/ga4-oauth.json` | GA4 API access (client_id, client_secret, refresh_token) |
+| Pub config cache | `/home/bradwu/pub-config-cache.json` | 1-hour cache of Google Sheet pub config |
 | Trending main cache | `/home/bradwu/trending-main-cache.json` | 1-hour cache of scored topic results |
 | Article topic cache | `/home/bradwu/trending-article-cache.json` | 24-hour per-article topic tag cache |
 | Topic name cache | `/home/bradwu/trending-topicname-cache.json` | 7-day slug→display name cache |
 | Usage log | `/home/bradwu/headline-lab-usage.log` | Tab-separated: timestamp, action, ip, json |
 
-**GA4 property:** Defense One editorial = `353836589` (account `395628`). Do NOT use `529112613` — that tracks the Chrome extension itself.
+| File | Path on Air | Purpose |
+|---|---|---|
+| CMS session | `~/headline-lab/.cms-session.json` | Saved Playwright browser session (shared by both apply scripts) |
+| Session metadata | `~/headline-lab/.session-meta.json` | Login date + learned timeout duration for expiry warnings |
+| Env vars | `~/headline-lab/.env` | SMTP credentials for Slack email notifications |
+
+**GA4 properties:** D1 = `353836589`, WT = `358726868`, GE = `353164424`, NG = `353764914`, RF = `353766084`. Do NOT use `529112613` — that tracks the Chrome extension itself.
 
 ---
 
@@ -97,7 +117,7 @@ CMS browser (admin.govexec.com)
         ├── Trending Topics panel
         │     ├── GET → navybook.com/D1/seo/trending-topics.php
         │     │           ├── Google Analytics Data API (OAuth)
-        │     │           └── defenseone.com article pages (scraped)
+        │     │           └── pub article pages (scraped for topic tags)
         │     └── Applies edits via Grappelli autocomplete + Django form POST
         │         (directly within admin.govexec.com — no external call)
         └── Skybox Push (triggered by bookmarklet on article pages)
@@ -105,8 +125,18 @@ CMS browser (admin.govexec.com)
                   (sessionStorage carries plan across navigations)
 
 Bookmarklet (browser toolbar)
-  ├── SEO Bookmarklet → grabs article text → POST to prefill.php → Headline Lab
   └── Skyboxer → detects pub from hostname → opens CMS skybox page with #push=POSTID
+
+M1 Air (launchd nightly jobs)
+  ├── apply-trending.js (5:00am)
+  │     ├── GET pub config → navybook.com/D1/seo/pub-config.php (Google Sheet)
+  │     ├── GET topics → navybook.com/D1/seo/trending-topics.php (GA4 + scraper)
+  │     └── Playwright → admin.govexec.com trending items (Grappelli + form POST)
+  └── apply-earthbox.js (5:30am)
+        ├── GET pub config → navybook.com/D1/seo/pub-config.php
+        ├── GET posts → navybook.com/D1/seo/earthbox-posts.php (GA4 pageviews)
+        └── Playwright → admin.govexec.com earthbox items (form POST per slot)
+  Both scripts → Slack notification via Gmail SMTP email-to-channel
 ```
 
 ---
