@@ -36,7 +36,7 @@ p { margin: 0 0 1.2em; }
 /* ── Header ────────────────────────────────────────────────── */
 header {
   border-bottom: 3px double var(--ink);
-  padding: 1.2rem 2rem 1rem;
+  padding: 1.2rem 0 1rem;
   background: var(--cream);
 }
 header h1 {
@@ -46,6 +46,9 @@ header h1 {
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ink);
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
 /* ── Page wrapper ──────────────────────────────────────────── */
