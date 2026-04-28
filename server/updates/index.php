@@ -285,7 +285,7 @@ function renderEarthboxes(array $d): string {
 <body>
 
 <h1>GE360 automated updates for <?= htmlspecialchars($today) ?></h1>
-<p class="contact">Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a></p>
+<p class="contact">Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a> · <a href="/D1/updates/help.html">What is this and how does it work?</a></p>
 
 <nav class="pub-nav">
 <?php
