@@ -25,14 +25,28 @@ if ($configRaw) {
     $pubs   = $config['pubs'] ?? [];
 }
 
-// Sort alphabetically by pub_name
-usort($pubs, fn($a, $b) => strcmp($a['pub_name'] ?? '', $b['pub_name'] ?? ''));
-
-// ── Helpers ───────────────────────────────────────────────────
+// ── Sort: active pubs first (alpha), then inactive (alpha) ────
 function parseBool($v): bool {
     return filter_var($v ?? false, FILTER_VALIDATE_BOOLEAN);
 }
+usort($pubs, function($a, $b) {
+    $aActive = parseBool($a['trending_enabled'] ?? false) || parseBool($a['earthbox_enabled'] ?? false);
+    $bActive = parseBool($b['trending_enabled'] ?? false) || parseBool($b['earthbox_enabled'] ?? false);
+    if ($aActive !== $bActive) return $aActive ? -1 : 1;
+    return strcmp($a['pub_name'] ?? '', $b['pub_name'] ?? '');
+});
 
+// ── Pub abbreviations (for nav and anchors) ───────────────────
+$pubAbbrevs = [
+    'defenseone'  => 'D1',
+    'govexec'     => 'GE',
+    'nextgov'     => 'NG',
+    'routefifty'  => 'R50',
+    'washtech'    => 'WT',
+];
+$navOrder = ['defenseone', 'govexec', 'nextgov', 'routefifty', 'washtech'];
+
+// ── Render helpers ────────────────────────────────────────────
 function statusBadge(string $status): string {
     $class = match($status) {
         'Changed'   => 'badge-changed',
@@ -42,7 +56,7 @@ function statusBadge(string $status): string {
     return '<span class="badge ' . $class . '">' . htmlspecialchars($status) . '</span>';
 }
 
-// Pipe-separated topic line; bold items in $items that aren't in $oldSet
+// Pipe-separated topic line; bold new items not in $oldSet
 function topicLine(array $items, bool $markNew, array $oldSet): string {
     if (empty($items)) return '<span class="none">—</span>';
     $parts = [];
@@ -58,7 +72,7 @@ function topicLine(array $items, bool $markNew, array $oldSet): string {
     return implode(' <span class="pipe">|</span> ', $parts);
 }
 
-// Bulleted list; bold items in $items that aren't in $oldSet
+// Bulleted list; bold new items not in $oldSet
 function earthboxList(array $items, bool $markNew, array $oldSet): string {
     if (empty($items)) return '<p class="none">—</p>';
     $html = '<ul class="eb-list">';
@@ -81,19 +95,28 @@ function renderTopics(array $d): string {
     $status = $d['status'] ?? 'Problem';
     $errors = $d['errors'] ?? [];
     $oldSet = array_flip($old);
+    $html   = '';
 
-    $html = '';
     if ($status === 'Unchanged') {
-        $html .= '<p class="row-label">Unchanged</p>';
+        // Badge already says Unchanged — skip the row-label
         $html .= '<p class="topic-line">' . topicLine($new, false, $oldSet) . '</p>';
-    } else {
+
+    } elseif ($status === 'Problem') {
+        $msg   = $errors ? implode(' · ', $errors) : 'Unknown error';
+        $html .= '<p class="errors">⚠ ' . htmlspecialchars($msg) . '</p>';
+        if (!empty($old)) {
+            $html .= '<p class="row-label">Old</p>';
+            $html .= '<p class="topic-line">' . topicLine($old, false, $oldSet) . '</p>';
+        }
+
+    } else { // Changed
         $html .= '<p class="row-label">New</p>';
         $html .= '<p class="topic-line">' . topicLine($new, true, $oldSet) . '</p>';
         $html .= '<p class="row-label">Old</p>';
         $html .= '<p class="topic-line">' . topicLine($old, false, $oldSet) . '</p>';
-    }
-    if ($errors) {
-        $html .= '<p class="errors">⚠ ' . htmlspecialchars(implode(' · ', $errors)) . '</p>';
+        if ($errors) {
+            $html .= '<p class="errors">⚠ ' . htmlspecialchars(implode(' · ', $errors)) . '</p>';
+        }
     }
     return $html;
 }
@@ -104,19 +127,28 @@ function renderEarthboxes(array $d): string {
     $status = $d['status'] ?? 'Problem';
     $errors = $d['errors'] ?? [];
     $oldSet = array_flip($old);
+    $html   = '';
 
-    $html = '';
     if ($status === 'Unchanged') {
-        $html .= '<p class="row-label">Unchanged</p>';
+        // Badge already says Unchanged — skip the row-label
         $html .= earthboxList($new, false, $oldSet);
-    } else {
+
+    } elseif ($status === 'Problem') {
+        $msg   = $errors ? implode(' · ', $errors) : 'Unknown error';
+        $html .= '<p class="errors">⚠ ' . htmlspecialchars($msg) . '</p>';
+        if (!empty($old)) {
+            $html .= '<p class="row-label">Old</p>';
+            $html .= earthboxList($old, false, $oldSet);
+        }
+
+    } else { // Changed
         $html .= '<p class="row-label">New</p>';
         $html .= earthboxList($new, true, $oldSet);
         $html .= '<p class="row-label">Old</p>';
         $html .= earthboxList($old, false, $oldSet);
-    }
-    if ($errors) {
-        $html .= '<p class="errors">⚠ ' . htmlspecialchars(implode(' · ', $errors)) . '</p>';
+        if ($errors) {
+            $html .= '<p class="errors">⚠ ' . htmlspecialchars(implode(' · ', $errors)) . '</p>';
+        }
     }
     return $html;
 }
@@ -150,13 +182,32 @@ function renderEarthboxes(array $d): string {
     .contact {
       color: #555;
       font-size: 0.88em;
-      margin: 0 0 40px;
+      margin: 0 0 20px;
     }
-    .contact a {
+    .contact a { color: #0066cc; text-decoration: none; }
+    .contact a:hover { text-decoration: underline; }
+
+    /* ── Top nav ── */
+    .pub-nav {
+      font-size: 0.88em;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin: 0 0 36px;
+      display: flex;
+      gap: 0;
+      align-items: center;
+    }
+    .pub-nav a {
       color: #0066cc;
       text-decoration: none;
+      padding: 3px 0;
     }
-    .contact a:hover { text-decoration: underline; }
+    .pub-nav a:hover { text-decoration: underline; }
+    .pub-nav .sep {
+      color: #ccc;
+      margin: 0 8px;
+      font-weight: 400;
+    }
 
     /* ── Pub block ── */
     .pub {
@@ -198,7 +249,7 @@ function renderEarthboxes(array $d): string {
     .badge-unchanged { background: #e8f0fe; color: #1a56bb; }
     .badge-problem   { background: #fce8e6; color: #c5221f; }
 
-    /* ── Row label (New / Old / Unchanged) ── */
+    /* ── Row label (New / Old) ── */
     .row-label {
       font-size: 0.72em;
       text-transform: uppercase;
@@ -228,13 +279,24 @@ function renderEarthboxes(array $d): string {
     .disabled { color: #aaa; font-style: italic; font-size: 0.9em; }
     .not-run  { color: #bbb; font-style: italic; font-size: 0.88em; margin: 0; }
     .none     { color: #ccc; }
-    .errors   { color: #c5221f; font-size: 0.85em; margin: 6px 0 0; }
+    .errors   { color: #c5221f; font-size: 0.88em; margin: 2px 0 4px; }
   </style>
 </head>
 <body>
 
 <h1>GE360 automated updates for <?= htmlspecialchars($today) ?></h1>
 <p class="contact">Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a></p>
+
+<nav class="pub-nav">
+<?php
+$navLinks = [];
+foreach ($navOrder as $navKey):
+    $abbrev = $pubAbbrevs[$navKey] ?? strtoupper($navKey);
+    $navLinks[] = '<a href="#' . htmlspecialchars($navKey) . '">' . htmlspecialchars($abbrev) . '</a>';
+endforeach;
+echo implode('<span class="sep">|</span>', $navLinks);
+?>
+</nav>
 
 <?php if (empty($pubs)): ?>
   <p style="color:#c5221f">Could not load pub config.</p>
@@ -248,7 +310,7 @@ function renderEarthboxes(array $d): string {
     $tData    = $pubData[$key]['trending']  ?? null;
     $eData    = $pubData[$key]['earthbox']  ?? null;
   ?>
-  <div class="pub">
+  <div class="pub" id="<?= htmlspecialchars($key) ?>">
     <p class="pub-name"><?= htmlspecialchars($name) ?></p>
 
     <?php if (!$tEnabled && !$eEnabled): ?>
