@@ -163,7 +163,12 @@ function renderEarthboxes(array $d): string {
 </head>
 <body>
 
-<h1>GE360 automated updates for <?= htmlspecialchars($today) ?></h1>
+<header>
+  <h1>GE360 automated updates for <?= htmlspecialchars($today) ?></h1>
+</header>
+
+<div class="page">
+
 <p class="contact">Problems? Holler at <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a> · <a href="/D1/updates/help.html">What is this and how does it work?</a></p>
 
 <nav class="pub-nav">
@@ -178,7 +183,7 @@ echo implode('<span class="sep">|</span>', $navLinks);
 </nav>
 
 <?php if (empty($pubs)): ?>
-  <p style="color:#c5221f">Could not load pub config.</p>
+  <p style="color:var(--accent)">Could not load pub config.</p>
 <?php else: ?>
   <?php foreach ($pubs as $pub):
     $key      = $pub['pub_key']  ?? '';
@@ -230,5 +235,6 @@ echo implode('<span class="sep">|</span>', $navLinks);
   <?php endforeach; ?>
 <?php endif; ?>
 
+</div><!-- /.page -->
 </body>
 </html>
