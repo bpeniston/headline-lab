@@ -12,6 +12,16 @@
 - Sponsored wall detected via `_is_sponsored_content` checkbox (not `title_override`)
 - Post ID extracted from GA4 page path (5–7 digit number)
 
+## Newsroom tools hub page
+A front page at `navybook.com/D1/` (or similar) linking to all the standalone tools:
+- **Headline Lab** — SEO headline generator (`add-post.html` or CMS panel)
+- **Post Editor** — clean writing UI before CMS entry (`add-post.html`)
+- **Skyboxer** — bookmarklet / instructions page
+- **Autoupdater** — links to the daily updates page (`/D1/updates/`) and explains the nightly automation
+- **GE360 Updates** — `navybook.com/D1/updates/` (already live; just needs to be surfaced)
+
+Same newspaper-style design as the updates page.
+
 ## Headline Lab — SEO prompt improvements (future)
 
 Research session 2026-04-11 identified these improvements to the headline generator, not yet implemented:
