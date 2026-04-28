@@ -6,7 +6,7 @@
 // =============================================================
 
 $date    = date('Y-m-d');
-$today   = date('F j, Y');
+$today   = date('l, F j, Y');
 
 // ── Load today's update data ──────────────────────────────────
 $dataFile = "/home/bradwu/ge360-updates-{$date}.json";
