@@ -6,8 +6,10 @@ const path       = require('path');
 const https      = require('https');
 const nodemailer = require('nodemailer');
 
-const CMS_BASE       = 'https://admin.govexec.com';
-const PUB_CONFIG_URL = 'https://www.navybook.com/D1/seo/pub-config.php';
+const CMS_BASE        = 'https://admin.govexec.com';
+const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
+const UPDATES_API_URL = 'https://www.navybook.com/D1/seo/save-update.php';
+const UPDATES_PAGE    = 'http://navybook.com/D1/updates';
 
 // ── Logger factory ────────────────────────────────────────────
 function createLogger(logFile) {
@@ -53,6 +55,7 @@ function loadEnv() {
 
 // ── Slack ─────────────────────────────────────────────────────
 async function sendSlackEmail(subject, body, env, slackEmail, log = console.log) {
+  const fullBody = body + `\n\nSee all GE360 updates: ${UPDATES_PAGE}`;
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -62,7 +65,7 @@ async function sendSlackEmail(subject, body, env, slackEmail, log = console.log)
       from: `Athena Tools <${env.SMTP_USER}>`,
       to:   slackEmail,
       subject,
-      text: body,
+      text: fullBody,
     });
     log('Slack notification sent.');
   } catch (e) {
@@ -91,6 +94,55 @@ async function fetchPubConfig() {
   const data = await fetchJSON(PUB_CONFIG_URL);
   if (data.error) throw new Error(`pub-config.php: ${data.error}`);
   return data;
+}
+
+// ── HTTP POST helper ──────────────────────────────────────────
+function postForm(url, params) {
+  return new Promise((resolve, reject) => {
+    const body    = new URLSearchParams(params).toString();
+    const urlObj  = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      path:     urlObj.pathname,
+      method:   'POST',
+      headers:  {
+        'Content-Type':   'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(new Error(`Invalid JSON from POST: ${e.message}`)); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error(`Timeout: ${url}`)));
+    req.write(body);
+    req.end();
+  });
+}
+
+// ── Save daily update record to the updates page ──────────────
+async function saveUpdate(pubKey, type, status, newItems, oldItems, errors, env, log = console.log) {
+  if (!env.UPDATE_SECRET) { log('saveUpdate: UPDATE_SECRET not set in .env — skipping'); return; }
+  try {
+    const res = await postForm(UPDATES_API_URL, {
+      secret:  env.UPDATE_SECRET,
+      pub_key: pubKey,
+      type,
+      status,
+      new:     JSON.stringify(newItems),
+      old:     JSON.stringify(oldItems),
+      errors:  JSON.stringify(errors),
+    });
+    if (res.ok) log(`Update record saved (${type}).`);
+    else        log(`saveUpdate error: ${JSON.stringify(res)}`);
+  } catch (e) {
+    log(`saveUpdate failed: ${e.message}`);
+  }
 }
 
 // ── Pub label (first two chars of topic_oref, uppercased) ─────
@@ -140,6 +192,7 @@ module.exports = {
   loadEnv,
   sendSlackEmail,
   fetchJSON, fetchPubConfig,
+  saveUpdate,
   pubLabel,
   runSetup,
 };

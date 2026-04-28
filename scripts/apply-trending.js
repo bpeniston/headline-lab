@@ -18,7 +18,7 @@ const path         = require('path');
 const {
   CMS_BASE, createLogger, loadMeta, saveMeta, daysSince,
   loadEnv, sendSlackEmail, fetchJSON, fetchPubConfig,
-  pubLabel, runSetup,
+  saveUpdate, pubLabel, runSetup,
 } = require('./lib');
 
 // ── Config ────────────────────────────────────────────────────
@@ -66,6 +66,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
 
   if (!liveItems.length) {
     log('  No editable slots found — nothing to update.');
+    await saveUpdate(pub.pub_key, 'trending', 'Problem', [], [], ['No editable Live slots found in CMS'], env, log);
     await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env, pub.slack_email, log);
     return;
   }
@@ -179,6 +180,7 @@ async function applyTrendingForPub(page, pub, topics, env) {
     body = `NEW:\n\n${numbered(displayNew, true)}\n\nOLD:\n\n${numbered(displayOld, false)}`;
   }
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
+  await saveUpdate(pub.pub_key, 'trending', status, displayNew, displayOld, errors, env, log);
   await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
 }
 
