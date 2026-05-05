@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GE360 Tools</title>
+  <link rel="stylesheet" href="updates/updates.css?v=1">
+  <style>
+    /* ── Header (matches D1/seo style) ────────────────────────── */
+    header {
+      border-bottom: 3px double var(--ink);
+      padding: 1.2rem 2rem 1rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+      background: var(--cream);
+    }
+    header h1 {
+      font-family: var(--serif);
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    header h1 a { color: inherit; text-decoration: none; }
+    .kicker {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.15rem 0.4rem;
+      border-radius: 2px;
+    }
+    header nav { margin-left: auto; display: flex; gap: 1.5rem; align-items: center; }
+    header nav a {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+      text-decoration: none;
+    }
+    header nav a:hover { color: var(--ink); }
+
+    /* ── Component cards ───────────────────────────────────────── */
+    .component {
+      border-top: 1px solid var(--rule);
+      padding-top: 20px;
+      margin-bottom: 32px;
+    }
+    .component h2 {
+      font-family: var(--serif);
+      font-size: 1.25em;
+      font-weight: 700;
+      margin: 0 0 10px;
+    }
+    .component p { margin: 0 0 0.5em; }
+    .component .access {
+      color: #2255aa;
+      font-size: 0.95em;
+    }
+    .component .access a { color: #2255aa; }
+    .component .access a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><a href="/D1/">GE360 Tools</a></h1>
+  <span class="kicker">Help with CMS, art, and more</span>
+  <nav>
+    <a href="mailto:bpeniston@defenseone.com">Contact</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <div class="component">
+    <h2>Headline Lab</h2>
+    <p>Reads article hed/sub/body and suggests: six SEO-optimized options for hed/sub/slug; six posts optimized for X/Facebook/LinkedIn; and six subject lines for email alerts.</p>
+    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj">Athena Tools extension</a>.</p>
+    <p class="access">To use: <a href="https://navybook.com/D1/seo/">webpage</a> or <a href="https://navybook.com/D1/seo/bookmarklet.html">bookmarklet</a>.</p>
+  </div>
+
+  <div class="component">
+    <h2>Auto-updater</h2>
+    <p>Pulls GA4 traffic data, scores topics and posts by day + week + month views, and updates Trending Topics and Earthboxes at 5 a.m.</p>
+    <p class="access"><a href="https://navybook.com/D1/updates/">Status board</a></p>
+  </div>
+
+  <div class="component">
+    <h2>Add Post</h2>
+    <p>A clean two-panel writing interface for drafting posts before they enter the CMS. Supports headline (auto-generates slug), subheadline, rich-text body, endnote, tags, flags, publish/expiration dates, canonical URL, and video URL. Autosaves to your browser. When you're ready, "Open in CMS" pre-fills all supported fields in Athena automatically.</p>
+    <p class="access"><a href="https://www.navybook.com/D1/seo/add-post.html">Link</a></p>
+  </div>
+
+  <div class="component">
+    <h2>Skyboxer</h2>
+    <p>Cascades an article through skybox slots 1–5 in the pub's skybox admin. Slot 1 gets a clean slate; existing overrides travel with each article as it shifts down. Sponsored slots (and everything below them) are never touched.</p>
+    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj">Athena Tools extension</a>.</p>
+    <p class="access">To use: click <a href="https://navybook.com/D1/seo/skyboxer.html">bookmarklet</a>.</p>
+  </div>
+
+  <div class="component">
+    <h2>UI Tweaks</h2>
+    <p>Reorders CMS post editor fields and groups publish date and status into a cleaner bar. Runs quietly in the background — nothing to click.</p>
+    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj">Athena Tools extension</a>.</p>
+  </div>
+
+</div><!-- /.page -->
+</body>
+</html>
