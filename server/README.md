@@ -20,4 +20,4 @@ Inherits `updates/updates.css` (served from `navybook.com/D1/updates/updates.css
 
 ## Placeholder
 
-The Athena Tools Chrome Web Store link (`chromewebstore.google.com/detail/athena-tools/okllcogcjdniedlhjkjmppoknfpemajk`) is already wired up. No placeholders remain.
+The Athena Tools Chrome Web Store link (`chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb`) is already wired up. No placeholders remain.
