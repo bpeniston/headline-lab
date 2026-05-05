@@ -14,6 +14,10 @@ scp server/index.html bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybo
 
 Inherits `updates/updates.css` (served from `navybook.com/D1/updates/updates.css`) and overrides the header to match the inline flexbox style used by `navybook.com/D1/seo/`.
 
+## To do
+
+- [ ] Unify CSS for all these components
+
 ## Placeholder
 
 The Athena Tools Chrome Web Store link (`chromewebstore.google.com/detail/athena-tools/ebbgjpelelejigefjnioihjohaphpkhj`) is already wired up. No placeholders remain.
