@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GE360 Tools</title>
+  <link rel="stylesheet" href="updates/updates.css?v=1">
+  <style>
+    /* ── Kicker / nav bar ──────────────────────────────────────── */
+    .header-kicker {
+      font-family: var(--mono);
+      font-size: 0.85em;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #888;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0.5rem 2rem 0;
+    }
+    .header-nav {
+      font-family: var(--sans);
+      font-size: 0.9em;
+      color: #888;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0.35rem 2rem 0;
+    }
+    .header-nav a { color: var(--accent); text-decoration: none; }
+    .header-nav a:hover { text-decoration: underline; }
+
+    /* ── Component cards ───────────────────────────────────────── */
+    .component {
+      border-top: 1px solid var(--rule);
+      padding-top: 20px;
+      margin-bottom: 32px;
+    }
+    .component h2 {
+      font-family: var(--serif);
+      font-size: 1.25em;
+      font-weight: 700;
+      margin: 0 0 10px;
+    }
+    .component p { margin: 0 0 0.5em; }
+    .component .access {
+      color: #2255aa;
+      font-size: 0.95em;
+    }
+    .component .access a { color: #2255aa; }
+    .component .access a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <p class="header-kicker">Help with CMS, art, and more</p>
+  <h1>GE360 Tools</h1>
+  <p class="header-nav">Need help? Ask <a href="mailto:bpeniston@defenseone.com">Brad Peniston</a></p>
+</header>
+
+<div class="page">
+
+  <div class="component">
+    <h2>Post Editor</h2>
+    <p>A clean two-panel writing interface for drafting posts before they enter the CMS. Supports headline (auto-generates slug), subheadline, rich-text body, endnote, tags, flags, publish/expiration dates, canonical URL, and video URL. Autosaves to your browser. When you're ready, "Open in CMS" pre-fills all supported fields in Athena automatically.</p>
+    <p class="access">Visit <a href="https://www.navybook.com/D1/seo/add-post.html">navybook.com/D1/seo/add-post.html</a></p>
+  </div>
+
+  <div class="component">
+    <h2>Headline Lab</h2>
+    <p>Reads your article body and returns six AI-generated options for headline, subheadline, and slug — each tuned for SEO and the publication's voice. Powered by the Anthropic Claude API.</p>
+    <p class="access">Appears as a button in the CMS post editor sidebar. Requires the Athena Tools Chrome extension.</p>
+  </div>
+
+  <div class="component">
+    <h2>UI Tweaks</h2>
+    <p>Reorders CMS post editor fields and groups publish date and status into a cleaner bar. Runs quietly in the background — nothing to click.</p>
+    <p class="access">Automatic on any Athena CMS post editor page when the Athena Tools Chrome extension is installed.</p>
+  </div>
+
+  <div class="component">
+    <h2>Skybox Push</h2>
+    <p>Cascades an article through skybox slots 1–5 in the pub's skybox admin. Slot 1 gets a clean slate; existing overrides travel with each article as it shifts down. Sponsored slots (and everything below them) are never touched.</p>
+    <p class="access">Use the bookmarklet on any GE360 article page. Opens the skybox admin and handles the cascade automatically.</p>
+  </div>
+
+  <div class="component">
+    <h2>Trending Topics</h2>
+    <p>Pulls GA4 traffic data, scores topics by day + week + month views, and surfaces the top 7 recommendations for review. You can apply them in one click or adjust before saving. Runs automatically each night at 5:00&nbsp;am for Defense One and Washington Technology.</p>
+    <p class="access">Available on the D1-Trending items list page in the Athena CMS. Requires the Athena Tools Chrome extension. Nightly automation runs without any action needed for D1 and WT.</p>
+  </div>
+
+  <div class="component">
+    <h2>Earthbox Auto-Updater</h2>
+    <p>Populates editorial Earthbox slots with the top GA4 articles for each pub. Sponsored slots are detected automatically and left untouched. Runs nightly at 5:30&nbsp;am for Defense One and Washington Technology.</p>
+    <p class="access">Fully automated for D1 and WT — no action needed. Results appear on the <a href="https://navybook.com/D1/updates/">Daily Updates page</a>.</p>
+  </div>
+
+  <div class="component">
+    <h2>Daily Updates</h2>
+    <p>A daily digest showing what the nightly scripts changed across all five pubs — topics and earthboxes, with new items bolded and sponsored slots called out inline. Active pubs sort first; inactive pubs show a "no auto-updates" note.</p>
+    <p class="access">Visit <a href="https://navybook.com/D1/updates/">navybook.com/D1/updates/</a></p>
+  </div>
+
+</div><!-- /.page -->
+</body>
+</html>
