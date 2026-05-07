@@ -202,14 +202,37 @@ click tracking via `oref=d1-earthbox-post` (confirmed present on D1 article
 pages); monthly baseline being established via `scripts/earthbox-baseline.js`.
 See SETUP.md. Live for D1 and WT as of 2026-04-28.
 
+Skybox auto-updater (built 2026-05-07, not yet live)
+-----------------------------------------------------
+
+Playwright script on the Air (`scripts/apply-skybox.js`, same pattern as
+`apply-earthbox.js`) populates editorial Skybox slots (1–N Live slots, stopping
+at the sponsored wall) with top GA4 articles. Runs via launchd at 5:35am (5
+minutes after earthbox). Post rankings come from `earthbox-posts.php` — the
+same GA4-weighted list, served from the earthbox script's 1-hour cache (no
+extra GA4 queries). Sponsored wall: stops when `_is_sponsored_content` is
+checked on a slot; that slot and everything below is left untouched. Sends Slack
+notification: `{PUB} Skyboxes: Changed|Unchanged|Problem`. Updates page shows
+a Skyboxes section per pub (same bulleted-list renderer as earthbox). Controlled
+via `skybox_enabled` / `skybox_cms_path` columns in the GE360 Pub Config sheet.
+
+**Skybox oref values (GA4 click tracking):** `d1-skybox-hp`, `wt-skybox-hp`,
+`ge-skybox-hp`, `ng-skybox-hp`, `rf-skybox-hp` (confirmed D1 and WT; others
+inferred from pattern).
+
+**To activate for a pub:** set `skybox_enabled = TRUE` in the sheet; ensure
+`skybox_cms_path` and `skybox_oref` are filled in. No new PHP or launchd work
+needed — the plist exists at `scripts/com.navybook.skybox-apply.plist` and must
+be copied to `~/Library/LaunchAgents/` on the Air and loaded with `launchctl`.
+
 ## GE360 daily updates page (live, launched 2026-04-28)
 
 `https://navybook.com/D1/updates/` — a daily digest of what the nightly scripts
 changed. Files: `server/updates/index.php`, `server/updates/help.html`,
 `server/updates/updates.css`.
 
-- `save-update.php` (new server endpoint) accepts POSTs from `apply-trending.js`
-  and `apply-earthbox.js` (authenticated via `UPDATE_SECRET`) and writes results
+- `save-update.php` (new server endpoint) accepts POSTs from `apply-trending.js`,
+  `apply-earthbox.js`, and `apply-skybox.js` (authenticated via `UPDATE_SECRET`) and writes results
   to `/home/bradwu/ge360-updates-YYYY-MM-DD.json` with `flock` for concurrency.
 - `index.php` reads today's JSON + pub config; renders Topics/Earthbox sections
   per pub with Changed/Unchanged/Problem badges; new items in a Changed run are

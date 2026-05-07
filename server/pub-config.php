@@ -9,7 +9,7 @@
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:R');
+define('SHEET_RANGE', 'Pubs!A:V');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
@@ -121,13 +121,13 @@ function parseRows($rows, $requiredCols) {
 
         // Required string fields
         foreach (['pub_name', 'pub_key', 'trending_cms_path', 'earthbox_cms_path',
-                  'grappelli_topic_model', 'grappelli_app_label', 'slack_channel',
-                  'slack_email', 'base_url', 'topic_oref'] as $col) {
+                  'skybox_cms_path', 'grappelli_topic_model', 'grappelli_app_label',
+                  'slack_channel', 'slack_email', 'base_url', 'topic_oref'] as $col) {
             if ($r[$col] === '') $rowErrors[] = "missing $col";
         }
 
         // Boolean fields — Google Sheets exports TRUE/FALSE in caps
-        foreach (['trending_enabled', 'earthbox_enabled'] as $col) {
+        foreach (['trending_enabled', 'earthbox_enabled', 'skybox_enabled'] as $col) {
             $v = strtoupper($r[$col]);
             if ($v !== 'TRUE' && $v !== 'FALSE') {
                 $rowErrors[] = "$col must be TRUE or FALSE (got: \"{$r[$col]}\")";
@@ -172,8 +172,8 @@ function parseRows($rows, $requiredCols) {
 /** Fetch and cache all pub configs. Returns { pubs, errors }. */
 function get_pub_configs(): array {
     $required = [
-        'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled',
-        'trending_cms_path', 'earthbox_cms_path', 'ga4_property_id',
+        'pub_name', 'pub_key', 'trending_enabled', 'earthbox_enabled', 'skybox_enabled',
+        'trending_cms_path', 'earthbox_cms_path', 'skybox_cms_path', 'ga4_property_id',
         'grappelli_topic_model', 'grappelli_app_label', 'topic_content_type',
         'slack_channel', 'slack_email',
         'base_url', 'topic_oref',

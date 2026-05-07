@@ -30,8 +30,8 @@ function parseBool($v): bool {
     return filter_var($v ?? false, FILTER_VALIDATE_BOOLEAN);
 }
 usort($pubs, function($a, $b) {
-    $aActive = parseBool($a['trending_enabled'] ?? false) || parseBool($a['earthbox_enabled'] ?? false);
-    $bActive = parseBool($b['trending_enabled'] ?? false) || parseBool($b['earthbox_enabled'] ?? false);
+    $aActive = parseBool($a['trending_enabled'] ?? false) || parseBool($a['earthbox_enabled'] ?? false) || parseBool($a['skybox_enabled'] ?? false);
+    $bActive = parseBool($b['trending_enabled'] ?? false) || parseBool($b['earthbox_enabled'] ?? false) || parseBool($b['skybox_enabled'] ?? false);
     if ($aActive !== $bActive) return $aActive ? -1 : 1;
     return strcmp($a['pub_name'] ?? '', $b['pub_name'] ?? '');
 });
@@ -196,13 +196,15 @@ echo implode('<span class="sep">|</span>', $navLinks);
     if (!$name) continue;
     $tEnabled = parseBool($pub['trending_enabled']  ?? false);
     $eEnabled = parseBool($pub['earthbox_enabled']  ?? false);
+    $sEnabled = parseBool($pub['skybox_enabled']    ?? false);
     $tData    = $pubData[$key]['trending']  ?? null;
     $eData    = $pubData[$key]['earthbox']  ?? null;
+    $sData    = $pubData[$key]['skybox']    ?? null;
   ?>
   <div class="pub" id="<?= htmlspecialchars($key) ?>">
     <p class="pub-name"><?= htmlspecialchars($name) ?></p>
 
-    <?php if (!$tEnabled && !$eEnabled): ?>
+    <?php if (!$tEnabled && !$eEnabled && !$sEnabled): ?>
       <p class="disabled">No auto-updates set</p>
 
     <?php else: ?>
@@ -229,6 +231,20 @@ echo implode('<span class="sep">|</span>', $navLinks);
           </p>
           <?php if ($eData): ?>
             <?= renderEarthboxes($eData) ?>
+          <?php else: ?>
+            <p class="not-run">Not yet run today</p>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($sEnabled): ?>
+        <div class="section">
+          <p class="section-head">
+            Skyboxes
+            <?php if ($sData): echo statusBadge($sData['status']); endif; ?>
+          </p>
+          <?php if ($sData): ?>
+            <?= renderEarthboxes($sData) ?>
           <?php else: ?>
             <p class="not-run">Not yet run today</p>
           <?php endif; ?>
