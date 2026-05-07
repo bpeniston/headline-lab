@@ -125,6 +125,8 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 - D1 article tags appear twice in DOM (desktop/mobile) — deduplicate by slug; verify for each new pub
 - DO NOT use GA4 property `529112613` — that's the extension's own analytics, not a pub property
 - Route Fifty's `topic_content_type` 164 was unconfirmed (item had no pre-selected topic) — verify when saving a real trending item
+- **`is_sponsored()` in `earthbox-posts.php`**: do NOT match `'sponsor-content'` as an HTML string — WT's skybox includes a `/sponsors/sponsor-content/…` link on every page, causing every editorial article to be flagged as sponsored (same class of problem as D1's `skybox-item-sponsored` nav). Use the article's own URL path instead: check `str_contains(path, '/sponsors/')`. Sponsored articles live under `/sponsors/`; regular articles that merely link to one do not.
+- **`apply-earthbox.js` zero-posts guard**: if the API returns no posts, `count = 0`, the slot loop never runs, and `[].every()` returns `true`, so the script silently reports `Unchanged` with empty arrays. Guard: treat `count === 0` as `Problem` and return early.
 
 **Defense One GA4:** account `395628`, property `353836589`
 

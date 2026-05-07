@@ -57,12 +57,18 @@
       margin: 0 0 10px;
     }
     .component p { margin: 0 0 0.5em; }
+    .component .requires,
     .component .access {
-      color: #2255aa;
-      font-size: 0.95em;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
     }
+    .component .access { color: #2255aa; }
     .component .access a { color: #2255aa; }
-    .component .access a:hover { text-decoration: underline; }
+    .component .access a:hover,
+    .component .requires a:hover { text-decoration: underline; }
+    .component .requires a { color: inherit; }
   </style>
 </head>
 <body>
@@ -80,7 +86,7 @@
   <div class="component">
     <h2>Headline Lab</h2>
     <p>Reads article hed/sub/body and suggests: six SEO-optimized options for hed/sub/slug; six posts optimized for X/Facebook/LinkedIn; and six subject lines for email alerts.</p>
-    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
+    <p class="requires">Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
     <p class="access">To use: <a href="https://navybook.com/D1/seo/">webpage</a> or <a href="https://navybook.com/D1/seo/bookmarklet.html">bookmarklet</a>.</p>
   </div>
 
@@ -99,14 +105,20 @@
   <div class="component">
     <h2>Skyboxer</h2>
     <p>Cascades an article through skybox slots 1–5 in the pub's skybox admin. Slot 1 gets a clean slate; existing overrides travel with each article as it shifts down. Sponsored slots (and everything below them) are never touched.</p>
-    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
+    <p class="requires">Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
     <p class="access">To use: click <a href="https://navybook.com/D1/seo/skyboxer.html">bookmarklet</a>.</p>
+  </div>
+
+  <div class="component">
+    <h2>Art Finder</h2>
+    <p>Search Getty, DVIDS, Google, and more from a single search box.</p>
+    <p class="access"><a href="https://navybook.com/D1/multisearch/">Link</a></p>
   </div>
 
   <div class="component">
     <h2>UI Tweaks</h2>
     <p>Reorders CMS post editor fields and groups publish date and status into a cleaner bar. Runs quietly in the background — nothing to click.</p>
-    <p>Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
+    <p class="requires">Requires: Chrome, <a href="https://chromewebstore.google.com/detail/okllcogcjdniedlhjkjmppoknfpemajk?utm_source=item-share-cb">Athena Tools extension</a>.</p>
   </div>
 
 </div><!-- /.page -->

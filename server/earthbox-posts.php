@@ -118,7 +118,7 @@ if ($to_fetch) {
         $title_cache[$url] = [
             'ts'        => time(),
             'title'     => extract_title($html),
-            'sponsored' => is_sponsored($html),
+            'sponsored' => is_sponsored($html, $url),
         ];
     }
     file_put_contents($TITLE_CACHE, json_encode($title_cache));
@@ -209,12 +209,13 @@ function extract_title(string $html): string {
     return '';
 }
 
-function is_sponsored(string $html): bool {
+function is_sponsored(string $html, string $url = ''): bool {
     if (!$html) return false;
-    // Note: do NOT match the broad class=".*sponsored.*" pattern — D1 nav
-    // includes skybox-item-sponsored and sponsored-nav-link on every page.
-    return str_contains($html, 'sponsor-content')
-        || str_contains($html, 'brandlab')
+    // Check URL path first — real sponsored articles live under /sponsors/.
+    // Do NOT match 'sponsor-content' in HTML: WT's skybox links to sponsored
+    // articles on every page, causing false positives on editorial content.
+    if ($url && str_contains(parse_url($url, PHP_URL_PATH) ?? '', '/sponsors/')) return true;
+    return str_contains($html, 'brandlab')
         || str_contains($html, '"sponsored":true');
 }
 

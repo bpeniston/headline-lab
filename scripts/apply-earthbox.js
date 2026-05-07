@@ -74,6 +74,15 @@ async function applyEarthboxForPub(page, pub, posts, env) {
   }
 
   const count      = Math.min(liveItems.length, posts.length);
+
+  if (count === 0) {
+    const reason = posts.length === 0 ? 'API returned no post recommendations' : 'No editable Live slots found in CMS';
+    log(`  ${reason} — nothing to update.`);
+    await saveUpdate(pub.pub_key, 'earthbox', 'Problem', [], [], [reason], env, log);
+    await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, `${reason} — nothing was updated.`, env, pub.slack_email, log);
+    return;
+  }
+
   let applied      = 0;
   let failed       = 0;
   let skipped      = 0;
