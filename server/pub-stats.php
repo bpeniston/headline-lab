@@ -26,9 +26,9 @@ if ($token !== ($config['monthly_stats_token'] ?? '')) {
 
 $pub_key = preg_replace('/[^a-z0-9]/', '', strtolower($_GET['pub'] ?? ''));
 $type    = $_GET['type'] ?? '';
-if (!$pub_key || !in_array($type, ['topics', 'earthbox'], true)) {
+if (!$pub_key || !in_array($type, ['topics', 'earthbox', 'skybox'], true)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Required params: pub, type (topics|earthbox)']);
+    echo json_encode(['error' => 'Required params: pub, type (topics|earthbox|skybox)']);
     exit;
 }
 
@@ -43,9 +43,12 @@ if (!$pub) {
 }
 
 $ga4_property = (string) $pub['ga4_property_id'];
-$oref = $type === 'topics'
-    ? ($pub['topic_oref']   ?? '')
-    : ($pub['earthbox_oref'] ?? '');
+$oref = match($type) {
+    'topics'   => $pub['topic_oref']   ?? '',
+    'earthbox' => $pub['earthbox_oref'] ?? '',
+    'skybox'   => $pub['skybox_oref']   ?? '',
+    default    => '',
+};
 
 if (!$oref) {
     http_response_code(400);

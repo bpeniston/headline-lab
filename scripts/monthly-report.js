@@ -6,7 +6,7 @@
 // automation-enabled pub in the GE360 Google Sheet, then sends
 // one combined email to bpeniston@defenseone.com.
 //
-// Per-pub data comes from pub-stats.php (?pub=&type=topics|earthbox).
+// Per-pub data comes from pub-stats.php (?pub=&type=topics|earthbox|skybox).
 // Baselines and automation_start_date come from the sheet itself.
 // =============================================================
 
@@ -108,7 +108,7 @@ function clickLine(label, views, baseline) {
   let allPubs;
   try {
     const data = await fetchJSON(PUB_CONFIG_URL);
-    allPubs = (data.pubs || []).filter(p => p._valid && (p.trending_enabled || p.earthbox_enabled));
+    allPubs = (data.pubs || []).filter(p => p._valid && (p.trending_enabled || p.earthbox_enabled || p.skybox_enabled));
   } catch (e) {
     log(`Failed to fetch pub config: ${e.message}`);
     logStream.end();
@@ -126,6 +126,7 @@ function clickLine(label, views, baseline) {
     allPubs.map(pub => Promise.all([
       pub.trending_enabled && pub.topic_oref   ? fetchPubStats(pub.pub_key, 'topics')   : Promise.resolve(null),
       pub.earthbox_enabled && pub.earthbox_oref ? fetchPubStats(pub.pub_key, 'earthbox') : Promise.resolve(null),
+      pub.skybox_enabled   && pub.skybox_oref   ? fetchPubStats(pub.pub_key, 'skybox')   : Promise.resolve(null),
     ]))
   );
 
@@ -135,14 +136,16 @@ function clickLine(label, views, baseline) {
   const sections = [];
   let totalTopics   = 0;
   let totalEarthbox = 0;
+  let totalSkybox   = 0;
   let hasTopics     = false;
   let hasEarthbox   = false;
+  let hasSkybox     = false;
 
   for (let i = 0; i < allPubs.length; i++) {
-    const pub          = allPubs[i];
-    const [tStats, eStats] = statResults[i];
-    const startDate    = pub.automation_start_date || null;
-    const startLabel   = startDate ? ` (automation since ${startDate})` : '';
+    const pub                    = allPubs[i];
+    const [tStats, eStats, sStats] = statResults[i];
+    const startDate              = pub.automation_start_date || null;
+    const startLabel             = startDate ? ` (automation since ${startDate})` : '';
 
     const lines = [`${pub.pub_name}${startLabel}`];
 
@@ -156,9 +159,14 @@ function clickLine(label, views, baseline) {
       lines.push(clickLine('Earthbox', eStats.views, baseline));
       if (eStats.views !== null) { totalEarthbox += eStats.views; hasEarthbox = true; }
     }
+    if (sStats !== null) {
+      const baseline = parseInt(pub.skybox_baseline, 10) || 0;
+      lines.push(clickLine('Skybox', sStats.views, baseline));
+      if (sStats.views !== null) { totalSkybox += sStats.views; hasSkybox = true; }
+    }
 
     sections.push(lines.join('\n'));
-    log(`${pub.pub_name}: Topics=${tStats?.views ?? 'n/a'}, Earthbox=${eStats?.views ?? 'n/a'}`);
+    log(`${pub.pub_name}: Topics=${tStats?.views ?? 'n/a'}, Earthbox=${eStats?.views ?? 'n/a'}, Skybox=${sStats?.views ?? 'n/a'}`);
   }
 
   // Totals (only meaningful if there are multiple enabled pubs)
@@ -166,8 +174,10 @@ function clickLine(label, views, baseline) {
     const totalLines = ['TOTALS'];
     if (hasTopics)   totalLines.push(`  Topics:   ${totalTopics.toLocaleString()} clicks`);
     if (hasEarthbox) totalLines.push(`  Earthbox: ${totalEarthbox.toLocaleString()} clicks`);
-    if (hasTopics && hasEarthbox) {
-      totalLines.push(`  Combined: ${(totalTopics + totalEarthbox).toLocaleString()} clicks`);
+    if (hasSkybox)   totalLines.push(`  Skybox:   ${totalSkybox.toLocaleString()} clicks`);
+    const combined = totalTopics + totalEarthbox + totalSkybox;
+    if ([hasTopics, hasEarthbox, hasSkybox].filter(Boolean).length > 1) {
+      totalLines.push(`  Combined: ${combined.toLocaleString()} clicks`);
     }
     sections.push(totalLines.join('\n'));
   }
