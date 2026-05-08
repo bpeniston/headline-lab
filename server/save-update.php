@@ -6,7 +6,7 @@
 // POST fields:
 //   secret   — shared secret (from ~/.update-secret on server)
 //   pub_key  — e.g. "defenseone"
-//   type     — "trending" or "earthbox"
+//   type     — "trending", "earthbox", or "skybox"
 //   status   — "Changed", "Unchanged", or "Problem"
 //   new      — JSON array of new labels/titles
 //   old      — JSON array of old labels/titles
@@ -25,7 +25,7 @@ if (!$expected || ($_POST['secret'] ?? '') !== $expected) {
 }
 
 $pubKey   = preg_replace('/[^a-z0-9_-]/', '', $_POST['pub_key'] ?? '');
-$type     = in_array($_POST['type'] ?? '', ['trending', 'earthbox']) ? $_POST['type'] : '';
+$type     = in_array($_POST['type'] ?? '', ['trending', 'earthbox', 'skybox']) ? $_POST['type'] : '';
 $status   = in_array($_POST['status'] ?? '', ['Changed', 'Unchanged', 'Problem']) ? $_POST['status'] : 'Problem';
 $newItems = json_decode($_POST['new']    ?? '[]', true) ?: [];
 $oldItems = json_decode($_POST['old']    ?? '[]', true) ?: [];

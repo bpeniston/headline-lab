@@ -127,6 +127,8 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 - Route Fifty's `topic_content_type` 164 was unconfirmed (item had no pre-selected topic) — verify when saving a real trending item
 - **`is_sponsored()` in `earthbox-posts.php`**: do NOT match `'sponsor-content'` as an HTML string — WT's skybox includes a `/sponsors/sponsor-content/…` link on every page, causing every editorial article to be flagged as sponsored (same class of problem as D1's `skybox-item-sponsored` nav). Use the article's own URL path instead: check `str_contains(path, '/sponsors/')`. Sponsored articles live under `/sponsors/`; regular articles that merely link to one do not.
 - **`apply-earthbox.js` zero-posts guard**: if the API returns no posts, `count = 0`, the slot loop never runs, and `[].every()` returns `true`, so the script silently reports `Unchanged` with empty arrays. Guard: treat `count === 0` as `Problem` and return early.
+- **`save-update.php` type allowlist**: `type` is validated against an explicit list (`trending`, `earthbox`, `skybox`). When adding a new script, add its type string to the `in_array()` check or `saveUpdate` will fail with `Missing pub_key or type`.
+- **GovExec `base_url` in sheet**: was set to `www.washingtontechnology.com` instead of `www.govexec.com`, causing trending to scrape WT pages and find no `ge-article-topics`. GovExec articles DO have their own `ge-article-topics` links. After fixing `base_url`, clear `~/trending-article-cache-govexec.json` and `~/trending-main-cache-govexec.json` on the server to purge stale data.
 
 **Defense One GA4:** account `395628`, property `353836589`
 
@@ -202,8 +204,8 @@ click tracking via `oref=d1-earthbox-post` (confirmed present on D1 article
 pages); monthly baseline being established via `scripts/earthbox-baseline.js`.
 See SETUP.md. Live for D1 and WT as of 2026-04-28.
 
-Skybox auto-updater (built 2026-05-07, not yet live)
------------------------------------------------------
+Skybox auto-updater (live, launched 2026-05-08)
+-----------------------------------------------
 
 Playwright script on the Air (`scripts/apply-skybox.js`, same pattern as
 `apply-earthbox.js`) populates editorial Skybox slots (1–N Live slots, stopping
@@ -224,6 +226,7 @@ inferred from pattern).
 `skybox_cms_path` and `skybox_oref` are filled in. No new PHP or launchd work
 needed — the plist exists at `scripts/com.navybook.skybox-apply.plist` and must
 be copied to `~/Library/LaunchAgents/` on the Air and loaded with `launchctl`.
+Live for GovExec as of 2026-05-08.
 
 ## GE360 daily updates page (live, launched 2026-04-28)
 
