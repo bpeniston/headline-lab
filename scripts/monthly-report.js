@@ -19,7 +19,7 @@ const https = require('https');
 const PUB_CONFIG_URL = 'https://www.navybook.com/D1/seo/pub-config.php';
 const PUB_STATS_URL  = 'https://www.navybook.com/D1/seo/pub-stats.php';
 const STATS_TOKEN    = 'e46ac3a0976b1fb6a6e14cf61f5bfb1438dc8768412e7dc7';
-const REPORT_EMAIL   = 'bpeniston@defenseone.com';
+const REPORT_EMAIL   = 'bpeniston@defenseone.com, edit-editors-aaaadtyvmussep4z4h5xl7nobi@govexec.slack.com';
 const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'monthly-report.log');
 
 // ── Logging ───────────────────────────────────────────────────
