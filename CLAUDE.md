@@ -79,7 +79,7 @@ timeout duration self-calibrates after first observed expiry (tracked in
 `~/.session-meta.json` on the Air). See SETUP.md.
 
 **Shared library:** `scripts/lib.js` contains all utilities shared between
-`apply-trending.js` and `apply-earthbox.js`: logger factory, session metadata,
+`apply-trending.js`, `apply-earthbox.js`, and `apply-skybox.js`: logger factory, session metadata,
 `.env` loader, Slack email, HTTP helpers, pub config fetch, `pubLabel()` helper,
 `runSetup()`, `postForm()` (HTTPS POST helper), and `saveUpdate()`. API fetches
 run in parallel across pubs via `Promise.all`.
@@ -113,9 +113,9 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 |---|---|---|---|---|---|---|---|
 | Defense One | `353836589` | `d1-article-topics` | `d1-earthbox-post` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
 | Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `post_manager` | `wttopic` | `657` | ✓ live |
-| GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | disabled — needs slack only |
-| Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | disabled — needs slack only |
-| Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | disabled — needs slack only |
+| GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | ✓ trending + skybox live |
+| Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | ✓ trending live |
+| Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | ✓ trending live |
 
 **Key learnings:**
 - `grappelli_app_label`: all five pubs confirmed as `post_manager` — always verify via Network tab
@@ -137,7 +137,7 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo. GE/NG/RF baselines TBD pending first full automation month.
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Apr 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo; GE topics 5,611/mo, GE earthbox 2,403/mo, GE skybox 22,369/mo; NG topics 1,677/mo, NG earthbox 933/mo, NG skybox 5,038/mo; RF topics 1,426/mo, RF earthbox 245/mo, RF skybox 261/mo. All stored in GE360 Pub Config sheet. - GA4 queries must use `pageLocation` or `fullPageUrl` dimension (not `pagePath`) to filter by `oref=` query param — `pagePath` strips query strings.
 
 Repo & deploy
 -------------
