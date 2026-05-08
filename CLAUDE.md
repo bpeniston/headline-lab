@@ -6,8 +6,8 @@ What this project is
 
 A Chrome extension (`athena-tools/`) plus PHP backend (`navybook.com/D1/seo/`)
 that adds tools to the Athena CMS shared by the **GE360** family of
-publications. Nightly automation live for Defense One and Washington Technology;
-GovExec, Nextgov, and Route Fifty pending Slack config only.
+publications. Currently deployed for Defense One; being extended to the full
+family.
 
 Five features
 -------------
@@ -68,26 +68,20 @@ autocomplete.
 
 **Nightly auto-apply (launched 2026-04-08):** `scripts/apply-trending.js` runs
 as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
-nightly 2FA). Skips sponsored slots — detected via `_is_sponsored_content`
-checkbox on the individual edit form (CMS list page titles are blank for some
-pubs; `title_override` check is unreliable). Sends Slack notification: subject
-`{PUB} Topics: Changed|Unchanged|Problem` (e.g. `D1 Topics: Changed`), body
-`New: T1, T2, …` / `Old: T1, T2, …` (comma-separated; items new to the list
-are bolded). Re-login alert sent if session expired. Proactive
-`Topics: Session expiring soon` warning sent 5 days before expected expiry;
-timeout duration self-calibrates after first observed expiry (tracked in
-`~/.session-meta.json` on the Air). See SETUP.md.
+nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
+`Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
+(comma-separated; items new to the list are bolded). Re-login alert sent if
+session expired. Proactive `Topics: Session expiring soon` warning sent 5 days
+before expected expiry; timeout duration self-calibrates after first observed
+expiry (tracked in `~/.session-meta.json` on the Air). See SETUP.md.
 
-**Shared library:** `scripts/lib.js` contains all utilities shared between
-`apply-trending.js`, `apply-earthbox.js`, and `apply-skybox.js`: logger factory, session metadata,
-`.env` loader, Slack email, HTTP helpers, pub config fetch, `pubLabel()` helper,
-`runSetup()`, `postForm()` (HTTPS POST helper), and `saveUpdate()`. API fetches
-run in parallel across pubs via `Promise.all`.
-
-`saveUpdate(pubKey, type, status, newItems, oldItems, errors, env, log)` — POSTs
-result data to `save-update.php` after each script run, using `UPDATE_SECRET`
-from `.env`. Skips gracefully if secret is absent. `sendSlackEmail` appends a
-footer link to `https://navybook.com/D1/updates/` on every notification.
+**Nightly GA4 stats (added 2026-05-08):** After each nightly CMS update,
+`apply-trending.js` queries GA4 for `oref=d1-article-topics` click counts and
+sends a separate Slack message: subject `Defense One Topics: Stats`, body shows
+current month MTD with projected full-month total, plus the two prior months for
+comparison. D1 only for now (oref validated; other pubs TBD). Uses the same
+`httpsPost` pattern as the validation script (DreamHost Node is too old for
+native `fetch` or optional chaining).
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` filters slugs/display
 names from recommendations regardless of score. Currently: `['commentary']`.
@@ -112,32 +106,37 @@ Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (s
 | Pub | GA4 Property | topic_oref | earthbox_oref | app_label | model | content_type | Sheet status |
 |---|---|---|---|---|---|---|---|
 | Defense One | `353836589` | `d1-article-topics` | `d1-earthbox-post` | `post_manager` | `defenseonetopic` | `382` | ✓ live |
-| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `post_manager` | `wttopic` | `657` | ✓ live |
-| GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | ✓ trending + skybox live |
-| Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | ✓ trending live |
-| Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | ✓ trending live |
+| Washington Technology | `358726868` | `wt-article-topics` | `wt-earthbox-post` | `core` | `topic` | TBD | disabled — needs topic_content_type, slack, base_url |
+| GovExec | `353164424` | `ge-article-topics` | `ge-earthbox-post` | `post_manager` | `govexectopic` | `505` | disabled — needs slack only |
+| Nextgov | `353764914` | `ng-article-topics` | `ng-earthbox-post` | `post_manager` | `nextgovtopic` | `496` | disabled — needs slack only |
+| Route Fifty | `353766084` | `rf-article-topics` | `rf-earthbox-post` | `post_manager` | `topic` | `164` | disabled — needs slack only |
 
 **Key learnings:**
-- `grappelli_app_label`: all five pubs confirmed as `post_manager` — always verify via Network tab
-- `grappelli_topic_model`: D1=`defenseonetopic`, GE=`govexectopic`, NG=`nextgovtopic`, WT=`wttopic`; RF uses plain `topic`
+- `grappelli_app_label`: WT uses `core`; all others confirmed as `post_manager` — always verify via Network tab
+- `grappelli_topic_model`: D1=`defenseonetopic`, GE=`govexectopic`, NG=`nextgovtopic`; WT and RF both use plain `topic`
 - `topic_content_type` varies per pub — find via the `content_type` select on a trending item edit page
 - `oref` pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` holds for all 5 pubs (confirmed)
 - D1 article tags appear twice in DOM (desktop/mobile) — deduplicate by slug; verify for each new pub
 - DO NOT use GA4 property `529112613` — that's the extension's own analytics, not a pub property
 - Route Fifty's `topic_content_type` 164 was unconfirmed (item had no pre-selected topic) — verify when saving a real trending item
-- **`is_sponsored()` in `earthbox-posts.php`**: do NOT match `'sponsor-content'` as an HTML string — WT's skybox includes a `/sponsors/sponsor-content/…` link on every page, causing every editorial article to be flagged as sponsored (same class of problem as D1's `skybox-item-sponsored` nav). Use the article's own URL path instead: check `str_contains(path, '/sponsors/')`. Sponsored articles live under `/sponsors/`; regular articles that merely link to one do not.
-- **`apply-earthbox.js` zero-posts guard**: if the API returns no posts, `count = 0`, the slot loop never runs, and `[].every()` returns `true`, so the script silently reports `Unchanged` with empty arrays. Guard: treat `count === 0` as `Problem` and return early.
-- **`save-update.php` type allowlist**: `type` is validated against an explicit list (`trending`, `earthbox`, `skybox`). When adding a new script, add its type string to the `in_array()` check or `saveUpdate` will fail with `Missing pub_key or type`.
-- **GovExec `base_url` in sheet**: was set to `www.washingtontechnology.com` instead of `www.govexec.com`, causing trending to scrape WT pages and find no `ge-article-topics`. GovExec articles DO have their own `ge-article-topics` links. After fixing `base_url`, clear `~/trending-article-cache-govexec.json` and `~/trending-main-cache-govexec.json` on the server to purge stale data.
 
 **Defense One GA4:** account `395628`, property `353836589`
+
+**D1 Trending Topics click baseline (oref=d1-article-topics):**
+- Oct 2025: 2,512 · Nov: 2,191 · Dec: 2,911 · Jan 2026: 3,696 · Feb: 3,093 · Mar: 4,065
+- Pre-launch avg (Oct 2025–Mar 2026): ~3,078/mo. Peak: 4,065 (Mar 2026).
+- Automation launched ~Apr 8 2026. Apr total: 1,885 (anomalously low — cause unclear; launchd logs worth checking).
+- May 2026 will be first full clean post-launch month. Interpretation thresholds: <3,078 = no lift; 3,078–4,065 = holding trend; >4,065 = clear lift.
+- GA4 can backfill up to 72h — April's manually-pulled figure of 1,709 later settled to 1,885.
 
 Key technical details
 ---------------------
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Apr 2026 avg): D1 topics 3,005/mo, D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo; GE topics 5,611/mo, GE earthbox 2,403/mo, GE skybox 22,369/mo; NG topics 1,677/mo, NG earthbox 933/mo, NG skybox 5,038/mo; RF topics 1,426/mo, RF earthbox 245/mo, RF skybox 261/mo. All stored in GE360 Pub Config sheet. - GA4 queries must use `pageLocation` or `fullPageUrl` dimension (not `pagePath`) to filter by `oref=` query param — `pagePath` strips query strings.
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,078/mo (revised), D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo. GE/NG/RF baselines TBD pending first full automation month.
+
+**DreamHost Node version** is old (v12-era) — does not support native `fetch` or optional chaining (`?.`). Always use `require('https')` with a manual `httpsPost` helper and explicit `&&` null checks instead. See `fetchTopicClickStats()` in `apply-trending.js` for the pattern.
 
 Repo & deploy
 -------------
@@ -168,11 +167,6 @@ Secrets & credentials
 
 -   Monthly stats token: `/home/bradwu/.headline-lab-config.ini`
 
--   Updates shared secret: `/home/bradwu/.update-secret` on DreamHost (one line:
-    `UPDATE_SECRET=<hex>`). Mirrored as `UPDATE_SECRET` in `~/headline-lab/.env`
-    on the Air. Used by `save-update.php` to authenticate POSTs from the apply
-    scripts. Daily results written to `/home/bradwu/ge360-updates-YYYY-MM-DD.json`.
-
 Extension manifest
 ------------------
 
@@ -196,55 +190,22 @@ Playwright script on the Air (`scripts/apply-earthbox.js`, same pattern as
 Runs via launchd at 5:30am. Server-side: `server/earthbox-posts.php`. Sponsored
 wall detected via `_is_sponsored_content` checkbox on the individual edit form
 (the CMS list page does not expose this column). Sends Slack notification:
-subject `{PUB} Earthboxes: Changed|Unchanged|Problem` (e.g. `WT Earthboxes: Changed`),
-body bullet list with sponsored slots inline as `SPONSORED: …` (items new to
-the list are bolded). Proactive `Earthboxes: Session expiring soon` warning
-shares the same self-calibrating timeout logic as `apply-trending.js`. GA4
-click tracking via `oref=d1-earthbox-post` (confirmed present on D1 article
-pages); monthly baseline being established via `scripts/earthbox-baseline.js`.
-See SETUP.md. Live for D1 and WT as of 2026-04-28.
+subject `Earthbox: Changes|Unchanged|Problem`, body bullet list with sponsored
+slots inline as `SPONSORED: …` (items new to the list are bolded). Proactive
+`Earthbox: Session expiring soon` warning shares the same self-calibrating
+timeout logic as `apply-trending.js`. GA4 click tracking via
+`oref=d1-earthbox-post` (confirmed present on D1 article pages); monthly
+baseline being established via `scripts/earthbox-baseline.js`. See SETUP.md.
 
-Skybox auto-updater (live, launched 2026-05-08)
------------------------------------------------
+M1 Air — automation host
+------------------------
 
-Playwright script on the Air (`scripts/apply-skybox.js`, same pattern as
-`apply-earthbox.js`) populates editorial Skybox slots (1–N Live slots, stopping
-at the sponsored wall) with top GA4 articles. Runs via launchd at 5:35am (5
-minutes after earthbox). Post rankings come from `earthbox-posts.php` — the
-same GA4-weighted list, served from the earthbox script's 1-hour cache (no
-extra GA4 queries). Sponsored wall: stops when `_is_sponsored_content` is
-checked on a slot; that slot and everything below is left untouched. Sends Slack
-notification: `{PUB} Skyboxes: Changed|Unchanged|Problem`. Updates page shows
-a Skyboxes section per pub (same bulleted-list renderer as earthbox). Controlled
-via `skybox_enabled` / `skybox_cms_path` columns in the GE360 Pub Config sheet.
-
-**Skybox oref values (GA4 click tracking):** `d1-skybox-hp`, `wt-skybox-hp`,
-`ge-skybox-hp`, `ng-skybox-hp`, `rf-skybox-hp` (confirmed D1 and WT; others
-inferred from pattern).
-
-**To activate for a pub:** set `skybox_enabled = TRUE` in the sheet; ensure
-`skybox_cms_path` and `skybox_oref` are filled in. No new PHP or launchd work
-needed — the plist exists at `scripts/com.navybook.skybox-apply.plist` and must
-be copied to `~/Library/LaunchAgents/` on the Air and loaded with `launchctl`.
-Live for GovExec as of 2026-05-08.
-
-## GE360 daily updates page (live, launched 2026-04-28)
-
-`https://navybook.com/D1/updates/` — a daily digest of what the nightly scripts
-changed. Files: `server/updates/index.php`, `server/updates/help.html`,
-`server/updates/updates.css`.
-
-- `save-update.php` (new server endpoint) accepts POSTs from `apply-trending.js`,
-  `apply-earthbox.js`, and `apply-skybox.js` (authenticated via `UPDATE_SECRET`) and writes results
-  to `/home/bradwu/ge360-updates-YYYY-MM-DD.json` with `flock` for concurrency.
-- `index.php` reads today's JSON + pub config; renders Topics/Earthbox sections
-  per pub with Changed/Unchanged/Problem badges; new items in a Changed run are
-  **bolded**; sponsored slots shown inline as `SPONSORED: …` (never bolded).
-  Active pubs sort first (alpha), inactive after.
-- `help.html` — static explainer page linked from the main page.
-- `updates.css` — shared stylesheet (Playfair Display + IBM Plex Mono/Sans,
-  newspaper-style palette). Bump `?v=N` on the `<link>` tag when deploying CSS
-  changes to bust browser cache.
+-   Tailscale IP: `100.117.250.37`
+-   SSH user: `brad-developer` (not `bradwu` — that's the DreamHost server user)
+-   SSH from MBP: `ssh brad-developer@100.117.250.37`
+-   Node: `/opt/homebrew/bin/node` — must set `PATH=/opt/homebrew/bin:$PATH` for non-interactive SSH sessions
+-   launchd plists: `~/Library/LaunchAgents/com.navybook.*.plist`
+-   All plists use absolute node path and set HOME + PATH in EnvironmentVariables — no shell profile needed
 
 ## Planned features
 see PLANNED.md
