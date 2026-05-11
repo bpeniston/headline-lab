@@ -202,6 +202,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 | Job | Schedule | Plist | Script | Log |
 |---|---|---|---|---|
 | Air heartbeat | Every 10 min | `com.navybook.heartbeat.plist` | `scripts/heartbeat.sh` | `logs/heartbeat.log` |
+| CMS pre-flight check | 4:55am nightly | `com.navybook.preflight.plist` | `scripts/pre-flight.js` | `logs/pre-flight.log` |
 | D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
 | D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` |
 | Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
@@ -212,6 +213,22 @@ launchctl unload ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
 launchctl load  ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
 ```
 To run manually: `launchctl start com.navybook.JOBNAME`
+
+---
+
+### Job: CMS pre-flight check (`pre-flight.js`)
+
+Runs at 4:55am — 5 minutes before the first nightly job — and validates the saved CMS session.
+
+- **Session expired:** records `sessionExpiredAlertSent` in `.session-meta.json`, sends ONE consolidated `CMS: Session Expired` Slack alert, then exits. The nightly scripts at 5:00am and 5:30am detect the same expiry but skip their own Slack alerts (they check `sessionExpiredAlertSent`), preventing duplicate messages. Also records `knownTimeoutDays` on first observed expiry.
+- **Session aging:** sends `CMS: Session expiring soon` if session age ≥ warning threshold (same `lastWarningSent` dedup used by main scripts — only one warning per day regardless of how many jobs run).
+- **Session healthy:** exits 0 silently.
+
+**Install on Air:**
+```
+scp scripts/com.navybook.preflight.plist brad-developer@100.117.250.37:~/Library/LaunchAgents/
+ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.navybook.preflight.plist"
+```
 
 ---
 

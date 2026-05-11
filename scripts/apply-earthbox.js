@@ -278,9 +278,14 @@ async function runApply() {
         log(`Session expired after ${elapsed} days — saving as known timeout.`);
         saveMeta(META_FILE, { ...meta, knownTimeoutDays: elapsed });
       }
-      const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-earthbox.js --setup';
-      for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, msg, env, pub.slack_email, log);
-      die('Session has expired — notifications sent.');
+      const todayStr0 = new Date().toISOString().slice(0, 10);
+      if (meta.sessionExpiredAlertSent !== todayStr0) {
+        const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-earthbox.js --setup';
+        for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, msg, env, pub.slack_email, log);
+      } else {
+        log('Session expired — alert already sent by pre-flight, skipping duplicate.');
+      }
+      die('Session has expired.');
     }
 
     log('Session valid.');
@@ -289,7 +294,7 @@ async function runApply() {
     const meta        = loadMeta(META_FILE);
     const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
     const timeoutDays = meta.knownTimeoutDays || 30;
-    const warnAt      = timeoutDays - 5;
+    const warnAt      = meta.knownTimeoutDays ? timeoutDays - 5 : 20;
     const todayStr    = new Date().toISOString().slice(0, 10);
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
