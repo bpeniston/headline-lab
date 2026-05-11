@@ -71,9 +71,11 @@ as a launchd job on the M1 Air at 5:00am via saved Playwright session (avoids
 nightly 2FA). Skips sponsored slots. Sends Slack notification: subject
 `Topics: Changes|Unchanged|Problem`, body `New: T1, T2, …` / `Old: T1, T2, …`
 (comma-separated; items new to the list are bolded). Re-login alert sent if
-session expired. Proactive `Topics: Session expiring soon` warning sent 5 days
-before expected expiry; timeout duration self-calibrates after first observed
-expiry (tracked in `~/.session-meta.json` on the Air). See SETUP.md.
+session expired. Pre-flight check (`pre-flight.js`, 4:55am) validates session
+before jobs run and sends one consolidated alert on expiry. Proactive
+`CMS: Session expiring soon` warning fires 5 days before expected expiry;
+observed timeout is 14 days (recorded 2026-05-11), so warning now fires at
+day 9. Timeout self-calibrates after each expiry (`~/.session-meta.json`). See SETUP.md.
 
 **Nightly GA4 stats (added 2026-05-08):** After each nightly CMS update,
 `apply-trending.js` queries GA4 for `oref=d1-article-topics` click counts and
@@ -147,12 +149,20 @@ Repo & deploy
 
 -   GitHub: `https://github.com/bpeniston/headline-lab`
 
--   Server: `bradwu@pdx1-shared-a1-08.dreamhost.com:~/navybook.com/D1/seo/`
+-   Server: `bradwu@pdx1-shared-a1-08.dreamhost.com`
+
+-   Server paths (three distinct directories under `~/navybook.com/D1/`):
+    -   `seo/` — API endpoints + Headline Lab homepage (`index.php`); **git-tracked**
+    -   `updates/` — daily auto-update digest page (`index.php`); NOT git-tracked
+    -   `index.html` — tools landing page listing all D1 tools; NOT git-tracked
+    -   **Do not scp updates/ files into seo/ or vice versa — both have an `index.php`**
 
 -   Deploy: `git push` then run `deploy` alias
 
 -   Upload PHP directly: `scp server/FILE.php
     bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/seo/FILE.php`
+
+-   Recovery: if a file in `seo/` gets overwritten, SSH in and run `git restore <file>`
 
 -   Reload extension: `chrome://extensions` → Athena Tools → ↺
 

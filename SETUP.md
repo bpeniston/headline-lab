@@ -182,7 +182,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 ### CMS session (`~/headline-lab/.cms-session.json`)
 - Playwright browser session saved after manual login (including 2FA)
 - Reused by the nightly script so it never needs to log in fresh
-- CMS hard-resets sessions periodically (observed ~30 days; exact interval recorded in `.session-meta.json` after first expiry)
+- CMS hard-resets sessions periodically (observed 14 days as of 2026-05-11; recorded in `.session-meta.json` as `knownTimeoutDays`)
 - To refresh: open Screen Sharing (`vnc://100.117.250.37`), open Terminal, run:
   ```
   export PATH=/opt/homebrew/bin:$PATH
@@ -192,7 +192,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 
 ### Session metadata (`~/headline-lab/.session-meta.json`)
 - Tracks `loginDate` (set on each `--setup` run), `knownTimeoutDays` (learned on first observed expiry), `lastWarningSent` (deduplicates warnings across both nightly scripts)
-- Both nightly scripts warn via Slack 5 days before the expected expiry (`knownTimeoutDays - 5`; defaults to day 25 until the timeout is observed)
+- Pre-flight warns via Slack 5 days before expected expiry (`knownTimeoutDays - 5`; defaults to day 20 on a fresh setup before timeout is observed). With `knownTimeoutDays: 14`, warning fires at day 9.
 - On first expiry, the scripts record the actual elapsed days as `knownTimeoutDays` so future warnings self-calibrate
 - Not committed to GitHub (Air-local, like `.cms-session.json`)
 - **Session expiry detection:** checks page title for "log in" / "sign in" in addition to URL patterns, so any login-page redirect is caught correctly
