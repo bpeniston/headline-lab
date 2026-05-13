@@ -35,17 +35,26 @@ if (!$pub) {
 }
 
 // ── Config ────────────────────────────────────────────────────
-$CREDS_FILE  = '/home/bradwu/ga4-oauth.json';
+$CREDS_FILE   = '/home/bradwu/ga4-oauth.json';
 $GA4_PROPERTY = (string) $pub['ga4_property_id'];
-$BASE_URL    = rtrim($pub['base_url'], '/');
-$CACHE_FILE  = "/home/bradwu/earthbox-cache-{$pub_key}.json";
+$BASE_URL     = rtrim($pub['base_url'], '/');
+$CACHE_TTL    = 3600;    // 1 hour
+$TITLE_TTL    = 86400;   // 24 hours
+$TOP_N        = 6;       // 5 editorial slots + 1 backup
+$MAX_MONTH    = 80;
+$MAX_WEEK     = 40;
+$MAX_DAY      = 20;
+
+// ── Resolve post mode (must precede cache check) ──────────────
+// Mode is passed explicitly by the caller; fall back to pub config.
+$mode_param = strtolower(preg_replace('/[^a-z_]/', '', $_GET['mode'] ?? ''));
+$post_mode  = in_array($mode_param, ['ga4', 'recent_staff'], true)
+    ? $mode_param
+    : ($pub['earthbox_post_mode'] ?? 'ga4');
+
+// Cache is keyed on pub + mode so GA4 and RECENT_STAFF results never collide.
+$CACHE_FILE  = "/home/bradwu/earthbox-cache-{$pub_key}-{$post_mode}.json";
 $TITLE_CACHE = "/home/bradwu/earthbox-title-cache-{$pub_key}.json";
-$CACHE_TTL   = 3600;    // 1 hour
-$TITLE_TTL   = 86400;   // 24 hours
-$TOP_N       = 6;       // 5 editorial slots + 1 backup
-$MAX_MONTH   = 80;
-$MAX_WEEK    = 40;
-$MAX_DAY     = 20;
 
 // ── 1. Main cache check ───────────────────────────────────────
 if (!isset($_GET['nocache']) && file_exists($CACHE_FILE)) {
@@ -56,12 +65,6 @@ if (!isset($_GET['nocache']) && file_exists($CACHE_FILE)) {
 }
 
 // ── 2. Recent-staff mode ──────────────────────────────────────
-// Mode is passed explicitly by the caller (apply-earthbox.js / apply-skybox.js).
-// Fall back to pub config's earthbox_post_mode if not provided.
-$mode_param = strtolower(preg_replace('/[^a-z_]/', '', $_GET['mode'] ?? ''));
-$post_mode  = in_array($mode_param, ['ga4', 'recent_staff'], true)
-    ? $mode_param
-    : ($pub['earthbox_post_mode'] ?? 'ga4');
 
 if ($post_mode === 'recent_staff') {
     if (empty($pub['rss_url']) || empty($pub['org_name'])) {
