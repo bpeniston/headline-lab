@@ -1,76 +1,45 @@
 # Athena Tools — Planned Features
 
-## Skybox/Earthbox — alternate post-selection mode (`recent_staff`)
-✓ **Deployed 2026-05-13; refactored 2026-05-13.** `earthbox_enabled` and `skybox_enabled` columns in the GE360 Pub Config Sheet are now three-value dropdowns: `OFF` (disabled), `GA4` (traffic-weighted), `RECENT_STAFF` (staff-written posts via RSS + JSON-LD). Each pub can use a different mode for its earthbox vs skybox. The old separate `post_mode` column was removed. GovExec is configured `RECENT_STAFF` for earthbox.
-
-`RECENT_STAFF` logic: `earthbox-posts.php` fetches the pub's RSS feed, skips the 5 most recent posts, and returns the next 6 whose `publisher.name` in JSON-LD matches `org_name` in the sheet. Sponsored CMS slots are never replaced.
-
-**Sheet columns:** `org_name` (W), `rss_url` (X). Confirmed `org_name` values: Defense One → `Defense One`, GovExec → `Government Executive`, Nextgov → `Nextgov/FCW`, Route Fifty → `Route Fifty`, Washington Technology → `Washington Technology`. All five pubs use `/rss/all/` as the feed path.
-
-## Earthbox auto-updater
-✓ **Deployed 2026-04-13.** Runs as a launchd job on the Air at 5:30am nightly.
-
-**Key implementation notes:**
-- POST requires `_save`, tracking pixel formset management form, and `suppress_label` preserved from GET
-- `image_override` deleted on each save so post's own featured image is used
-- Sponsored wall detected via `_is_sponsored_content` checkbox (not `title_override`)
-- Post ID extracted from GA4 page path (5–7 digit number)
-
-## Trending Topics — GA4 click stats in nightly Slack
-✓ **Deployed 2026-05-08.** `apply-trending.js` now sends a follow-up `Topics: Stats`
-Slack message after each nightly CMS update. Shows D1 MTD clicks (with projected
-full-month total) plus the two prior months for trend comparison. Query validated
-against manually-pulled GA4 data (March figure matched exactly at 4,065).
-
-**Next steps for stats:**
-- Pull end-of-May data manually to confirm first full clean post-launch month
-- Once May and June data are in, assess whether automation is producing measurable lift vs the pre-launch 3,078/mo avg and 4,065 March peak
-- Consider adding topic quality signal (CTR per slot) as a secondary metric if volume alone is ambiguous
-
 ## Trending Topics — impact study (ongoing)
-Pre-launch baseline (Oct 2025–Mar 2026 avg): ~3,078 clicks/mo via `oref=d1-article-topics`.
-Automation launched ~Apr 8 2026. April settled at 1,885 (anomalously low; cause TBD).
-May 2026 = first full clean post-launch month.
+
+Pre-launch baseline (Oct 2025–Mar 2026 avg): ~3,078 clicks/mo via `oref=d1-article-topics`. Automation launched ~Apr 8 2026. April settled at 1,885 (anomalously low; cause TBD). May 2026 = first full clean post-launch month.
 
 Interpretation thresholds for May:
 - Below 3,078 → no lift; investigate topic selection quality and launchd reliability
 - 3,078–4,065 → holding trend; automation working, not yet adding measurable lift
 - Above 4,065 → clear lift above pre-launch peak
 
+**Next steps:**
+- Pull end-of-May data manually to confirm first full clean post-launch month
+- Once May and June data are in, assess whether automation is producing measurable lift
+- Consider adding topic quality signal (CTR per slot) as a secondary metric if volume alone is ambiguous
+
+## Expand to full GE360 family (Trending Topics)
+
+All 5 pubs have `trending_enabled = TRUE` and fetch topics successfully. To fully activate each non-D1 pub, the GA4 `topic_oref` needs to be validated (confirm by inspecting a live article page for the correct `oref=` parameter). GA4 stats Slack is D1-only until other pubs' orefs are confirmed.
+
 ## Add Post — SEO slug generator button
 
-A button on the Add Post page (`server/add-post.html`) that, when clicked, sends the current headline, subheadline, and body copy to the API and returns the single best SEO slug, then replaces the contents of the slug field with it.
+A button on the Add Post page (`server/add-post.html`) that, when clicked, sends the current headline, subheadline, and body copy to the API and returns the single best SEO slug, then replaces the contents of the slug field.
 
-The slug should be calculated with the same Claude call already used for headline generation (or a lightweight dedicated call) using standard SEO slug rules: lowercase, hyphens, drop stop words, lead with the primary keyword, 4–6 words max.
+Slug rules: lowercase, hyphens, drop stop words, lead with the primary keyword, 4–6 words max. Use the same Claude call as headline generation, or a lightweight `?mode=slug` variant of `seo-api.php`.
 
 **Implementation notes:**
 - Button sits adjacent to the slug input field in the left pane
-- If the slug field already has content, prompt before overwriting (or make it a "re-generate" icon)
-- Reuse the existing `seo-api.php` endpoint or add a `?mode=slug` variant
-- The slug field auto-generates from the headline on keystroke today — this button is a deliberate override for when the auto-slug isn't keyword-optimal
-- **Only show the button when the post has not yet been published** — check the status field on the edit form; hide the button if status is `Live`. Show it on both `/post/add/` and `/post/NNN/change/` as long as the post hasn't gone live. Overwriting the slug of a published post would break existing URLs.
+- If the slug field already has content, prompt before overwriting (or use a "re-generate" icon)
+- The slug field auto-generates from the headline on keystroke today — this is a deliberate override for when the auto-slug isn't keyword-optimal
+- **Only show the button when the post has not yet been published** — check the status field; hide if status is `Live`. Show on both `/post/add/` and `/post/NNN/change/` as long as the post hasn't gone live. Overwriting the slug of a published post would break existing URLs.
 
-## Headline Lab — SEO prompt improvements (future)
+## Headline Lab — SEO prompt improvements
 
-Research session 2026-04-11 identified these improvements to the headline generator, not yet implemented:
+Research session 2026-04-11 identified these improvements (changes 1–6 were implemented; 7–11 remain):
 
-**7. Split headline into H1 + SEO title tag** — Add a `title_tag` field to the JSON output alongside `headline`. The H1 (display) is 50-65 chars, editorial. The title tag (SERP) is 60-70 chars, keyword-mechanical, with primary keyword in first 40 chars. Needs frontend changes to display/copy both.
+**7. Split headline into H1 + SEO title tag** — Add a `title_tag` field to the JSON output alongside `headline`. The H1 (display) is 50–65 chars, editorial. The title tag (SERP) is 60–70 chars, keyword-mechanical, with primary keyword in first 40 chars. Needs frontend changes to display/copy both.
 
-**8. Add `og_title` output field** — Open Graph title for Discover/social shares. Should be curiosity-gap/aspirational ("feature-y"), ~50-75 chars. **Blocked: Athena has no `og_title` field on the Post model.** Inspected post 412741 on 2026-04-11 — the CMS form has no og:title, social title, or meta title override anywhere (confirmed via full form field audit). og:title is auto-generated from `title` at the template level with no bypass. Requires the Athena/govexec dev team to add an optional `social_title` or `og_title_override` CharField to the Post model, with the template falling back to `title` if unset.
+**8. Add `og_title` output field** — Open Graph title for Discover/social shares; ~50–75 chars, curiosity-gap/aspirational. **Blocked:** Athena has no `og_title` field — it's auto-generated from `title` at the template level with no override. Requires the govexec dev team to add an optional `og_title_override` CharField to the Post model.
 
-**9. Add `content_type` parameter (breaking / analysis / feature / evergreen)** — Each type needs a different headline strategy. Breaking: short-tail, literal, freshness wins. Analysis: long-tail (3-5 word phrases), signal format ("what it means"). Evergreen: expertise framing, year signal. Implement as a prompt branch in `handle_headlines()`.
+**9. Add `content_type` parameter (breaking / analysis / feature / evergreen)** — Each type needs a different headline strategy. Breaking: short-tail, literal, freshness wins. Analysis: long-tail, signal format ("what it means"). Evergreen: expertise framing, year signal. Implement as a prompt branch in `handle_headlines()`.
 
-**10. Add few-shot headline examples to the prompt** — 2-3 good defense-journalism examples with rationale + 1 anti-example (cablese, question-form). Anthropic docs show this "dramatically improves accuracy and consistency."
+**10. Add few-shot examples to the prompt** — 2–3 good defense-journalism examples with rationale + 1 anti-example (cablese, question-form). Anthropic docs show this "dramatically improves accuracy and consistency."
 
 **11. Switch prompt delimiters to XML tags** — Replace `---` with `<article>`, `<lede_facts>`, `<competing_headlines>` for unambiguous Claude parsing.
-
-## Expand to full GE360 family (Trending Topics)
-Currently only Defense One is configured. Each additional pub needs:
-- GA4 property ID (need GA4 access permissions)
-- Grappelli model name (get from autocomplete field on that pub's trending item edit page)
-- Article topic oref (likely `oref={pub}-article-topics`; confirm by inspecting a live article page)
-- content_type integer for Topic (may differ per pub; get from edit page form)
-
-Note: as of 2026-05-08, the dry-run shows all 5 pubs fetching topics successfully
-(D1, WT, GovExec, Nextgov, Route Fifty) — trending_enabled appears to be set TRUE
-for all in the sheet. GA4 stats Slack is D1-only until other pubs' orefs are validated.
