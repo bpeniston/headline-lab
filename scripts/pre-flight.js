@@ -16,7 +16,8 @@ const { chromium } = require('playwright');
 const path         = require('path');
 const {
   CMS_BASE, createLogger, loadMeta, saveMeta, daysSince,
-  loadEnv, sendSlackEmail, fetchPubConfig,
+  loadEnv, isSessionExpired, makeSetupMsg, makeWarnMsg,
+  sendSlackEmail, fetchPubConfig,
 } = require('./lib');
 
 const META_FILE    = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
@@ -30,7 +31,7 @@ async function runPreflight() {
 
   const env  = loadEnv();
   const data = await fetchPubConfig();
-  const pubs = data.pubs.filter(p => p.trending_enabled || p.earthbox_enabled);
+  const pubs = data.pubs.filter(p => p._valid && (p.trending_enabled || p.earthbox_enabled !== 'OFF'));
   if (!pubs.length) {
     log('No enabled pubs — nothing to check.');
     logStream.end();
@@ -48,15 +49,10 @@ async function runPreflight() {
   try {
     await page.goto(`${CMS_BASE}${cmsPath}`, { waitUntil: 'domcontentloaded' });
     const pageTitle = await page.title();
-    const expired   =
-      page.url().includes('/accounts/login/') || page.url().includes('/saml/') ||
-      page.url().includes('/sso/')            || page.url().includes('/login/') ||
-      pageTitle.toLowerCase().includes('log in') || pageTitle.toLowerCase().includes('sign in');
+    const meta      = loadMeta(META_FILE);
+    const todayStr  = new Date().toISOString().slice(0, 10);
 
-    const meta     = loadMeta(META_FILE);
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    if (expired) {
+    if (isSessionExpired(page.url(), pageTitle)) {
       const updatedMeta = { ...meta, sessionExpiredAlertSent: todayStr };
       if (meta.loginDate && !meta.knownTimeoutDays) {
         const elapsed = daysSince(meta.loginDate);
@@ -64,9 +60,7 @@ async function runPreflight() {
         updatedMeta.knownTimeoutDays = elapsed;
       }
       saveMeta(META_FILE, updatedMeta);
-
-      const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup';
-      await sendSlackEmail('CMS: Session Expired', msg, env, slackEmail, log);
+      await sendSlackEmail('CMS: Session Expired', makeSetupMsg('apply-trending.js'), env, slackEmail, log);
       die('Session expired — alert sent. Nightly jobs will detect expiry and skip their own alerts.');
     }
 
@@ -80,8 +74,7 @@ async function runPreflight() {
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      const warnMsg  = `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup`;
-      await sendSlackEmail('CMS: Session expiring soon', warnMsg, env, slackEmail, log);
+      await sendSlackEmail('CMS: Session expiring soon', makeWarnMsg('apply-trending.js', elapsed, daysLeft), env, slackEmail, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected ~${timeoutDays}).`);
     }
 

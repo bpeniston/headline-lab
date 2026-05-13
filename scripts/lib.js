@@ -11,10 +11,7 @@ const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
 const UPDATES_API_URL = 'https://www.navybook.com/D1/seo/save-update.php';
 const UPDATES_PAGE    = 'http://navybook.com/D1/updates';
 
-const CMS_URL_RE = new RegExp(
-  'https?://' + CMS_BASE.replace(/^https?:\/\//, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\\s]*',
-  'g'
-);
+const CMS_URL_RE = /https?:\/\/admin\.govexec\.com[^\s]*/g;
 
 // ── Logger factory ────────────────────────────────────────────
 function createLogger(logFile) {
@@ -56,6 +53,21 @@ function loadEnv() {
     if (m) env[m[1].trim()] = m[2].trim();
   });
   return env;
+}
+
+// ── Session helpers ───────────────────────────────────────────
+function isSessionExpired(url, title) {
+  return url.includes('/accounts/login/') || url.includes('/saml/') ||
+         url.includes('/sso/')            || url.includes('/login/') ||
+         title.toLowerCase().includes('log in') || title.toLowerCase().includes('sign in');
+}
+
+function makeSetupMsg(scriptName) {
+  return `The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/${scriptName} --setup`;
+}
+
+function makeWarnMsg(scriptName, elapsed, daysLeft) {
+  return `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\n${makeSetupMsg(scriptName)}`;
 }
 
 // ── Slack ─────────────────────────────────────────────────────
@@ -196,6 +208,7 @@ module.exports = {
   createLogger,
   loadMeta, saveMeta, daysSince,
   loadEnv,
+  isSessionExpired, makeSetupMsg, makeWarnMsg,
   sendSlackEmail,
   fetchJSON, fetchPubConfig,
   saveUpdate,

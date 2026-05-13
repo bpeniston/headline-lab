@@ -146,6 +146,7 @@ if ($to_fetch) {
             'sponsored' => is_sponsored($html, $url),
         ];
     }
+    $title_cache = array_filter($title_cache, fn($e) => (time() - ($e['ts'] ?? 0)) < $TITLE_TTL);
     file_put_contents($TITLE_CACHE, json_encode($title_cache));
 }
 
@@ -328,6 +329,7 @@ function fetch_recent_staff_posts(array $pub, array &$title_cache, int $title_tt
                 'org'       => extract_org($html),
             ];
         }
+        $title_cache = array_filter($title_cache, fn($e) => (time() - ($e['ts'] ?? 0)) < $title_ttl);
     }
 
     $results = [];

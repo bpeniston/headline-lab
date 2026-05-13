@@ -17,7 +17,8 @@ const { chromium } = require('playwright');
 const path         = require('path');
 const {
   CMS_BASE, createLogger, loadMeta, saveMeta, daysSince,
-  loadEnv, sendSlackEmail, fetchJSON, fetchPubConfig,
+  loadEnv, isSessionExpired, makeSetupMsg, makeWarnMsg,
+  sendSlackEmail, fetchJSON, fetchPubConfig,
   saveUpdate, pubLabel, runSetup,
 } = require('./lib');
 
@@ -26,7 +27,8 @@ const SESSION_FILE    = path.join(process.env.HOME, 'headline-lab', '.cms-sessio
 const META_FILE       = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
 const LOG_FILE        = path.join(process.env.HOME, 'headline-lab', 'logs', 'trending-apply.log');
 const TRENDING_API_URL = 'https://www.navybook.com/D1/seo/trending-topics.php';
-const LABEL           = 'Topics';
+const LABEL            = 'Topics';
+const SCRIPT_NAME      = 'apply-trending.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
@@ -237,19 +239,16 @@ async function runApply() {
     // 4. Session validity check (once — all pubs share the same CMS domain)
     await page.goto(`${CMS_BASE}${pubs[0].trending_cms_path}`, { waitUntil: 'domcontentloaded' });
     const pageTitle = await page.title();
-    if (page.url().includes('/accounts/login/') || page.url().includes('/saml/') ||
-        page.url().includes('/sso/')            || page.url().includes('/login/') ||
-        pageTitle.toLowerCase().includes('log in') || pageTitle.toLowerCase().includes('sign in')) {
+    const todayStr  = new Date().toISOString().slice(0, 10);
+    if (isSessionExpired(page.url(), pageTitle)) {
       const meta = loadMeta(META_FILE);
       if (meta.loginDate && !meta.knownTimeoutDays) {
         const elapsed = daysSince(meta.loginDate);
         log(`Session expired after ${elapsed} days — saving as known timeout.`);
         saveMeta(META_FILE, { ...meta, knownTimeoutDays: elapsed });
       }
-      const todayStr0 = new Date().toISOString().slice(0, 10);
-      if (meta.sessionExpiredAlertSent !== todayStr0) {
-        const msg = 'The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup';
-        for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, msg, env, pub.slack_email, log);
+      if (meta.sessionExpiredAlertSent !== todayStr) {
+        for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, makeSetupMsg(SCRIPT_NAME), env, pub.slack_email, log);
       } else {
         log('Session expired — alert already sent by pre-flight, skipping duplicate.');
       }
@@ -263,12 +262,10 @@ async function runApply() {
     const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
     const timeoutDays = meta.knownTimeoutDays || 30;
     const warnAt      = meta.knownTimeoutDays ? timeoutDays - 5 : 20;
-    const todayStr    = new Date().toISOString().slice(0, 10);
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      const warnMsg  = `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/apply-trending.js --setup`;
-      await sendSlackEmail(`${LABEL}: Session expiring soon`, warnMsg, env, pubs[0].slack_email, log);
+      await sendSlackEmail(`${LABEL}: Session expiring soon`, makeWarnMsg(SCRIPT_NAME, elapsed, daysLeft), env, pubs[0].slack_email, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected at ~${timeoutDays}).`);
     }
 
