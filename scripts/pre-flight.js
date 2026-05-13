@@ -60,7 +60,7 @@ async function runPreflight() {
         updatedMeta.knownTimeoutDays = elapsed;
       }
       saveMeta(META_FILE, updatedMeta);
-      await sendSlackEmail('CMS: Session Expired', makeSetupMsg('apply-trending.js'), env, slackEmail, log);
+      await sendSlackEmail('CMS: Session Expired', makeSetupMsg('apply-box.js'), env, slackEmail, log);
       die('Session expired — alert sent. Nightly jobs will detect expiry and skip their own alerts.');
     }
 
@@ -74,7 +74,7 @@ async function runPreflight() {
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      await sendSlackEmail('CMS: Session expiring soon', makeWarnMsg('apply-trending.js', elapsed, daysLeft), env, slackEmail, log);
+      await sendSlackEmail('CMS: Session expiring soon', makeWarnMsg('apply-box.js', elapsed, daysLeft), env, slackEmail, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected ~${timeoutDays}).`);
     }
 
