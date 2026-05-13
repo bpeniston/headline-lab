@@ -101,17 +101,24 @@ All five pubs run Athena CMS at `admin.govexec.com`.
 | Route Fifty           | route-fifty.com          | `routefifty`     | `/athena/curate/routefiftytrendingtopicitem/` | `/athena/curate/routefiftyskyboxitem/` | `/athena/curate/routefiftyearthboxitem/` | 510               |
 | Washington Technology | washingtontechnology.com | `washtech`       | `/athena/curate/wttrendingitem/`              | `/athena/curate/wtskyboxitem/`         | `/athena/curate/wtearthboxitem/`         | 621               |
 
-Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row (including `base_url` and `topic_oref`), then set `trending_enabled`/`earthbox_enabled` to TRUE — no new PHP files needed, the shared endpoints handle all pubs via `?pub={pub_key}`.
+Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row (including `base_url` and `topic_oref`), then set `earthbox_enabled`/`skybox_enabled` to `GA4` or `RECENT_STAFF` — no new PHP files needed, the shared endpoints handle all pubs via `?pub={pub_key}`.
 
-**Post-selection mode** (skybox + earthbox): controlled by three optional sheet columns.
+**Post-selection mode** (skybox + earthbox): `earthbox_enabled` and `skybox_enabled` columns in the sheet are now three-value dropdowns that simultaneously control whether nightly automation is active *and* which post-selection mode to use.
+
+| Value | Meaning |
+|---|---|
+| `OFF` | Nightly updater disabled for this box on this pub |
+| `GA4` | Enabled — traffic-weighted ranking from GA4 (default) |
+| `RECENT_STAFF` | Enabled — recency-ordered staff-written posts via RSS + JSON-LD org check |
+
+Two additional optional columns support `RECENT_STAFF` mode:
 
 | Column | Values | Notes |
 |---|---|---|
-| `post_mode` | `ga4` (default) or `recent_staff` | `ga4` = existing traffic-weighted GA4 ranking; `recent_staff` = recency-ordered staff posts |
-| `org_name` | e.g. `Defense One` | Publisher name as it appears in article JSON-LD `publisher.name`. Required when `post_mode` is `recent_staff`. |
-| `rss_url` | e.g. `https://www.defenseone.com/rss/all/` | RSS 2.0 feed URL for the pub. Required when `post_mode` is `recent_staff`. |
+| `org_name` | e.g. `Government Executive` | Publisher name as it appears in article JSON-LD `publisher.name`. Required when either box is `RECENT_STAFF`. |
+| `rss_url` | e.g. `https://www.govexec.com/rss/all/` | RSS 2.0 feed URL. Required when either box is `RECENT_STAFF`. |
 
-`recent_staff` logic: skip the 5 most recent RSS items, then take the next 6 whose `publisher.name` matches `org_name` and are not sponsored. Sponsored slots in the CMS are never replaced (same as `ga4` mode).
+`RECENT_STAFF` logic: skip the 5 most recent RSS items, then take the next 6 whose `publisher.name` matches `org_name` and are not sponsored. Sponsored slots in the CMS are never replaced (same as `GA4` mode).
 
 **Per-pub configuration status:**
 

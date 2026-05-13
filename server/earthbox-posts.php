@@ -56,7 +56,12 @@ if (!isset($_GET['nocache']) && file_exists($CACHE_FILE)) {
 }
 
 // ── 2. Recent-staff mode ──────────────────────────────────────
-$post_mode = $pub['post_mode'] ?? 'ga4';
+// Mode is passed explicitly by the caller (apply-earthbox.js / apply-skybox.js).
+// Fall back to pub config's earthbox_post_mode if not provided.
+$mode_param = strtolower(preg_replace('/[^a-z_]/', '', $_GET['mode'] ?? ''));
+$post_mode  = in_array($mode_param, ['ga4', 'recent_staff'], true)
+    ? $mode_param
+    : ($pub['earthbox_post_mode'] ?? 'ga4');
 
 if ($post_mode === 'recent_staff') {
     if (empty($pub['rss_url']) || empty($pub['org_name'])) {

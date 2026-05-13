@@ -1,9 +1,11 @@
 # Athena Tools — Planned Features
 
 ## Skybox/Earthbox — alternate post-selection mode (`recent_staff`)
-✓ **Deployed 2026-05-13.** `post_mode` column added to the GE360 Pub Config Sheet. When set to `recent_staff`, `earthbox-posts.php` fetches the pub's RSS feed, skips the 5 most recent posts, and returns the next 6 whose `publisher.name` in JSON-LD matches `org_name` in the sheet — featuring only staff-written content. Sponsored CMS slots are still never replaced. `ga4` (traffic-weighted) remains the default. GovExec is the first pub using this mode.
+✓ **Deployed 2026-05-13; refactored 2026-05-13.** `earthbox_enabled` and `skybox_enabled` columns in the GE360 Pub Config Sheet are now three-value dropdowns: `OFF` (disabled), `GA4` (traffic-weighted), `RECENT_STAFF` (staff-written posts via RSS + JSON-LD). Each pub can use a different mode for its earthbox vs skybox. The old separate `post_mode` column was removed. GovExec is configured `RECENT_STAFF` for earthbox.
 
-**New sheet columns:** `post_mode` (W), `org_name` (X), `rss_url` (Y). Confirmed `org_name` values: Defense One → `Defense One`, GovExec → `Government Executive`, Nextgov → `Nextgov/FCW`, Route Fifty → `Route Fifty`, Washington Technology → `Washington Technology`. All five pubs use `/rss/all/` as the feed path.
+`RECENT_STAFF` logic: `earthbox-posts.php` fetches the pub's RSS feed, skips the 5 most recent posts, and returns the next 6 whose `publisher.name` in JSON-LD matches `org_name` in the sheet. Sponsored CMS slots are never replaced.
+
+**Sheet columns:** `org_name` (W), `rss_url` (X). Confirmed `org_name` values: Defense One → `Defense One`, GovExec → `Government Executive`, Nextgov → `Nextgov/FCW`, Route Fifty → `Route Fifty`, Washington Technology → `Washington Technology`. All five pubs use `/rss/all/` as the feed path.
 
 ## Earthbox auto-updater
 ✓ **Deployed 2026-04-13.** Runs as a launchd job on the Air at 5:30am nightly.

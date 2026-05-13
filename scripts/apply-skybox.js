@@ -236,16 +236,16 @@ async function runApply() {
   if (configResult.errors?.length) {
     log(`Sheet validation errors (skipping affected rows):\n${configResult.errors.map(e => `  ${e}`).join('\n')}`);
   }
-  const pubs = (configResult.pubs || []).filter(p => p._valid && p.skybox_enabled);
+  const pubs = (configResult.pubs || []).filter(p => p._valid && p.skybox_enabled !== 'OFF');
   if (!pubs.length) die('No valid skybox-enabled publications found in config.');
   log(`Enabled pubs: ${pubs.map(p => p.pub_name).join(', ')}`);
 
   // 2. Fetch post recommendations (parallel) — same endpoint as earthbox
   const pubPosts = {};
   await Promise.all(pubs.map(async pub => {
-    log(`Fetching posts for ${pub.pub_name}…`);
+    log(`Fetching posts for ${pub.pub_name} (mode=${pub.skybox_post_mode})…`);
     try {
-      const data = await fetchJSON(`${POSTS_API_URL}?pub=${pub.pub_key}`);
+      const data = await fetchJSON(`${POSTS_API_URL}?pub=${pub.pub_key}&mode=${pub.skybox_post_mode}`);
       if (data.error) throw new Error(data.error);
       pubPosts[pub.pub_key] = data.posts;
       log(`  Got ${data.posts.length} recommendations.`);

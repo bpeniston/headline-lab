@@ -126,15 +126,27 @@ function parseRows($rows, $requiredCols) {
             if ($r[$col] === '') $rowErrors[] = "missing $col";
         }
 
-        // Boolean fields — Google Sheets exports TRUE/FALSE in caps
-        foreach (['trending_enabled', 'earthbox_enabled', 'skybox_enabled'] as $col) {
+        // Boolean field — Google Sheets exports TRUE/FALSE in caps
+        $v = strtoupper($r['trending_enabled']);
+        if ($v !== 'TRUE' && $v !== 'FALSE') {
+            $rowErrors[] = "trending_enabled must be TRUE or FALSE (got: \"{$r['trending_enabled']}\")";
+        } else {
+            $r['trending_enabled'] = ($v === 'TRUE');
+        }
+
+        // Mode fields — OFF disables, GA4/RECENT_STAFF enable with the given mode
+        $valid_modes = ['OFF', 'GA4', 'RECENT_STAFF'];
+        foreach (['earthbox_enabled', 'skybox_enabled'] as $col) {
             $v = strtoupper($r[$col]);
-            if ($v !== 'TRUE' && $v !== 'FALSE') {
-                $rowErrors[] = "$col must be TRUE or FALSE (got: \"{$r[$col]}\")";
+            if (!in_array($v, $valid_modes, true)) {
+                $rowErrors[] = "$col must be OFF, GA4, or RECENT_STAFF (got: \"{$r[$col]}\")";
             } else {
-                $r[$col] = ($v === 'TRUE');
+                $r[$col] = $v;  // normalise to upper-case string
             }
         }
+        // Derived convenience booleans + mode strings used by scripts
+        $r['earthbox_post_mode'] = ($r['earthbox_enabled'] === 'RECENT_STAFF') ? 'recent_staff' : 'ga4';
+        $r['skybox_post_mode']   = ($r['skybox_enabled']   === 'RECENT_STAFF') ? 'recent_staff' : 'ga4';
 
         // Integer fields
         foreach (['ga4_property_id', 'topic_content_type'] as $col) {
@@ -155,17 +167,15 @@ function parseRows($rows, $requiredCols) {
         }
 
         // Optional columns — set defaults when column is absent or left blank
-        $r['post_mode'] = (isset($r['post_mode']) && $r['post_mode'] !== '')
-            ? strtolower($r['post_mode']) : 'ga4';
-        $r['org_name']  = $r['org_name'] ?? '';
-        $r['rss_url']   = $r['rss_url']  ?? '';
+        $r['org_name'] = $r['org_name'] ?? '';
+        $r['rss_url']  = $r['rss_url']  ?? '';
 
-        if (!in_array($r['post_mode'], ['ga4', 'recent_staff'], true)) {
-            $rowErrors[] = "post_mode must be 'ga4' or 'recent_staff' (got: \"{$r['post_mode']}\")";
-        }
-        if ($r['post_mode'] === 'recent_staff') {
-            if ($r['org_name'] === '') $rowErrors[] = "org_name required when post_mode is recent_staff";
-            if ($r['rss_url']  === '') $rowErrors[] = "rss_url required when post_mode is recent_staff";
+        // Validate recent_staff requirements for each enabled mode
+        foreach (['earthbox', 'skybox'] as $box) {
+            if (($r["{$box}_post_mode"] ?? '') === 'recent_staff') {
+                if ($r['org_name'] === '') $rowErrors[] = "org_name required when {$box}_enabled is RECENT_STAFF";
+                if ($r['rss_url']  === '') $rowErrors[] = "rss_url required when {$box}_enabled is RECENT_STAFF";
+            }
         }
 
         if ($rowErrors) {
