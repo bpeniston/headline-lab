@@ -48,6 +48,7 @@ The slug should be calculated with the same Claude call already used for headlin
 - If the slug field already has content, prompt before overwriting (or make it a "re-generate" icon)
 - Reuse the existing `seo-api.php` endpoint or add a `?mode=slug` variant
 - The slug field auto-generates from the headline on keystroke today — this button is a deliberate override for when the auto-slug isn't keyword-optimal
+- **Only inject the button on new-post pages** (`/post/add/`), never on edit pages (`/post/NNN/change/`) — overwriting the slug of an already-published post would break existing URLs
 
 ## Headline Lab — SEO prompt improvements (future)
 
