@@ -1,20 +1,15 @@
 #!/usr/bin/env node
 // =============================================================
-// scripts/apply-skybox.js
-// Nightly Skybox auto-apply for all enabled GE360 publications.
-// Per-pub config (CMS paths, GA4 IDs, Slack emails, etc.) is
-// read from a Google Sheet via pub-config.php.
+// scripts/apply-box.js
+// Nightly Earthbox + Skybox auto-apply for all enabled GE360 pubs.
+// Per-pub config is read from the GE360 Pub Config Google Sheet.
 //
-// Post recommendations come from earthbox-posts.php (same GA4-
-// weighted list used by the earthbox updater, served from cache).
-//
-// Slots where _is_sponsored_content is checked are skipped;
-// everything below the sponsored wall is also left untouched.
-//
-// Usage:
-//   node apply-skybox.js --setup     Log in and save CMS session
-//   node apply-skybox.js             Apply posts (all enabled pubs)
-//   node apply-skybox.js --dry-run   Fetch only, no CMS writes
+// By default runs both box types. Use flags to restrict:
+//   node apply-box.js                  Apply earthbox + skybox
+//   node apply-box.js --earthbox       Earthbox only
+//   node apply-box.js --skybox         Skybox only
+//   node apply-box.js --dry-run        Fetch only, no CMS writes
+//   node apply-box.js --setup          Log in and save CMS session
 // =============================================================
 
 'use strict';
@@ -29,28 +24,50 @@ const {
 } = require('./lib');
 
 // ── Config ────────────────────────────────────────────────────
-const SESSION_FILE   = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
-const META_FILE      = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
-const LOG_FILE       = path.join(process.env.HOME, 'headline-lab', 'logs', 'skybox-apply.log');
-const POSTS_API_URL  = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
-const LABEL          = 'Skyboxes';
-const SCRIPT_NAME    = 'apply-skybox.js';
+const SESSION_FILE  = path.join(process.env.HOME, 'headline-lab', '.cms-session.json');
+const META_FILE     = path.join(process.env.HOME, 'headline-lab', '.session-meta.json');
+const LOG_FILE      = path.join(process.env.HOME, 'headline-lab', 'logs', 'box-apply.log');
+const POSTS_API_URL = 'https://www.navybook.com/D1/seo/earthbox-posts.php';
+const SCRIPT_NAME   = 'apply-box.js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SETUP   = process.argv.includes('--setup');
 
 const { log, die, logStream } = createLogger(LOG_FILE);
 
-// ── Apply skybox for one publication ─────────────────────────
-async function applySkyboxForPub(page, pub, posts, env) {
-  const itemSlug = pub.skybox_cms_path.replace(/\/$/, '').split('/').pop();
+// Box type definitions — drives all field-name lookups
+const BOX = {
+  earthbox: {
+    enabledField:  'earthbox_enabled',
+    cmsPathField:  'earthbox_cms_path',
+    postModeField: 'earthbox_post_mode',
+    type:          'earthbox',
+    label:         'Earthboxes',
+  },
+  skybox: {
+    enabledField:  'skybox_enabled',
+    cmsPathField:  'skybox_cms_path',
+    postModeField: 'skybox_post_mode',
+    type:          'skybox',
+    label:         'Skyboxes',
+  },
+};
 
-  log(`--- ${pub.pub_name} (${itemSlug}) ---`);
+const hasEarthbox = process.argv.includes('--earthbox');
+const hasSkybox   = process.argv.includes('--skybox');
+const BOX_TYPES   = (hasEarthbox || hasSkybox)
+  ? [hasEarthbox && 'earthbox', hasSkybox && 'skybox'].filter(Boolean)
+  : ['earthbox', 'skybox'];
 
-  await page.goto(`${CMS_BASE}${pub.skybox_cms_path}`, { waitUntil: 'domcontentloaded' });
+// ── Apply one box type for one pub ────────────────────────────
+async function applyBoxForPub(page, pub, posts, env, box) {
+  const cmsPath  = pub[box.cmsPathField];
+  const itemSlug = cmsPath.replace(/\/$/, '').split('/').pop();
 
-  // Skybox list page does not expose _is_sponsored_content —
-  // sponsored detection happens on the individual edit page below.
+  log(`--- ${pub.pub_name} ${box.label} (${itemSlug}) ---`);
+
+  await page.goto(`${CMS_BASE}${cmsPath}`, { waitUntil: 'domcontentloaded' });
+
   const liveItems = await page.evaluate(itemSlug => {
     const items = [];
     document.querySelectorAll('#result_list tbody tr').forEach(row => {
@@ -70,20 +87,25 @@ async function applySkyboxForPub(page, pub, posts, env) {
 
   log(`  Found ${liveItems.length} Live slots.`);
 
-  const count      = Math.min(liveItems.length, posts.length);
-
-  if (count === 0) {
-    const reason = posts.length === 0 ? 'API returned no post recommendations' : 'No editable Live slots found in CMS';
-    log(`  ${reason} — nothing to update.`);
-    await saveUpdate(pub.pub_key, 'skybox', 'Problem', [], [], [reason], env, log);
-    await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, `${reason} — nothing was updated.`, env, pub.slack_email, log);
+  if (!liveItems.length) {
+    log('  No editable slots found — nothing to update.');
+    await saveUpdate(pub.pub_key, box.type, 'Problem', [], [], ['No editable Live slots found in CMS'], env, log);
+    await sendSlackEmail(`${pubLabel(pub)} ${box.label}: Problem`, 'No editable Live slots found in CMS — nothing was updated.', env, pub.slack_email, log);
     return;
   }
 
+  if (!posts.length) {
+    const reason = 'API returned no post recommendations';
+    log(`  ${reason} — nothing to update.`);
+    await saveUpdate(pub.pub_key, box.type, 'Problem', [], [], [reason], env, log);
+    await sendSlackEmail(`${pubLabel(pub)} ${box.label}: Problem`, `${reason} — nothing was updated.`, env, pub.slack_email, log);
+    return;
+  }
+
+  const count      = Math.min(liveItems.length, posts.length);
   let applied      = 0;
   let failed       = 0;
   let skipped      = 0;
-  let hitWall      = false;
   const errors     = [];
   const displayOld = [];
   const displayNew = [];
@@ -93,13 +115,6 @@ async function applySkyboxForPub(page, pub, posts, env) {
   for (let i = 0; i < count; i++) {
     const item = liveItems[i];
     const post = posts[i];
-
-    if (hitWall) {
-      // Below the sponsored wall — carry current slot title as-is
-      displayOld.push(item.title);
-      displayNew.push(item.title);
-      continue;
-    }
 
     log(`  [${i+1}/${count}] "${item.title}" → "${post.title}" (post_id=${post.post_id})…`);
 
@@ -130,7 +145,7 @@ async function applySkyboxForPub(page, pub, posts, env) {
 
         const fd = new FormData();
         fd.append('csrfmiddlewaretoken', csrf);
-        fd.append('content_type',        '22');
+        fd.append('content_type',        '22'); // Post, same across all GE360 pubs
         fd.append('object_id',           String(postId));
         fd.append('status',              liveVal);
         fd.append('live_date_0',         liveDate0);
@@ -178,11 +193,9 @@ async function applySkyboxForPub(page, pub, posts, env) {
 
       if (result.error) throw new Error(result.error);
       if (result.skipped) {
-        log(`    ↷ Skipped slot ${item.id} (${result.reason}) — stopping at sponsored wall`);
-        const label = `SPONSORED: ${item.title}`;
-        displayOld.push(label);
-        displayNew.push(label);
-        hitWall = true;
+        log(`    ↷ Skipped slot ${item.id} (${result.reason})`);
+        displayOld.push(`SPONSORED: ${item.title}`);
+        displayNew.push(`SPONSORED: ${item.title}`);
         skipped++;
         continue;
       }
@@ -201,9 +214,8 @@ async function applySkyboxForPub(page, pub, posts, env) {
     }
   }
 
-  log(`  ${pub.pub_name}: ${applied} applied, ${failed} failed, ${skipped} skipped (sponsored wall)`);
+  log(`  ${pub.pub_name} ${box.label}: ${applied} applied, ${failed} failed, ${skipped} skipped (sponsored)`);
 
-  // Sponsored slots excluded from unchanged detection — they're never updated.
   const unchanged = failed === 0 && appliedNew.every((t, i) => t === appliedOld[i]);
   const status    = failed > 0 ? 'Problem' : unchanged ? 'Unchanged' : 'Changed';
   const oldSet    = new Set(displayOld);
@@ -217,13 +229,13 @@ async function applySkyboxForPub(page, pub, posts, env) {
     body = `NEW:\n\n${numbered(displayNew, true)}\n\nOLD:\n\n${numbered(displayOld, false)}`;
   }
   if (errors.length) body += `\n\nErrors:\n${errors.map(e => `  ${e}`).join('\n')}`;
-  await saveUpdate(pub.pub_key, 'skybox', status, displayNew, displayOld, errors, env, log);
-  await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: ${status}`, body, env, pub.slack_email, log);
+  await saveUpdate(pub.pub_key, box.type, status, displayNew, displayOld, errors, env, log);
+  await sendSlackEmail(`${pubLabel(pub)} ${box.label}: ${status}`, body, env, pub.slack_email, log);
 }
 
 // ── Main apply ────────────────────────────────────────────────
 async function runApply() {
-  log(`=== Skybox apply start${DRY_RUN ? ' (DRY RUN)' : ''} ===`);
+  log(`=== Box apply start${DRY_RUN ? ' (DRY RUN)' : ''} (${BOX_TYPES.join(', ')}) ===`);
   let env;
   try { env = loadEnv(); } catch (e) { die(e.message); }
 
@@ -238,27 +250,45 @@ async function runApply() {
   if (configResult.errors?.length) {
     log(`Sheet validation errors (skipping affected rows):\n${configResult.errors.map(e => `  ${e}`).join('\n')}`);
   }
-  const pubs = (configResult.pubs || []).filter(p => p._valid && p.skybox_enabled !== 'OFF');
-  if (!pubs.length) die('No valid skybox-enabled publications found in config.');
-  log(`Enabled pubs: ${pubs.map(p => p.pub_name).join(', ')}`);
 
-  // 2. Fetch post recommendations (parallel) — same endpoint as earthbox
+  // Build per-box-type pub lists
+  const pubsByBox = {};
+  for (const boxType of BOX_TYPES) {
+    const box  = BOX[boxType];
+    const pubs = (configResult.pubs || []).filter(p => p._valid && p[box.enabledField] !== 'OFF');
+    pubsByBox[boxType] = pubs;
+    if (pubs.length) log(`${box.label} enabled: ${pubs.map(p => p.pub_name).join(', ')}`);
+  }
+
+  // Deduplicated list of all enabled pubs (for session alerts)
+  const allEnabledPubs = [...new Map(
+    BOX_TYPES.flatMap(bt => pubsByBox[bt]).map(p => [p.pub_key, p])
+  ).values()];
+  if (!allEnabledPubs.length) die('No enabled pubs found for any box type.');
+
+  // 2. Fetch post recommendations — all pub+box combos in parallel
   const pubPosts = {};
-  await Promise.all(pubs.map(async pub => {
-    log(`Fetching posts for ${pub.pub_name} (mode=${pub.skybox_post_mode})…`);
-    try {
-      const data = await fetchJSON(`${POSTS_API_URL}?pub=${pub.pub_key}&mode=${pub.skybox_post_mode}`);
-      if (data.error) throw new Error(data.error);
-      pubPosts[pub.pub_key] = data.posts;
-      log(`  Got ${data.posts.length} recommendations.`);
-      data.posts.forEach((p, i) =>
-        log(`    [${i+1}] ${p.title} (post_id=${p.post_id}, score=${p.score})`));
-    } catch (e) {
-      log(`  API fetch failed for ${pub.pub_name}: ${e.message}`);
-      await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, `API fetch failed: ${e.message}`, env, pub.slack_email, log);
-      pubPosts[pub.pub_key] = null;
-    }
-  }));
+  await Promise.all(
+    BOX_TYPES.flatMap(boxType =>
+      pubsByBox[boxType].map(async pub => {
+        const box = BOX[boxType];
+        const key = `${pub.pub_key}:${boxType}`;
+        log(`Fetching posts for ${pub.pub_name} ${box.label} (mode=${pub[box.postModeField]})…`);
+        try {
+          const data = await fetchJSON(`${POSTS_API_URL}?pub=${pub.pub_key}&mode=${pub[box.postModeField]}`);
+          if (data.error) throw new Error(data.error);
+          pubPosts[key] = data.posts;
+          log(`  Got ${data.posts.length} recommendations.`);
+          data.posts.forEach((p, i) =>
+            log(`    [${i+1}] ${p.title} (post_id=${p.post_id}, score=${p.score})`));
+        } catch (e) {
+          log(`  API fetch failed for ${pub.pub_name} ${box.label}: ${e.message}`);
+          await sendSlackEmail(`${pubLabel(pub)} ${box.label}: Problem`, `API fetch failed: ${e.message}`, env, pub.slack_email, log);
+          pubPosts[key] = null;
+        }
+      })
+    )
+  );
 
   if (DRY_RUN) {
     log('Dry run — skipping CMS update.');
@@ -273,8 +303,10 @@ async function runApply() {
   const page    = await context.newPage();
 
   try {
-    // 4. Session validity check
-    await page.goto(`${CMS_BASE}${pubs[0].skybox_cms_path}`, { waitUntil: 'domcontentloaded' });
+    // 4. Session validity check (once — all pubs share the same CMS domain)
+    const firstBoxType = BOX_TYPES.find(bt => pubsByBox[bt].length > 0);
+    const firstPub     = pubsByBox[firstBoxType][0];
+    await page.goto(`${CMS_BASE}${firstPub[BOX[firstBoxType].cmsPathField]}`, { waitUntil: 'domcontentloaded' });
     const pageTitle = await page.title();
     const todayStr  = new Date().toISOString().slice(0, 10);
     if (isSessionExpired(page.url(), pageTitle)) {
@@ -285,7 +317,7 @@ async function runApply() {
         saveMeta(META_FILE, { ...meta, knownTimeoutDays: elapsed });
       }
       if (meta.sessionExpiredAlertSent !== todayStr) {
-        for (const pub of pubs) await sendSlackEmail(`${pubLabel(pub)} ${LABEL}: Problem`, makeSetupMsg(SCRIPT_NAME), env, pub.slack_email, log);
+        for (const pub of allEnabledPubs) await sendSlackEmail(`${pubLabel(pub)} Boxes: Problem`, makeSetupMsg(SCRIPT_NAME), env, pub.slack_email, log);
       } else {
         log('Session expired — alert already sent by pre-flight, skipping duplicate.');
       }
@@ -294,7 +326,7 @@ async function runApply() {
 
     log('Session valid.');
 
-    // 5. Session age warning
+    // 5. Session age warning (once)
     const meta        = loadMeta(META_FILE);
     const elapsed     = meta.loginDate ? daysSince(meta.loginDate) : 0;
     const timeoutDays = meta.knownTimeoutDays || 30;
@@ -302,15 +334,18 @@ async function runApply() {
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      await sendSlackEmail(`${LABEL}: Session expiring soon`, makeWarnMsg(SCRIPT_NAME, elapsed, daysLeft), env, pubs[0].slack_email, log);
+      await sendSlackEmail('Boxes: Session expiring soon', makeWarnMsg(SCRIPT_NAME, elapsed, daysLeft), env, allEnabledPubs[0].slack_email, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected at ~${timeoutDays}).`);
     }
 
-    // 6. Apply for each pub
-    for (const pub of pubs) {
-      const posts = pubPosts[pub.pub_key];
-      if (!posts) { log(`Skipping ${pub.pub_name} — API fetch failed earlier.`); continue; }
-      await applySkyboxForPub(page, pub, posts, env);
+    // 6. Apply each box type for each enabled pub
+    for (const boxType of BOX_TYPES) {
+      const box = BOX[boxType];
+      for (const pub of pubsByBox[boxType]) {
+        const posts = pubPosts[`${pub.pub_key}:${boxType}`];
+        if (!posts) { log(`Skipping ${pub.pub_name} ${box.label} — API fetch failed earlier.`); continue; }
+        await applyBoxForPub(page, pub, posts, env, box);
+      }
     }
 
     // 7. Persist updated session cookies
@@ -323,7 +358,7 @@ async function runApply() {
   }
 }
 
-// ── Entry point ──────────────────────────────────────────────
+// ── Entry point ───────────────────────────────────────────────
 if (SETUP) {
   runSetup({ chromium, sessionFile: SESSION_FILE, metaFile: META_FILE, log, logStream })
     .catch(e => { console.error(e); process.exit(1); });
