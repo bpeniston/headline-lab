@@ -11,6 +11,11 @@ const PUB_CONFIG_URL  = 'https://www.navybook.com/D1/seo/pub-config.php';
 const UPDATES_API_URL = 'https://www.navybook.com/D1/seo/save-update.php';
 const UPDATES_PAGE    = 'http://navybook.com/D1/updates';
 
+const CMS_URL_RE = new RegExp(
+  'https?://' + CMS_BASE.replace(/^https?:\/\//, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\\s]*',
+  'g'
+);
+
 // ── Logger factory ────────────────────────────────────────────
 function createLogger(logFile) {
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
@@ -55,7 +60,7 @@ function loadEnv() {
 
 // ── Slack ─────────────────────────────────────────────────────
 async function sendSlackEmail(subject, body, env, slackEmail, log = console.log) {
-  const sanitized = body.replace(/https?:\/\/admin\.govexec\.com[^\s]*/g, '[CMS URL]');
+  const sanitized = body.replace(CMS_URL_RE, '[CMS URL]');
   const fullBody = sanitized + `\n\nSee all GE360 updates: ${UPDATES_PAGE}`;
   try {
     const transporter = nodemailer.createTransport({
