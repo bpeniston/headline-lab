@@ -9,7 +9,7 @@
 
 define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
-define('SHEET_RANGE', 'Pubs!A:V');
+define('SHEET_RANGE', 'Pubs!A:Z');
 define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
@@ -152,6 +152,20 @@ function parseRows($rows, $requiredCols) {
             if ($r[$col] !== '' && !filter_var($r[$col], FILTER_VALIDATE_URL)) {
                 $rowErrors[] = "$col is not a valid URL (got: \"{$r[$col]}\")";
             }
+        }
+
+        // Optional columns — set defaults when column is absent or left blank
+        $r['post_mode'] = (isset($r['post_mode']) && $r['post_mode'] !== '')
+            ? strtolower($r['post_mode']) : 'ga4';
+        $r['org_name']  = $r['org_name'] ?? '';
+        $r['rss_url']   = $r['rss_url']  ?? '';
+
+        if (!in_array($r['post_mode'], ['ga4', 'recent_staff'], true)) {
+            $rowErrors[] = "post_mode must be 'ga4' or 'recent_staff' (got: \"{$r['post_mode']}\")";
+        }
+        if ($r['post_mode'] === 'recent_staff') {
+            if ($r['org_name'] === '') $rowErrors[] = "org_name required when post_mode is recent_staff";
+            if ($r['rss_url']  === '') $rowErrors[] = "rss_url required when post_mode is recent_staff";
         }
 
         if ($rowErrors) {

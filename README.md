@@ -63,8 +63,14 @@ deploy    # alias: ssh to server and git pull
 
 **To upload a new/changed PHP file directly:**
 ```bash
+# API/Headline Lab files → seo/
 scp server/trending-topics.php bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/seo/trending-topics.php
+
+# Daily updates page files → updates/  (not seo/ — both dirs have an index.php)
+scp server/updates/index.php bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/updates/index.php
 ```
+
+**If a file in `seo/` gets clobbered:** that directory is git-tracked on the server — SSH in and run `git restore <file>` to recover.
 
 **To reload the extension after code changes:**
 Go to `chrome://extensions` → Athena Tools → ↺ reload button, then hard-refresh the CMS page.
@@ -78,7 +84,9 @@ Go to `chrome://extensions` → Athena Tools → ↺ reload button, then hard-re
 | Local repo | `~/Documents/devstuff/headline-lab` |
 | GitHub | `https://github.com/bpeniston/headline-lab` |
 | Server (SSH) | `bradwu@pdx1-shared-a1-08.dreamhost.com` |
-| Server path | `~/navybook.com/D1/seo/` |
+| Server — API + Headline Lab | `~/navybook.com/D1/seo/` (git-tracked) |
+| Server — daily updates page | `~/navybook.com/D1/updates/` |
+| Server — tools landing page | `~/navybook.com/D1/index.html` |
 | Deploy alias | `deploy` in Terminal |
 
 ---

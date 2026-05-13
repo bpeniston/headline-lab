@@ -55,7 +55,27 @@ if (!isset($_GET['nocache']) && file_exists($CACHE_FILE)) {
     }
 }
 
-// ── 2. OAuth access token ─────────────────────────────────────
+// ── 2. Recent-staff mode ──────────────────────────────────────
+$post_mode = $pub['post_mode'] ?? 'ga4';
+
+if ($post_mode === 'recent_staff') {
+    if (empty($pub['rss_url']) || empty($pub['org_name'])) {
+        die(json_encode(['error' => 'post_mode is recent_staff but rss_url or org_name is missing from pub config']));
+    }
+    $title_cache = file_exists($TITLE_CACHE)
+        ? (json_decode(file_get_contents($TITLE_CACHE), true) ?? [])
+        : [];
+
+    $results = fetch_recent_staff_posts($pub, $title_cache, $TITLE_TTL, $TOP_N);
+
+    file_put_contents($TITLE_CACHE, json_encode($title_cache));
+    $output = ['posts' => $results, 'generated_at' => date('c'), 'mode' => 'recent_staff'];
+    file_put_contents($CACHE_FILE, json_encode(['ts' => time(), 'data' => $output]));
+    echo json_encode($output);
+    exit;
+}
+
+// ── 3. OAuth access token ─────────────────────────────────────
 $creds = json_decode(@file_get_contents($CREDS_FILE), true);
 if (!$creds || !isset($creds['client_id'])) {
     die(json_encode(['error' => 'Cannot read GA4 credentials file']));
@@ -72,7 +92,7 @@ if (!$access_token) {
     die(json_encode(['error' => 'OAuth token refresh failed', 'detail' => $tok]));
 }
 
-// ── 3. Three GA4 queries (month / week / day) ─────────────────
+// ── 4. Three GA4 queries (month / week / day) ─────────────────
 $month_pages = ga4_top_pages($access_token, $GA4_PROPERTY, '30daysAgo', 'today', $MAX_MONTH);
 $week_pages  = ga4_top_pages($access_token, $GA4_PROPERTY, '7daysAgo',  'today', $MAX_WEEK);
 $day_pages   = ga4_top_pages($access_token, $GA4_PROPERTY, '1daysAgo',  'today', $MAX_DAY);
@@ -94,7 +114,7 @@ $all_paths = array_filter($all_paths, fn($v) => $v['post_id'] !== null);
 uasort($all_paths, fn($a, $b) => $b['score'] <=> $a['score']);
 $candidates = array_slice($all_paths, 0, $TOP_N * 4, true);
 
-// ── 4. Fetch article titles and check for sponsored content ───
+// ── 5. Fetch article titles and check for sponsored content ───
 $title_cache = file_exists($TITLE_CACHE)
     ? (json_decode(file_get_contents($TITLE_CACHE), true) ?? [])
     : [];
@@ -124,7 +144,7 @@ if ($to_fetch) {
     file_put_contents($TITLE_CACHE, json_encode($title_cache));
 }
 
-// ── 5. Build ranked list; filter sponsored; take top N ────────
+// ── 6. Build ranked list; filter sponsored; take top N ────────
 $results = [];
 foreach ($candidates as $path => $data) {
     if (count($results) >= $TOP_N) break;
@@ -146,7 +166,7 @@ foreach ($candidates as $path => $data) {
     ];
 }
 
-// ── 6. Cache and return ───────────────────────────────────────
+// ── 7. Cache and return ───────────────────────────────────────
 $output = ['posts' => $results, 'generated_at' => date('c')];
 file_put_contents($CACHE_FILE, json_encode(['ts' => time(), 'data' => $output]));
 echo json_encode($output);
@@ -241,6 +261,102 @@ function http_post(string $url, array $fields): array {
     $res = curl_exec($ch);
     curl_close($ch);
     return json_decode($res, true) ?? [];
+}
+
+function fetch_recent_staff_posts(array $pub, array &$title_cache, int $title_ttl, int $top_n): array {
+    $rss_url  = $pub['rss_url'];
+    $org_name = $pub['org_name'];
+
+    // Fetch RSS feed
+    $ch = curl_init($rss_url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; GE360EarthboxBot/1.0)',
+        CURLOPT_FOLLOWLOCATION => true,
+    ]);
+    $rss_xml = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$rss_xml) return [];
+
+    $xml = @simplexml_load_string($rss_xml);
+    if (!$xml) return [];
+
+    // Parse <item> elements (RSS 2.0); try <link> then <guid>
+    $items = [];
+    foreach ($xml->channel->item as $item) {
+        $link = (string)$item->link;
+        if (!$link) $link = (string)$item->guid;
+        if (!$link) continue;
+        $path = parse_url($link, PHP_URL_PATH) ?: '';
+        if (strpos($path, '/topic/') !== false) continue;
+        preg_match('#/(\d{5,7})/?$#', $path, $m);
+        if (!isset($m[1])) continue;
+        $items[] = ['link' => $link, 'post_id' => $m[1], 'path' => $path];
+    }
+
+    // Skip 5 most recent; cap candidates to avoid excessive fetches
+    if (count($items) <= 5) return [];
+    $candidates = array_slice($items, 5, $top_n * 4);
+
+    // Determine which article pages need fetching (missing or stale org data)
+    $to_fetch = [];
+    foreach ($candidates as $item) {
+        $cached = $title_cache[$item['link']] ?? null;
+        if (!$cached || (time() - $cached['ts']) > $title_ttl || !isset($cached['org'])) {
+            $to_fetch[] = $item['link'];
+        }
+    }
+
+    if ($to_fetch) {
+        $html_map = curl_multi_get($to_fetch, [
+            CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; GE360EarthboxBot/1.0)',
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 12,
+        ]);
+        foreach ($html_map as $url => $html) {
+            $title_cache[$url] = [
+                'ts'        => time(),
+                'title'     => extract_title($html),
+                'sponsored' => is_sponsored($html, $url),
+                'org'       => extract_org($html),
+            ];
+        }
+    }
+
+    $results = [];
+    foreach ($candidates as $item) {
+        if (count($results) >= $top_n) break;
+        $cached    = $title_cache[$item['link']] ?? null;
+        $sponsored = $cached['sponsored'] ?? false;
+        $org       = $cached['org'] ?? '';
+        if ($sponsored) continue;
+        if ($org !== $org_name) continue;
+        $results[] = [
+            'post_id' => (int)$item['post_id'],
+            'title'   => ($cached['title'] ?? '') ?: path_to_title($item['path']),
+            'path'    => $item['path'],
+            'score'   => 0,
+        ];
+    }
+    return $results;
+}
+
+function extract_org(string $html): string {
+    if (!$html) return '';
+    if (preg_match_all('/<script[^>]+type=["\']application\/ld\+json["\'][^>]*>([\s\S]*?)<\/script>/i', $html, $matches)) {
+        foreach ($matches[1] as $json_str) {
+            $data = json_decode($json_str, true);
+            if (!$data) continue;
+            $nodes = isset($data['@graph']) ? $data['@graph'] : [$data];
+            foreach ($nodes as $node) {
+                if (isset($node['publisher']['name'])) return $node['publisher']['name'];
+                if (isset($node['sourceOrganization']['name'])) return $node['sourceOrganization']['name'];
+            }
+        }
+    }
+    return '';
 }
 
 function curl_multi_get(array $urls, array $extra_opts = []): array {

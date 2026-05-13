@@ -103,6 +103,16 @@ All five pubs run Athena CMS at `admin.govexec.com`.
 
 Per-pub automation config is managed in the **GE360 Pub Config** Google Sheet (see SETUP.md). Scripts read from it at runtime via `pub-config.php`. To add a pub: fill in its row (including `base_url` and `topic_oref`), then set `trending_enabled`/`earthbox_enabled` to TRUE — no new PHP files needed, the shared endpoints handle all pubs via `?pub={pub_key}`.
 
+**Post-selection mode** (skybox + earthbox): controlled by three optional sheet columns.
+
+| Column | Values | Notes |
+|---|---|---|
+| `post_mode` | `ga4` (default) or `recent_staff` | `ga4` = existing traffic-weighted GA4 ranking; `recent_staff` = recency-ordered staff posts |
+| `org_name` | e.g. `Defense One` | Publisher name as it appears in article JSON-LD `publisher.name`. Required when `post_mode` is `recent_staff`. |
+| `rss_url` | e.g. `https://www.defenseone.com/rss/all/` | RSS 2.0 feed URL for the pub. Required when `post_mode` is `recent_staff`. |
+
+`recent_staff` logic: skip the 5 most recent RSS items, then take the next 6 whose `publisher.name` matches `org_name` and are not sponsored. Sponsored slots in the CMS are never replaced (same as `ga4` mode).
+
 **Per-pub configuration status:**
 
 | Pub | GA4 Property | topic_oref | earthbox_oref | app_label | model | content_type | Sheet status |
@@ -139,6 +149,25 @@ Key technical details
 **GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,078/mo (revised), D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo. GE/NG/RF baselines TBD pending first full automation month.
 
 **DreamHost Node version** is old (v12-era) — does not support native `fetch` or optional chaining (`?.`). Always use `require('https')` with a manual `httpsPost` helper and explicit `&&` null checks instead. See `fetchTopicClickStats()` in `apply-trending.js` for the pattern.
+
+GE360 Pub Config Google Sheet — editing via browser tools
+---------------------------------------------------------
+
+Sheet ID: `1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0`
+
+**How to navigate to a specific cell (e.g. W1) reliably:**
+The name box behaves unreliably when a row-range or multi-cell range is already selected — typing a cell address into it selects a region instead of jumping. The Name Box also doesn't work when you cmd+a in it from a bad state.
+
+Reliable method:
+1. Click any normal data cell in the sheet body to clear any range selection
+2. Press `Cmd+Home` (or click cell A1 directly) to land on A1
+3. Press `Ctrl+Right` to jump to the last non-empty cell in row 1
+4. Press `Right` once more to land on the first empty column in row 1
+5. Type the header, press `Tab` to move right, type next header, repeat
+6. Press `Return` when done with row 1 — cursor moves to the first cell you started from in row 2
+7. Repeat Tab-entry for descriptions in row 2
+
+**Key pitfall:** Clicking frozen row cells (rows 1–2 at the top of the viewport) while the sheet is scrolled down selects the entire row instead of the cell. Always scroll to normal view first or use keyboard navigation from a known body cell.
 
 Repo & deploy
 -------------
