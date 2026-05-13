@@ -37,6 +37,18 @@ Interpretation thresholds for May:
 - 3,078–4,065 → holding trend; automation working, not yet adding measurable lift
 - Above 4,065 → clear lift above pre-launch peak
 
+## Add Post — SEO slug generator button
+
+A button on the Add Post page (`server/add-post.html`) that, when clicked, sends the current headline, subheadline, and body copy to the API and returns the single best SEO slug, then replaces the contents of the slug field with it.
+
+The slug should be calculated with the same Claude call already used for headline generation (or a lightweight dedicated call) using standard SEO slug rules: lowercase, hyphens, drop stop words, lead with the primary keyword, 4–6 words max.
+
+**Implementation notes:**
+- Button sits adjacent to the slug input field in the left pane
+- If the slug field already has content, prompt before overwriting (or make it a "re-generate" icon)
+- Reuse the existing `seo-api.php` endpoint or add a `?mode=slug` variant
+- The slug field auto-generates from the headline on keystroke today — this button is a deliberate override for when the auto-slug isn't keyword-optimal
+
 ## Headline Lab — SEO prompt improvements (future)
 
 Research session 2026-04-11 identified these improvements to the headline generator, not yet implemented:
