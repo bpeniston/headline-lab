@@ -55,7 +55,8 @@ function loadEnv() {
 
 // ── Slack ─────────────────────────────────────────────────────
 async function sendSlackEmail(subject, body, env, slackEmail, log = console.log) {
-  const fullBody = body + `\n\nSee all GE360 updates: ${UPDATES_PAGE}`;
+  const sanitized = body.replace(/https?:\/\/admin\.govexec\.com[^\s]*/g, '[CMS URL]');
+  const fullBody = sanitized + `\n\nSee all GE360 updates: ${UPDATES_PAGE}`;
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail',

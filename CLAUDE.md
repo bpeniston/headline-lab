@@ -139,6 +139,11 @@ Two additional optional columns support `RECENT_STAFF` mode:
 - DO NOT use GA4 property `529112613` — that's the extension's own analytics, not a pub property
 - Route Fifty's `topic_content_type` 164 was unconfirmed (item had no pre-selected topic) — verify when saving a real trending item
 
+**Automation failure modes:**
+- **Slack "Page not available" card (govexec-branded):** Playwright error messages often contain full `admin.govexec.com` edit-page URLs (e.g. session expiry, navigation timeout). Slack unfurls those URLs → hits a Google Workspace auth wall → shows a govexec-branded "Page not available" card instead of notification content. Fix (live 2026-05-13): `sendSlackEmail` in `scripts/lib.js` strips `admin.govexec.com` URLs before sending, replacing them with `[CMS URL]`.
+- **Missing pub entries in `updates/index.php`:** The page uses `parseBool()` from PHP's `FILTER_VALIDATE_BOOLEAN` to check if boxes are enabled. After the `earthbox_enabled`/`skybox_enabled` columns changed from TRUE/FALSE booleans to `OFF`/`GA4`/`RECENT_STAFF` strings (2026-05-13), `parseBool('GA4')` returned `false` and sections disappeared. Fix: use `!== 'OFF'` string comparison, not `parseBool()`, for these two columns. `updates/index.php` is not git-tracked — apply fix directly on the server.
+- **Silent missing-pub entries in Slack (trending):** `apply-trending.js` fetches topics for all pubs in parallel via `Promise.all`. If a pub's fetch fails (transient GA4/network error), it is recorded as `null` and silently skipped — no update file entry is written, so the pub simply disappears from the Slack report and `updates/` page for that day. This is not a bug in the code; it indicates a transient upstream failure. Self-heals the next morning.
+
 **Defense One GA4:** account `395628`, property `353836589`
 
 **D1 Trending Topics click baseline (oref=d1-article-topics):**
