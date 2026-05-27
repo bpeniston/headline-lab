@@ -7,6 +7,7 @@ This document describes the physical machines, services, and configurations that
 ## Machines
 
 ### Main MacBook Pro (M1) — `bp-mbp-m1`
+
 - **Role:** Primary dev machine. All active coding, browser-based CMS work, Chrome extension development.
 - **Tailscale IP:** `100.119.94.34`
 - **Local repo:** `~/Documents/devstuff/headline-lab`
@@ -14,6 +15,7 @@ This document describes the physical machines, services, and configurations that
 - **SSH:** passwordless access to the Air and to DreamHost
 
 ### M1 MacBook Air — `blotchy-macbook`
+
 - **Role:** Dedicated background/automation machine. Runs nighttime cron jobs and browser automation tasks. Sits in server closet.
 - **Tailscale IP:** `100.117.250.37`
 - **Local user:** `brad-developer`
@@ -32,12 +34,14 @@ This document describes the physical machines, services, and configurations that
 ## Remote Access
 
 ### Tailscale
+
 - **Account:** `bpeniston@github` (free tier)
 - **Tailnet:** `bpeniston.github`
 - Both machines connected and showing green in Tailscale admin: `login.tailscale.com/admin/machines`
 - Enables SSH and Screen Sharing from anywhere, not just local network
 
 ### SSH
+
 - MBP → Air: `ssh brad-developer@100.117.250.37` (passwordless)
 - MBP → DreamHost: `ssh bradwu@pdx1-shared-a1-08.dreamhost.com` (passwordless)
 - Air → DreamHost: `ssh bradwu@pdx1-shared-a1-08.dreamhost.com` (passwordless, SSH key installed Apr 2026)
@@ -53,30 +57,31 @@ This document describes the physical machines, services, and configurations that
 
 ### What runs on DreamHost
 
-| Job | Schedule | Location | Notes |
-|---|---|---|---|
-| `ingest.py` | Every 5 min | `~/athena-helper/` | RSS ingest for D1 mirror/daybook; needs MySQL |
-| `calendar_fetch.py` | Every 10 min | `~/navybook.com/kitchen_config/` | Calendar sync |
-| `traffic_stats_nightly.py` | 2:15am nightly | `~/navybook.com/kitchen/` | Traffic stats |
-| D1 Daily Digest | 4:00am weekdays | `~/d1_scripts/` | Digest email to bpeniston@defenseone.com |
-| D1 Auto-Decline | 4:30am weekdays | `~/d1_scripts/` | Auto-decline script |
-| dfnbot | 2:30pm weekdays | `~/venvs/venv1/` | Email to brad@navybook.com |
-| Air heartbeat check | 4:50am nightly | `~/navybook.com/D1/seo/air-check.py` | Sends `Air: Problem` Slack alert if heartbeat stale |
+| Job                        | Schedule        | Location                             | Notes                                               |
+| -------------------------- | --------------- | ------------------------------------ | --------------------------------------------------- |
+| `ingest.py`                | Every 5 min     | `~/athena-helper/`                   | RSS ingest for D1 mirror/daybook; needs MySQL       |
+| `calendar_fetch.py`        | Every 10 min    | `~/navybook.com/kitchen_config/`     | Calendar sync                                       |
+| `traffic_stats_nightly.py` | 2:15am nightly  | `~/navybook.com/kitchen/`            | Traffic stats                                       |
+| D1 Daily Digest            | 4:00am weekdays | `~/d1_scripts/`                      | Digest email to bpeniston@defenseone.com            |
+| D1 Auto-Decline            | 4:30am weekdays | `~/d1_scripts/`                      | Auto-decline script                                 |
+| dfnbot                     | 2:30pm weekdays | `~/venvs/venv1/`                     | Email to brad@navybook.com                          |
+| Air heartbeat check        | 4:50am nightly  | `~/navybook.com/D1/seo/air-check.py` | Sends `Air: Problem` Slack alert if heartbeat stale |
 
 ### Key files on DreamHost
 
-| File | Path | Purpose |
-|---|---|---|
-| GA4 OAuth credentials | `/home/bradwu/ga4-oauth.json` | Defense One GA4 API access |
-| Trending main cache | `/home/bradwu/trending-main-cache-{pubkey}.json` | 1hr scored topic results (one file per pub) |
-| Trending article cache | `/home/bradwu/trending-article-cache-{pubkey}.json` | 24hr per-article topic cache (one file per pub) |
-| Trending name cache | `/home/bradwu/trending-topicname-cache-{pubkey}.json` | 7-day slug→display name cache (one file per pub) |
-| Earthbox main cache | `/home/bradwu/earthbox-cache-{pubkey}.json` | 1hr scored post results (one file per pub) |
-| Earthbox title cache | `/home/bradwu/earthbox-title-cache-{pubkey}.json` | 24hr per-article title/sponsored cache (one file per pub) |
-| Usage log | `/home/bradwu/headline-lab-usage.log` | Headline Lab usage |
-| Air heartbeat | `/home/bradwu/air-heartbeat.txt` | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
+| File                   | Path                                                  | Purpose                                                               |
+| ---------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- |
+| GA4 OAuth credentials  | `/home/bradwu/ga4-oauth.json`                         | Defense One GA4 API access                                            |
+| Trending main cache    | `/home/bradwu/trending-main-cache-{pubkey}.json`      | 1hr scored topic results (one file per pub)                           |
+| Trending article cache | `/home/bradwu/trending-article-cache-{pubkey}.json`   | 24hr per-article topic cache (one file per pub)                       |
+| Trending name cache    | `/home/bradwu/trending-topicname-cache-{pubkey}.json` | 7-day slug→display name cache (one file per pub)                      |
+| Earthbox main cache    | `/home/bradwu/earthbox-cache-{pubkey}.json`           | 1hr scored post results (one file per pub)                            |
+| Earthbox title cache   | `/home/bradwu/earthbox-title-cache-{pubkey}.json`     | 24hr per-article title/sponsored cache (one file per pub)             |
+| Usage log              | `/home/bradwu/headline-lab-usage.log`                 | Headline Lab usage                                                    |
+| Air heartbeat          | `/home/bradwu/air-heartbeat.txt`                      | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
 
 ### PHP endpoints (navybook.com/D1/seo/)
+
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
 - `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
 - `earthbox-posts.php` — Earthbox: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub cache files: `earthbox-cache-{pubkey}.json`, `earthbox-title-cache-{pubkey}.json`
@@ -89,28 +94,29 @@ This document describes the physical machines, services, and configurations that
 
 Row 1 = column headers, row 2 = human-readable descriptions (skipped by script), row 3+ = one publication per row.
 
-| Column | Example (D1) | Notes |
-|---|---|---|
-| `pub_name` | Defense One | Display name for logs |
-| `pub_key` | defenseone | Short identifier, no spaces |
-| `trending_enabled` | TRUE | TRUE or FALSE |
-| `earthbox_enabled` | TRUE | TRUE or FALSE |
-| `trending_cms_path` | `/athena/curate/defenseonetrendingitem/` | Path on admin.govexec.com — must start with `/` |
-| `earthbox_cms_path` | `/athena/curate/defenseoneearthboxitem/` | Path on admin.govexec.com — must start with `/` |
-| `ga4_property_id` | 353836589 | Integer only |
-| `grappelli_topic_model` | defenseonetopic | Varies per pub — confirm via Network tab on CMS Topics autocomplete |
-| `grappelli_app_label` | post_manager | Varies per pub — D1: `post_manager`, WT: `core`. Confirm via Network tab |
-| `topic_content_type` | 382 | Django content_type int for this pub's Topic model — find via CMS POST form data on save |
-| `slack_channel` | #edit-d1-aggs-n-stuff | Human-readable Slack channel name (for reference) |
-| `slack_email` | u5q8...@govexec.slack.com | Slack channel email address for notifications |
-| `base_url` | `https://www.defenseone.com` | Public-facing site URL (no trailing slash) — used to build article scrape URLs |
-| `topic_oref` | `d1-article-topics` | oref value on topic nav links in article HTML — used to identify topic tags during scraping |
-| `earthbox_oref` | `d1-earthbox-post` | oref value on Earthbox widget links in article HTML — used to count monthly Earthbox clicks in GA4. Confirm by inspecting a live article page |
-| `automation_start_date` | `2026-04-08` | Date automation first went live for this pub (YYYY-MM-DD). Set when trending_enabled or earthbox_enabled is first flipped to TRUE |
-| `topics_baseline` | `3005` | Pre-automation monthly avg for Topics nav clicks (integer). Leave blank if not yet calculated — report will show "baseline not yet established" |
-| `earthbox_baseline` | `1795` | Pre-automation monthly avg for Earthbox widget clicks (integer). Leave blank if not yet calculated |
+| Column                  | Example (D1)                             | Notes                                                                                                                                           |
+| ----------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pub_name`              | Defense One                              | Display name for logs                                                                                                                           |
+| `pub_key`               | defenseone                               | Short identifier, no spaces                                                                                                                     |
+| `trending_enabled`      | TRUE                                     | TRUE or FALSE                                                                                                                                   |
+| `earthbox_enabled`      | TRUE                                     | TRUE or FALSE                                                                                                                                   |
+| `trending_cms_path`     | `/athena/curate/defenseonetrendingitem/` | Path on admin.govexec.com — must start with `/`                                                                                                 |
+| `earthbox_cms_path`     | `/athena/curate/defenseoneearthboxitem/` | Path on admin.govexec.com — must start with `/`                                                                                                 |
+| `ga4_property_id`       | 353836589                                | Integer only                                                                                                                                    |
+| `grappelli_topic_model` | defenseonetopic                          | Varies per pub — confirm via Network tab on CMS Topics autocomplete                                                                             |
+| `grappelli_app_label`   | post_manager                             | Varies per pub — D1: `post_manager`, WT: `core`. Confirm via Network tab                                                                        |
+| `topic_content_type`    | 382                                      | Django content_type int for this pub's Topic model — find via CMS POST form data on save                                                        |
+| `slack_channel`         | #edit-d1-aggs-n-stuff                    | Human-readable Slack channel name (for reference)                                                                                               |
+| `slack_email`           | u5q8...@govexec.slack.com                | Slack channel email address for notifications                                                                                                   |
+| `base_url`              | `https://www.defenseone.com`             | Public-facing site URL (no trailing slash) — used to build article scrape URLs                                                                  |
+| `topic_oref`            | `d1-article-topics`                      | oref value on topic nav links in article HTML — used to identify topic tags during scraping                                                     |
+| `earthbox_oref`         | `d1-earthbox-post`                       | oref value on Earthbox widget links in article HTML — used to count monthly Earthbox clicks in GA4. Confirm by inspecting a live article page   |
+| `automation_start_date` | `2026-04-08`                             | Date automation first went live for this pub (YYYY-MM-DD). Set when trending_enabled or earthbox_enabled is first flipped to TRUE               |
+| `topics_baseline`       | `3005`                                   | Pre-automation monthly avg for Topics nav clicks (integer). Leave blank if not yet calculated — report will show "baseline not yet established" |
+| `earthbox_baseline`     | `1795`                                   | Pre-automation monthly avg for Earthbox widget clicks (integer). Leave blank if not yet calculated                                              |
 
 **To add a new pub:**
+
 1. Fill in the row — set `trending_enabled`/`earthbox_enabled` to FALSE until ready
 2. Confirm `grappelli_topic_model` and `grappelli_app_label`: open a CMS trending item edit page for that pub, type in the Topics autocomplete field, inspect the Network request to `/grappelli/lookup/autocomplete/`
 3. Find `topic_content_type`: read the `content_type` select value on that same edit page (or watch POST on save)
@@ -121,13 +127,13 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 
 **Confirmed per-pub values (all in sheet):**
 
-| Pub | pub_key | GA4 property | app_label | model | content_type | topic_oref | earthbox_oref | Sheet status |
-|---|---|---|---|---|---|---|---|---|
-| Defense One | `defenseone` | `353836589` | `post_manager` | `defenseonetopic` | `382` | `d1-article-topics` | `d1-earthbox-post` | ✓ live |
-| Washington Technology | `washtech` | `358726868` | `core` | `topic` | TBD | `wt-article-topics` | `wt-earthbox-post` | disabled — needs content_type, slack, base_url |
-| GovExec | `govexec` | `353164424` | `post_manager` | `govexectopic` | `505` | `ge-article-topics` | `ge-earthbox-post` | disabled — needs slack |
-| Nextgov | `nextgov` | `353764914` | `post_manager` | `nextgovtopic` | `496` | `ng-article-topics` | `ng-earthbox-post` | disabled — needs slack |
-| Route Fifty | `routefifty` | `353766084` | `post_manager` | `topic` | `164`* | `rf-article-topics` | `rf-earthbox-post` | disabled — needs slack |
+| Pub                   | pub_key      | GA4 property | app_label      | model             | content_type | topic_oref          | earthbox_oref      | Sheet status                                   |
+| --------------------- | ------------ | ------------ | -------------- | ----------------- | ------------ | ------------------- | ------------------ | ---------------------------------------------- |
+| Defense One           | `defenseone` | `353836589`  | `post_manager` | `defenseonetopic` | `382`        | `d1-article-topics` | `d1-earthbox-post` | ✓ live                                         |
+| Washington Technology | `washtech`   | `358726868`  | `core`         | `topic`           | TBD          | `wt-article-topics` | `wt-earthbox-post` | disabled — needs content_type, slack, base_url |
+| GovExec               | `govexec`    | `353164424`  | `post_manager` | `govexectopic`    | `505`        | `ge-article-topics` | `ge-earthbox-post` | disabled — needs slack                         |
+| Nextgov               | `nextgov`    | `353764914`  | `post_manager` | `nextgovtopic`    | `496`        | `ng-article-topics` | `ng-earthbox-post` | disabled — needs slack                         |
+| Route Fifty           | `routefifty` | `353766084`  | `post_manager` | `topic`           | `164`*       | `rf-article-topics` | `rf-earthbox-post` | disabled — needs slack                         |
 
 *Route Fifty `topic_content_type` 164 was read from an empty trending item — confirm when a real topic is saved.
 
@@ -138,6 +144,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 1. **Create the Google Sheet** with the columns above. Name the sheet tab `Pubs`. Fill in the D1 row.
 
 2. **Create a GCP service account:**
+   
    - Go to console.cloud.google.com → APIs & Services → Credentials → Create credentials → Service account
    - Name it something like `headline-lab-sheets-reader`
    - Grant it no roles (read-only sheet access is granted by sharing, not IAM)
@@ -148,6 +155,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 4. **Share the sheet** with the service account's email (shown in the JSON key as `client_email`). View-only access is sufficient.
 
 5. **Upload the key to DreamHost:**
+   
    ```
    scp sheets-service-account.json bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/sheets-service-account.json
    ```
@@ -170,28 +178,36 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 ## What runs on the Air
 
 ### Installed software
+
 - **Node.js** (`/opt/homebrew/bin/node`) — v25.9.0, installed via Homebrew
 - **Playwright** + Chromium — installed in `~/headline-lab/node_modules`
 - **nodemailer** — installed in `~/headline-lab/node_modules`
 
 ### Secrets on the Air (`~/headline-lab/.env`)
+
 - `CMS_USERNAME` / `CMS_PASSWORD` — Athena CMS login credentials
 - `SMTP_USER` / `SMTP_PASS` — Gmail app password for dcwriter@gmail.com (used for Slack notifications)
 - Never committed to GitHub
 
 ### CMS session (`~/headline-lab/.cms-session.json`)
+
 - Playwright browser session saved after manual login (including 2FA)
+
 - Reused by the nightly script so it never needs to log in fresh
+
 - CMS hard-resets sessions periodically (observed 14 days as of 2026-05-11; recorded in `.session-meta.json` as `knownTimeoutDays`)
-- To refresh: open Screen Sharing (`vnc://100.117.250.37`), open Terminal, run:
+
+- To refresh: open Screen Sharing (`vnc://100.117.250.37`), open Terminal on the Air, paste this single command:
+  
   ```
-  export PATH=/opt/homebrew/bin:$PATH
-  cd ~/headline-lab
-  node scripts/apply-trending.js --setup
+  export PATH=/opt/homebrew/bin:$PATH && cd ~/headline-lab && node scripts/apply-trending.js --setup
   ```
+  
+  Log in with 2FA in the browser window that opens, then press Enter in Terminal to save. The script exits automatically (no Ctrl+C needed).
 
 ### Session metadata (`~/headline-lab/.session-meta.json`)
-- Tracks `loginDate` (set on each `--setup` run), `knownTimeoutDays` (learned on first observed expiry), `lastWarningSent` (deduplicates warnings across both nightly scripts)
+
+- Tracks `loginDate` (set on each `--setup` run), `knownTimeoutDays` (learned on first observed expiry), `lastWarningSent` (deduplicates warnings across both nightly scripts), `sessionExpiredAlertSent` (set on first expiry morning; prevents pre-flight from re-alerting on subsequent mornings; cleared to `null` on `--setup`)
 - Pre-flight warns via Slack 5 days before expected expiry (`knownTimeoutDays - 5`; defaults to day 20 on a fresh setup before timeout is observed). With `knownTimeoutDays: 14`, warning fires at day 9.
 - On first expiry, the scripts record the actual elapsed days as `knownTimeoutDays` so future warnings self-calibrate
 - Not committed to GitHub (Air-local, like `.cms-session.json`)
@@ -199,19 +215,21 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 
 ### Launchd jobs
 
-| Job | Schedule | Plist | Script | Log |
-|---|---|---|---|---|
-| Air heartbeat | Every 10 min | `com.navybook.heartbeat.plist` | `scripts/heartbeat.sh` | `logs/heartbeat.log` |
-| CMS pre-flight check | 4:55am nightly | `com.navybook.preflight.plist` | `scripts/pre-flight.js` | `logs/pre-flight.log` |
-| D1 Trending Topics | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
-| D1 Earthbox | 5:30am nightly | `com.navybook.earthbox-apply.plist` | `scripts/apply-earthbox.js` | `logs/earthbox-apply.log` |
-| Monthly click report | 6:00am on 1st | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
+| Job                  | Schedule       | Plist                               | Script                      | Log                       |
+| -------------------- | -------------- | ----------------------------------- | --------------------------- | ------------------------- |
+| Air heartbeat        | Every 10 min   | `com.navybook.heartbeat.plist`      | `scripts/heartbeat.sh`      | `logs/heartbeat.log`      |
+| CMS pre-flight check | 4:55am nightly | `com.navybook.preflight.plist`      | `scripts/pre-flight.js`     | `logs/pre-flight.log`     |
+| D1 Trending Topics   | 5:00am nightly | `com.navybook.trending-apply.plist` | `scripts/apply-trending.js` | `logs/trending-apply.log` |
+| Earthbox + Skybox    | 5:30am nightly | `com.navybook.box-apply.plist`      | `scripts/apply-box.js`      | `logs/box-apply.log`      |
+| Monthly click report | 6:00am on 1st  | `com.navybook.monthly-report.plist` | `scripts/monthly-report.js` | `logs/monthly-report.log` |
 
 To reload a plist after changes:
+
 ```
 launchctl unload ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
 launchctl load  ~/Library/LaunchAgents/com.navybook.JOBNAME.plist
 ```
+
 To run manually: `launchctl start com.navybook.JOBNAME`
 
 ---
@@ -220,11 +238,12 @@ To run manually: `launchctl start com.navybook.JOBNAME`
 
 Runs at 4:55am — 5 minutes before the first nightly job — and validates the saved CMS session.
 
-- **Session expired:** records `sessionExpiredAlertSent` in `.session-meta.json`, sends ONE consolidated `CMS: Session Expired` Slack alert, then exits. The nightly scripts at 5:00am and 5:30am detect the same expiry but skip their own Slack alerts (they check `sessionExpiredAlertSent`), preventing duplicate messages. Also records `knownTimeoutDays` on first observed expiry.
+- **Session expired:** sends `CMS: ACTION REQUIRED — Playwright session expired` once (guarded by `sessionExpiredAlertSent` — subsequent mornings skip the alert but still `die()` so nightly jobs abort). Records `sessionExpiredAlertSent` and, on first ever expiry, `knownTimeoutDays`. Alert includes a 5-step VNC recovery walkthrough and a single copy-pasteable command. ⚠️ The alert explicitly warns that logging in via Chrome/Safari does NOT fix it — Playwright uses a separate cookie jar.
 - **Session aging:** sends `CMS: Session expiring soon` if session age ≥ warning threshold (same `lastWarningSent` dedup used by main scripts — only one warning per day regardless of how many jobs run).
 - **Session healthy:** exits 0 silently.
 
 **Install on Air:**
+
 ```
 scp scripts/com.navybook.preflight.plist brad-developer@100.117.250.37:~/Library/LaunchAgents/
 ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.navybook.preflight.plist"
@@ -235,6 +254,7 @@ ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.nav
 ### Job: Trending Topics auto-apply (`apply-trending.js`)
 
 **Flow:**
+
 1. Fetches scored topics from `navybook.com/D1/seo/trending-topics.php`
 2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
 3. Parses D1 Trending Items list — skips any slot whose title starts with `"Sponsored:"`
@@ -243,7 +263,7 @@ ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.nav
 6. Sends Slack email via Gmail SMTP — subject: `Topics: Changes`, `Topics: Unchanged`, or `Topics: Problem`; body: `New: …` / `Old: …` (items new to the list are bolded with `*text*`); or error detail if Problem
 7. If session age ≥ warning threshold, sends a `Topics: Session expiring soon` Slack message (once per day, deduped with Earthbox via `.session-meta.json`)
 
-**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
+**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH), `--test-alert expired|warning` (sends the Slack alert immediately without running the browser check — useful for previewing alert copy)
 
 **Excluded topics:** `$EXCLUDED_TOPICS` in `trending-topics.php` (line ~29) lists slugs/display names that are never surfaced, regardless of score. Currently: `['commentary']`. Add slugs or display names (case-insensitive) to extend.
 
@@ -251,9 +271,10 @@ ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.nav
 
 ---
 
-### Job: Earthbox auto-apply (`apply-earthbox.js`)
+### Job: Earthbox + Skybox auto-apply (`apply-box.js`)
 
 **Flow:**
+
 1. Fetches top GA4 articles from `navybook.com/D1/seo/earthbox-posts.php?pub={pub_key}` for each enabled pub (scores: month + week + day views; filters sponsored articles)
 2. Loads saved CMS session; detects expiry and sends Slack alert with re-login instructions
 3. Parses D1 Earthbox Items list — reads all Live slots (note: `_is_sponsored_content` column is not shown on the list page)
@@ -262,7 +283,7 @@ ssh brad-developer@100.117.250.37 "launchctl load ~/Library/LaunchAgents/com.nav
 6. Sends Slack email via Gmail SMTP — subject: `Earthbox: Changes`, `Earthbox: Unchanged`, or `Earthbox: Problem`; body: bullet list of updated headlines (sponsored slots appear inline as `SPONSORED: …`; items new to the list are bolded with `*text*`); Problem messages include error detail
 7. If session age ≥ warning threshold, sends a `Earthbox: Session expiring soon` Slack message (once per day, deduped with Topics via `.session-meta.json`)
 
-**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH)
+**Flags:** `--dry-run` (no CMS writes), `--setup` (interactive login — requires desktop, not SSH), `--test-alert expired|warning` (same as pre-flight)
 
 ---
 
@@ -279,14 +300,22 @@ The Air pings DreamHost every 10 minutes via curl → `heartbeat.php`, which wri
 When the Air stops responding to SSH or VNC:
 
 1. **Check Tailscale:** `login.tailscale.com/admin/machines` — is `blotchy-macbook` green?
+   
    - If offline: the Air lost network, crashed, or Tailscale dropped
    - If online but SSH fails: Remote Login was turned off (common after macOS update)
+
 2. **Try VNC first:** `open vnc://100.117.250.37` — sometimes VNC works when SSH doesn't
+
 3. **On Air, check Tailscale:** menu bar icon → if "Logged Out", sign back in
+   
    - Note: VPN on the MBP blocks Tailscale's coordination server — turn it off first
+
 4. **Check Sharing settings:** System Settings → General → Sharing → Remote Login ON
+
 5. **Restart Tailscale if stuck:** quit from menu bar, reopen from Applications
+
 6. **Once SSH is back:**
+   
    ```bash
    ssh air   # uses alias in ~/.ssh/config
    cd ~/headline-lab && git pull
@@ -305,10 +334,10 @@ Runs 6:00am on the 1st of each month. Fetches Topics and Earthbox click counts f
 - **Stats endpoint:** `pub-stats.php?pub={pubkey}&type=topics|earthbox` — reads `ga4_property_id`, `topic_oref`, and `earthbox_oref` from the sheet
 - **Baselines** (from sheet columns S/T, calculated from Oct 2025–Mar 2026 GA4 data):
 
-| Pub | Topics baseline | Earthbox baseline |
-|---|---|---|
-| Defense One | 3,005/mo | 1,795/mo |
-| Washington Technology | 1,699/mo | 459/mo |
+| Pub                   | Topics baseline | Earthbox baseline |
+| --------------------- | --------------- | ----------------- |
+| Defense One           | 3,005/mo        | 1,795/mo          |
+| Washington Technology | 1,699/mo        | 459/mo            |
 
 - A pub appears in the report when `trending_enabled` OR `earthbox_enabled` is TRUE and the row is valid
 - If baseline is 0/blank, report shows "baseline not yet established" instead of a comparison
@@ -318,6 +347,7 @@ Runs 6:00am on the 1st of each month. Fetches Topics and Earthbox click counts f
 ---
 
 ## Philosophy
+
 - **Air:** Tasks that need a browser, local compute, or Playwright automation
 - **DreamHost:** Server-side PHP/Python tasks, MySQL-dependent jobs, lightweight cron
 - **MBP:** Active development only; not a cron host
