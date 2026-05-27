@@ -52,16 +52,20 @@ async function runPreflight() {
     const meta      = loadMeta(META_FILE);
     const todayStr  = new Date().toISOString().slice(0, 10);
 
-    if (isSessionExpired(page.url(), pageTitle) && !meta.sessionExpiredAlertSent) {
-      const updatedMeta = { ...meta, sessionExpiredAlertSent: todayStr };
-      if (meta.loginDate && !meta.knownTimeoutDays) {
-        const elapsed = daysSince(meta.loginDate);
-        log(`Session expired after ${elapsed} days — recording as known timeout.`);
-        updatedMeta.knownTimeoutDays = elapsed;
+    if (isSessionExpired(page.url(), pageTitle)) {
+      if (!meta.sessionExpiredAlertSent) {
+        const updatedMeta = { ...meta, sessionExpiredAlertSent: todayStr };
+        if (meta.loginDate && !meta.knownTimeoutDays) {
+          const elapsed = daysSince(meta.loginDate);
+          log(`Session expired after ${elapsed} days — recording as known timeout.`);
+          updatedMeta.knownTimeoutDays = elapsed;
+        }
+        saveMeta(META_FILE, updatedMeta);
+        await sendSlackEmail('CMS: ACTION REQUIRED — Playwright session expired', makeSetupMsg('apply-trending.js'), env, slackEmail, log);
+        die('Session expired — alert sent. Nightly jobs will detect expiry and skip their own alerts.');
+      } else {
+        die('Session expired — alert already sent, skipping duplicate. Nightly jobs will detect expiry and skip their own alerts.');
       }
-      saveMeta(META_FILE, updatedMeta);
-      await sendSlackEmail('CMS: ACTION REQUIRED — Playwright session expired', makeSetupMsg('apply-trending.js'), env, slackEmail, log);
-      die('Session expired — alert sent. Nightly jobs will detect expiry and skip their own alerts.');
     }
 
     log('Session valid.');
