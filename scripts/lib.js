@@ -17,9 +17,10 @@ const CMS_URL_RE = /https?:\/\/admin\.govexec\.com[^\s]*/g;
 function createLogger(logFile) {
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
   const stream = fs.createWriteStream(logFile, { flags: 'a' });
+  const isTTY  = !!process.stdout.isTTY;
   function log(msg) {
     const line = `[${new Date().toISOString()}] ${msg}`;
-    console.log(line);
+    if (isTTY) console.log(line);
     stream.write(line + '\n');
   }
   function die(msg) {
@@ -218,7 +219,7 @@ async function runSetup({ chromium, sessionFile, metaFile, log, logStream }) {
   await browser.close();
 
   const meta = loadMeta(metaFile);
-  saveMeta(metaFile, { ...meta, loginDate: new Date().toISOString(), lastWarningSent: null });
+  saveMeta(metaFile, { ...meta, loginDate: new Date().toISOString(), lastWarningSent: null, sessionExpiredAlertSent: null });
 
   console.log(`\nSession saved to ${sessionFile}`);
   console.log('This session covers all GE360 publications (same CMS domain).');

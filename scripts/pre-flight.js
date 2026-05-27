@@ -52,7 +52,7 @@ async function runPreflight() {
     const meta      = loadMeta(META_FILE);
     const todayStr  = new Date().toISOString().slice(0, 10);
 
-    if (isSessionExpired(page.url(), pageTitle)) {
+    if (isSessionExpired(page.url(), pageTitle) && !meta.sessionExpiredAlertSent) {
       const updatedMeta = { ...meta, sessionExpiredAlertSent: todayStr };
       if (meta.loginDate && !meta.knownTimeoutDays) {
         const elapsed = daysSince(meta.loginDate);
