@@ -207,7 +207,7 @@ async function runSetup({ chromium, sessionFile, metaFile, log, logStream }) {
     process.stdin.resume();
     process.stdin.setEncoding('utf8');
     process.stdout.write('Press Enter once you are logged in to the CMS…');
-    process.stdin.once('data', () => resolve());
+    process.stdin.once('data', () => { process.stdin.pause(); resolve(); });
   });
 
   if (!page.url().includes('admin.govexec.com')) {
