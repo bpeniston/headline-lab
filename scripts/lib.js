@@ -62,12 +62,35 @@ function isSessionExpired(url, title) {
          title.toLowerCase().includes('log in') || title.toLowerCase().includes('sign in');
 }
 
+function makeRecoverySteps(scriptName) {
+  return `To refresh (must be done at the Air's desktop, not over SSH — 2FA needs a real browser):
+
+  1. From your Mac:   open vnc://100.117.250.37
+  2. Open Terminal on the Air
+  3. Paste this single command:
+
+     export PATH=/opt/homebrew/bin:$PATH && cd ~/headline-lab && node scripts/${scriptName} --setup
+
+  4. Log into the CMS in the window that opens (do the 2FA)
+  5. Return to Terminal and press Enter to save the session`;
+}
+
 function makeSetupMsg(scriptName) {
-  return `The Air is logged out of the CMS.\n\nvnc://100.117.250.37\n\nexport PATH=/opt/homebrew/bin:$PATH\ncd ~/headline-lab\nnode scripts/${scriptName} --setup`;
+  return `The saved Playwright session on the Air has expired.
+Nightly Trending Topics and Earthbox updates are paused until this is fixed.
+
+⚠️  Logging into the CMS via Chrome or Safari will NOT fix this.
+   Playwright uses its own cookie jar, separate from your normal browsers.
+
+${makeRecoverySteps(scriptName)}`;
 }
 
 function makeWarnMsg(scriptName, elapsed, daysLeft) {
-  return `The CMS session is ${elapsed} days old and may expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.\n\nRun --setup before it fails:\n\n${makeSetupMsg(scriptName)}`;
+  return `The Playwright CMS session on the Air is ${elapsed} days old and is expected to expire in ~${daysLeft} day${daysLeft === 1 ? '' : 's'}.
+
+Refresh at your convenience to avoid a broken nightly run.
+
+${makeRecoverySteps(scriptName)}`;
 }
 
 // ── Slack ─────────────────────────────────────────────────────

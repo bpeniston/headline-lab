@@ -60,7 +60,7 @@ async function runPreflight() {
         updatedMeta.knownTimeoutDays = elapsed;
       }
       saveMeta(META_FILE, updatedMeta);
-      await sendSlackEmail('CMS: Session Expired', makeSetupMsg('apply-box.js'), env, slackEmail, log);
+      await sendSlackEmail('CMS: ACTION REQUIRED — Playwright session expired', makeSetupMsg('apply-trending.js'), env, slackEmail, log);
       die('Session expired — alert sent. Nightly jobs will detect expiry and skip their own alerts.');
     }
 
@@ -74,7 +74,7 @@ async function runPreflight() {
     if (elapsed >= warnAt && meta.lastWarningSent !== todayStr) {
       saveMeta(META_FILE, { ...meta, lastWarningSent: todayStr });
       const daysLeft = timeoutDays - elapsed;
-      await sendSlackEmail('CMS: Session expiring soon', makeWarnMsg('apply-box.js', elapsed, daysLeft), env, slackEmail, log);
+      await sendSlackEmail('CMS: Session expiring soon', makeWarnMsg('apply-trending.js', elapsed, daysLeft), env, slackEmail, log);
       log(`Session age warning sent (${elapsed} days old, timeout expected ~${timeoutDays}).`);
     }
 
@@ -86,4 +86,33 @@ async function runPreflight() {
   }
 }
 
-runPreflight().catch(e => { log(`Unhandled error: ${e.message}`); logStream.end(); process.exit(1); });
+const testAlertIdx = process.argv.indexOf('--test-alert');
+if (testAlertIdx !== -1) {
+  (async () => {
+    const which = process.argv[testAlertIdx + 1];
+    const env   = loadEnv();
+    const data  = await fetchPubConfig();
+    const slackEmail = (data.pubs.find(p => p._valid) || {}).slack_email;
+    if (!slackEmail) { console.error('No slack_email found in config'); process.exit(1); }
+
+    if (which === 'expired') {
+      await sendSlackEmail(
+        'CMS: ACTION REQUIRED — Playwright session expired [TEST]',
+        makeSetupMsg('apply-trending.js'),
+        env, slackEmail, console.log
+      );
+    } else if (which === 'warning') {
+      await sendSlackEmail(
+        'CMS: Session expiring soon [TEST]',
+        makeWarnMsg('apply-trending.js', 9, 5),
+        env, slackEmail, console.log
+      );
+    } else {
+      console.error('Usage: node pre-flight.js --test-alert expired|warning');
+      process.exit(1);
+    }
+    console.log('Test alert sent.');
+  })().catch(e => { console.error(e.message); process.exit(1); });
+} else {
+  runPreflight().catch(e => { log(`Unhandled error: ${e.message}`); logStream.end(); process.exit(1); });
+}
