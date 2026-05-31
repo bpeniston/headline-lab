@@ -1,3 +1,16 @@
+<!-- shared-infra pointer · v1.0 · 2026-05-31 -->
+## Shared infrastructure context
+
+Cross-project setup — machines, SSH, cron jobs, DreamHost, external services, and remote
+access — lives in the **`dev-infrastructure`** repo's `SETUP.md`. Read that first for
+anything touching infrastructure, deployment, cron, or remote access. Don't duplicate it
+here; this file is only for THIS project's specifics.
+
+- Canonical source: `bpeniston/dev-infrastructure` → `SETUP.md`
+- Local clone: `~/Documents/devstuff/dev-infrastructure/SETUP.md`
+
+---
+
 Athena Tools — Claude Project Context
 =====================================
 
