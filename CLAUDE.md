@@ -192,6 +192,15 @@ Key technical details
 
   The old sheet skybox figures (22,369, 5,038) were non-reproducible by any standard GA4 metric and were misattributed across rows; `customEvent:oref` is not a registered GA4 dimension. Baselines must use the same oref+metric `pub-stats.php` queries or the monthly "vs baseline" deltas are corrupt. (Monthly report now leads with traffic **share** ‰ + YoY; click-vs-baseline is secondary — see `monthly-report.js`.)
 
+**Impact analysis scripts (one-offs, run on the server where `ga4-oauth.json` lives):**
+
+- `scripts/pull-impact-report.js` — per-pub × per-feature report: clicks + traffic **share** (‰ of total site pageviews) + YoY, against the 12-mo baseline band. Use to compare a feature's performance before/after launch.
+- `scripts/automation-lift.js` — the aggregate "what did automation do overall" answer. Counterfactual = `baseline_share × actual_pageviews` (normalizes out traffic swings); incremental = actual − counterfactual, summed across all automated pub×feature, counting only **full** months under automation (per `automation_start_date`). Reports incremental clicks as a % of total site traffic, with a YoY cross-check.
+- `scripts/update-baselines.php` — rewrites the sheet's `*_baseline` columns (needs the service account temporarily granted **Editor**; it's normally read-only). Dry-runs by default; `--apply` to write.
+- All use the screenPageViews-CONTAINS-`oref=` method (matching `pub-stats.php`) so figures are mutually comparable. Old-Node-safe (`httpsPost`, no `fetch`/`?.`).
+
+**Latest impact finding (measured 2026-06-25, full-automation months May–Jun 25 2026):** net **+~9,900 incremental clicks ≈ +0.14% of total site traffic** (YoY cross-check +0.11%; June steady-state +0.06%). The net is positive *only* because of Earthbox (+242% vs counterfactual, ~+14,500 clicks); **Topics (−26%) and Skybox (−6%) are net drags** vs their pre-automation share. Attribution caveat: some of the Topics/Skybox decline is likely secular (un-automated pubs drifted down too), so the true automation effect on those is probably less negative. The clearest improvement lever is diagnosing why Topics/Skybox underperform their baselines.
+
 **DreamHost Node version** is old (v12-era) — does not support native `fetch` or optional chaining (`?.`). Always use `require('https')` with a manual `httpsPost` helper and explicit `&&` null checks instead. See `fetchTopicClickStats()` in `apply-trending.js` for the pattern.
 
 GE360 Pub Config Google Sheet — editing via browser tools
