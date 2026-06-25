@@ -26,9 +26,11 @@ if ($token !== ($config['monthly_stats_token'] ?? '')) {
 
 $pub_key = preg_replace('/[^a-z0-9]/', '', strtolower($_GET['pub'] ?? ''));
 $type    = $_GET['type'] ?? '';
-if (!$pub_key || !in_array($type, ['topics', 'earthbox', 'skybox'], true)) {
+// 'total' = unfiltered total site pageviews for the pub (the denominator
+// for traffic-share normalization); the others count one oref each.
+if (!$pub_key || !in_array($type, ['topics', 'earthbox', 'skybox', 'total'], true)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Required params: pub, type (topics|earthbox|skybox)']);
+    echo json_encode(['error' => 'Required params: pub, type (topics|earthbox|skybox|total)']);
     exit;
 }
 
@@ -47,10 +49,10 @@ $oref = match($type) {
     'topics'   => $pub['topic_oref']   ?? '',
     'earthbox' => $pub['earthbox_oref'] ?? '',
     'skybox'   => $pub['skybox_oref']   ?? '',
-    default    => '',
+    default    => '',  // 'total' — no oref, counts all pageviews
 };
 
-if (!$oref) {
+if ($type !== 'total' && !$oref) {
     http_response_code(400);
     echo json_encode(['error' => "No oref configured for $pub_key / $type"]);
     exit;
@@ -90,17 +92,21 @@ if (!empty($_GET['start']) && !empty($_GET['end'])) {
 $month_label = date('F Y', strtotime($start));
 
 // ── GA4 query ─────────────────────────────────────────────────
-$payload = json_encode([
-    'dateRanges'      => [['startDate' => $start, 'endDate' => $end]],
-    'dimensions'      => [],
-    'metrics'         => [['name' => 'screenPageViews']],
-    'dimensionFilter' => [
+$report = [
+    'dateRanges' => [['startDate' => $start, 'endDate' => $end]],
+    'dimensions' => [],
+    'metrics'    => [['name' => 'screenPageViews']],
+];
+// 'total' has no oref filter — it counts all site pageviews.
+if ($type !== 'total') {
+    $report['dimensionFilter'] = [
         'filter' => [
             'fieldName'    => 'fullPageUrl',
             'stringFilter' => ['matchType' => 'CONTAINS', 'value' => 'oref=' . $oref],
         ],
-    ],
-]);
+    ];
+}
+$payload = json_encode($report);
 
 $ch = curl_init("https://analyticsdata.googleapis.com/v1beta/properties/{$ga4_property}:runReport");
 curl_setopt_array($ch, [

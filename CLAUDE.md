@@ -180,7 +180,17 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs follow pattern `{prefix}-article-topics` / `{prefix}-earthbox-post` (confirmed all 5 pubs); stored in sheet columns `topic_oref` / `earthbox_oref` - Pre-automation baselines (Oct 2025–Mar 2026 avg): D1 topics 3,078/mo (revised), D1 earthbox 1,795/mo; WT topics 1,699/mo, WT earthbox 459/mo. GE/NG/RF baselines TBD pending first full automation month.
+**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs (stored in sheet columns `topic_oref` / `earthbox_oref` / `skybox_oref`, confirmed all 5 pubs): topics `{prefix}-article-topics`, earthbox `{prefix}-earthbox-post`, **skybox `{prefix}-skybox-hp`** (homepage — NOT `-skybox-post`; the natural guess from the earthbox pattern is wrong). `{prefix}` = d1/wt/ge/ng/rf. - **Pre-automation baselines (12-mo avg, Apr 2025–Mar 2026, measured via `scripts/pull-impact-report.js` as screenPageViews where fullPageUrl CONTAINS oref= — the same metric `pub-stats.php`/`monthly-report.js` use).** These replace the older 6-mo Oct–Mar estimates and now live in the sheet's `topics_baseline`/`earthbox_baseline`/`skybox_baseline` columns:
+
+  | Pub | topics/mo | earthbox/mo | skybox/mo |
+  | --- | --- | --- | --- |
+  | Defense One | 2,586 | 1,842 | 6,233 |
+  | Washington Technology | 1,136 | 437 | 3,721 |
+  | GovExec | 7,130 | 3,475 | 39,444 |
+  | Nextgov | 1,401 | 926 | 5,500 |
+  | Route Fifty | 917 | 191 | 622 |
+
+  The old sheet skybox figures (22,369, 5,038) were non-reproducible by any standard GA4 metric and were misattributed across rows; `customEvent:oref` is not a registered GA4 dimension. Baselines must use the same oref+metric `pub-stats.php` queries or the monthly "vs baseline" deltas are corrupt. (Monthly report now leads with traffic **share** ‰ + YoY; click-vs-baseline is secondary — see `monthly-report.js`.)
 
 **DreamHost Node version** is old (v12-era) — does not support native `fetch` or optional chaining (`?.`). Always use `require('https')` with a manual `httpsPost` helper and explicit `&&` null checks instead. See `fetchTopicClickStats()` in `apply-trending.js` for the pattern.
 

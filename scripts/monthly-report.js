@@ -59,10 +59,41 @@ function fetchJSON(url) {
   });
 }
 
-// ── Fetch stats for one pub/type ──────────────────────────────
-function fetchPubStats(pubKey, type) {
-  const url = `${PUB_STATS_URL}?pub=${pubKey}&type=${type}&token=${STATS_TOKEN}`;
+// ── Fetch stats for one pub/type over an explicit date range ──
+// type: topics | earthbox | skybox | total  (total = all site pageviews)
+function fetchPubStats(pubKey, type, start, end) {
+  let url = `${PUB_STATS_URL}?pub=${pubKey}&type=${type}&token=${STATS_TOKEN}`;
+  if (start && end) url += `&start=${start}&end=${end}`;
   return fetchJSON(url).catch(e => ({ views: null, error: e.message }));
+}
+
+// ── Date helpers ──────────────────────────────────────────────
+function fmtDate(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+// Previous full calendar month relative to today, and the same
+// month one year earlier (the year-over-year anchor).
+function reportPeriods() {
+  const now       = new Date();
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevEnd   = new Date(now.getFullYear(), now.getMonth(), 0);
+  const yoyStart  = new Date(prevStart.getFullYear() - 1, prevStart.getMonth(), 1);
+  const yoyEnd    = new Date(prevStart.getFullYear() - 1, prevStart.getMonth() + 1, 0);
+  return {
+    cur: { start: fmtDate(prevStart), end: fmtDate(prevEnd) },
+    yoy: { start: fmtDate(yoyStart),  end: fmtDate(yoyEnd) },
+  };
+}
+function shareOf(clicks, total) { // ‰: clicks per 1,000 site pageviews
+  if (clicks === null || total === null || !total) return null;
+  return (clicks / total) * 1000;
+}
+// Baselines may arrive comma-formatted from the sheet (e.g. "5,611");
+// plain parseInt would stop at the comma and return 5.
+function parseBaseline(v) {
+  return parseInt(String(v == null ? '' : v).replace(/[^0-9]/g, ''), 10) || 0;
 }
 
 // ── Send email via Gmail SMTP ─────────────────────────────────
@@ -88,15 +119,31 @@ async function sendEmail(subject, body, env) {
   }
 }
 
-// ── Format a click count line with optional baseline comparison ──
-function clickLine(label, views, baseline) {
-  if (views === null) return `  ${label}: error fetching data`;
-  const n = views.toLocaleString();
-  if (!baseline) return `  ${label}: ${n} clicks (baseline not yet established)`;
-  const diff = views - baseline;
-  const pct  = Math.round((diff / baseline) * 100);
-  const sign = diff >= 0 ? '+' : '';
-  return `  ${label}: ${n} clicks (${sign}${diff.toLocaleString()}, ${sign}${pct}% vs pre-automation avg of ${baseline.toLocaleString()})`;
+// ── Format one feature line ───────────────────────────────────
+// Headline metric is traffic SHARE (‰ of total site pageviews),
+// normalized so site-wide traffic swings don't distort the read.
+// YoY compares this month's share to the same month last year
+// (seasonality control). The corrected click baseline from the
+// sheet is shown as secondary context.
+function fmtShare(s) { return s === null ? 'n/a' : s.toFixed(2) + '‰'; }
+function pctArrow(cur, prev) {
+  if (cur === null || prev === null || !prev) return null;
+  const pct = Math.round(((cur - prev) / prev) * 100);
+  return (pct >= 0 ? '▲' : '▼') + ' ' + (pct >= 0 ? '+' : '') + pct + '%';
+}
+function featureLine(label, clicks, share, yoyShare, baselineClicks) {
+  if (clicks === null) return `  ${label}: error fetching data`;
+  let line = `  ${label}: ${clicks.toLocaleString()} clicks · ${fmtShare(share)} share`;
+  const yoy = pctArrow(share, yoyShare);
+  if (yoy) line += ` · YoY ${yoy} (was ${fmtShare(yoyShare)})`;
+  if (baselineClicks) {
+    const diff = clicks - baselineClicks;
+    const pct  = Math.round((diff / baselineClicks) * 100);
+    line += ` · vs base ${baselineClicks.toLocaleString()} (${pct >= 0 ? '+' : ''}${pct}%)`;
+  } else {
+    line += ` · baseline not set`;
+  }
+  return line;
 }
 
 // ── Main ──────────────────────────────────────────────────────
@@ -104,11 +151,14 @@ function clickLine(label, views, baseline) {
   log('=== Monthly report ===');
   const env = loadEnv();
 
-  // Fetch pub config
+  // Fetch pub config. earthbox_enabled/skybox_enabled are the strings
+  // OFF/GA4/RECENT_STAFF — 'OFF' is truthy in JS, so test !== 'OFF',
+  // not plain truthiness. trending_enabled is a real boolean.
   let allPubs;
   try {
     const data = await fetchJSON(PUB_CONFIG_URL);
-    allPubs = (data.pubs || []).filter(p => p._valid && (p.trending_enabled || p.earthbox_enabled || p.skybox_enabled));
+    allPubs = (data.pubs || []).filter(p => p._valid &&
+      (p.trending_enabled || p.earthbox_enabled !== 'OFF' || p.skybox_enabled !== 'OFF'));
   } catch (e) {
     log(`Failed to fetch pub config: ${e.message}`);
     logStream.end();
@@ -121,69 +171,86 @@ function clickLine(label, views, baseline) {
     process.exit(0);
   }
 
-  // Fetch stats for all pubs in parallel
-  const statResults = await Promise.all(
-    allPubs.map(pub => Promise.all([
-      pub.trending_enabled && pub.topic_oref   ? fetchPubStats(pub.pub_key, 'topics')   : Promise.resolve(null),
-      pub.earthbox_enabled && pub.earthbox_oref ? fetchPubStats(pub.pub_key, 'earthbox') : Promise.resolve(null),
-      pub.skybox_enabled   && pub.skybox_oref   ? fetchPubStats(pub.pub_key, 'skybox')   : Promise.resolve(null),
-    ]))
-  );
+  const { cur, yoy } = reportPeriods();
+  log(`Current month: ${cur.start}…${cur.end}  |  YoY anchor: ${yoy.start}…${yoy.end}`);
 
-  const month = statResults.flat().find(r => r && r.month)?.month || 'Unknown month';
+  // For each pub, fetch: total site pageviews (current + YoY) once, plus
+  // per-enabled-feature clicks (current + YoY). Share = clicks / total.
+  const statResults = await Promise.all(allPubs.map(async pub => {
+    const feats = [
+      { key: 'topics',   label: 'Topics',   on: pub.trending_enabled        && pub.topic_oref,    base: parseBaseline(pub.topics_baseline)   },
+      { key: 'earthbox', label: 'Earthbox', on: pub.earthbox_enabled !== 'OFF' && pub.earthbox_oref, base: parseBaseline(pub.earthbox_baseline) },
+      { key: 'skybox',   label: 'Skybox',   on: pub.skybox_enabled   !== 'OFF' && pub.skybox_oref,   base: parseBaseline(pub.skybox_baseline)   },
+    ].filter(f => f.on);
+
+    const [totCur, totYoy] = await Promise.all([
+      fetchPubStats(pub.pub_key, 'total', cur.start, cur.end),
+      fetchPubStats(pub.pub_key, 'total', yoy.start, yoy.end),
+    ]);
+
+    const features = await Promise.all(feats.map(async f => {
+      const [c, y] = await Promise.all([
+        fetchPubStats(pub.pub_key, f.key, cur.start, cur.end),
+        fetchPubStats(pub.pub_key, f.key, yoy.start, yoy.end),
+      ]);
+      return {
+        label: f.label, base: f.base,
+        clicks:   c ? c.views : null,
+        share:    shareOf(c ? c.views : null, totCur ? totCur.views : null),
+        yoyShare: shareOf(y ? y.views : null, totYoy ? totYoy.views : null),
+      };
+    }));
+
+    return { totCur, features };
+  }));
+
+  const withMonth = statResults.find(r => r.totCur && r.totCur.month);
+  const month = withMonth ? withMonth.totCur.month : 'Unknown month';
 
   // Build report body
   const sections = [];
-  let totalTopics   = 0;
-  let totalEarthbox = 0;
-  let totalSkybox   = 0;
-  let hasTopics     = false;
-  let hasEarthbox   = false;
-  let hasSkybox     = false;
+  const totals   = { Topics: 0, Earthbox: 0, Skybox: 0 };
+  const has       = { Topics: false, Earthbox: false, Skybox: false };
 
   for (let i = 0; i < allPubs.length; i++) {
-    const pub                    = allPubs[i];
-    const [tStats, eStats, sStats] = statResults[i];
-    const startDate              = pub.automation_start_date || null;
-    const startLabel             = startDate ? ` (automation since ${startDate})` : '';
+    const pub        = allPubs[i];
+    const startDate  = pub.automation_start_date || null;
+    const startLabel = startDate ? ` (automation since ${startDate})` : '';
+    const lines      = [`${pub.pub_name}${startLabel}`];
 
-    const lines = [`${pub.pub_name}${startLabel}`];
-
-    if (tStats !== null) {
-      const baseline = parseInt(pub.topics_baseline, 10) || 0;
-      lines.push(clickLine('Topics', tStats.views, baseline));
-      if (tStats.views !== null) { totalTopics += tStats.views; hasTopics = true; }
-    }
-    if (eStats !== null) {
-      const baseline = parseInt(pub.earthbox_baseline, 10) || 0;
-      lines.push(clickLine('Earthbox', eStats.views, baseline));
-      if (eStats.views !== null) { totalEarthbox += eStats.views; hasEarthbox = true; }
-    }
-    if (sStats !== null) {
-      const baseline = parseInt(pub.skybox_baseline, 10) || 0;
-      lines.push(clickLine('Skybox', sStats.views, baseline));
-      if (sStats.views !== null) { totalSkybox += sStats.views; hasSkybox = true; }
+    for (const f of statResults[i].features) {
+      lines.push(featureLine(f.label, f.clicks, f.share, f.yoyShare, f.base));
+      if (f.clicks !== null) { totals[f.label] += f.clicks; has[f.label] = true; }
     }
 
     sections.push(lines.join('\n'));
-    log(`${pub.pub_name}: Topics=${tStats?.views ?? 'n/a'}, Earthbox=${eStats?.views ?? 'n/a'}, Skybox=${sStats?.views ?? 'n/a'}`);
+    log(`${pub.pub_name}: ` + statResults[i].features.map(f => `${f.label}=${f.clicks ?? 'n/a'}`).join(', '));
   }
 
-  // Totals (only meaningful if there are multiple enabled pubs)
+  // Totals (clicks only — shares use different per-pub denominators and don't sum)
   if (allPubs.length > 1) {
-    const totalLines = ['TOTALS'];
-    if (hasTopics)   totalLines.push(`  Topics:   ${totalTopics.toLocaleString()} clicks`);
-    if (hasEarthbox) totalLines.push(`  Earthbox: ${totalEarthbox.toLocaleString()} clicks`);
-    if (hasSkybox)   totalLines.push(`  Skybox:   ${totalSkybox.toLocaleString()} clicks`);
-    const combined = totalTopics + totalEarthbox + totalSkybox;
-    if ([hasTopics, hasEarthbox, hasSkybox].filter(Boolean).length > 1) {
-      totalLines.push(`  Combined: ${combined.toLocaleString()} clicks`);
+    const totalLines = ['TOTALS (clicks)'];
+    ['Topics', 'Earthbox', 'Skybox'].forEach(k => {
+      if (has[k]) totalLines.push(`  ${k}: ${totals[k].toLocaleString()}`);
+    });
+    const combined = totals.Topics + totals.Earthbox + totals.Skybox;
+    if (Object.values(has).filter(Boolean).length > 1) {
+      totalLines.push(`  Combined: ${combined.toLocaleString()}`);
     }
     sections.push(totalLines.join('\n'));
   }
 
+  const intro = `Share = clicks per 1,000 total site pageviews (normalizes out traffic swings).\n` +
+    `YoY compares this month's share to the same month last year (seasonality control).\n` +
+    `"vs base" compares clicks to the 12-mo pre-automation average (Apr 2025–Mar 2026).`;
   const subject = `GE360 Monthly Report — ${month}`;
-  const body    = sections.join('\n\n');
+  const body    = [intro, ...sections].join('\n\n');
+
+  if (process.argv.includes('--dry-run')) {
+    log(`DRY RUN — would send "${subject}". Body:\n\n${body}\n`);
+    logStream.end();
+    return;
+  }
 
   await sendEmail(subject, body, env);
   logStream.end();
