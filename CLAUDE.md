@@ -293,8 +293,9 @@ column). Sends Slack notification: subject `Earthbox: Changes|Unchanged|Problem`
 body bullet list with sponsored slots inline as `SPONSORED: …` (items new to the
 list are bolded). Proactive `Earthbox: Session expiring soon` warning shares the
 same self-calibrating timeout logic as `apply-trending.js`. GA4 click tracking
-via `oref=d1-earthbox-post` (confirmed present on D1 article pages); monthly
-baseline being established via `scripts/earthbox-baseline.js`. See SETUP.md.
+via `oref=d1-earthbox-post` (confirmed present on D1 article pages); pre-automation
+baseline established (one-off `earthbox-baseline.js`, since deleted — see the
+baseline table above). See SETUP.md.
 
 M1 Air — automation host
 ------------------------

@@ -83,7 +83,7 @@ All auto-updater files (credentials, caches, daily update records, heartbeat, on
 | Earthbox title cache   | `auto-updater/earthbox-title-cache-{pubkey}.json`                   | 24hr per-article title/sponsored cache (one file per pub)             |
 | Updates shared secret  | `auto-updater/.update-secret`                                       | Single-line `UPDATE_SECRET=<hex>`; authenticates POSTs from apply scripts |
 | Daily updates data     | `auto-updater/ge360-updates-YYYY-MM-DD.json`                        | Written by `save-update.php`; read by `updates/index.php`             |
-| Monthly stats token    | `auto-updater/.headline-lab-config.ini`                             | Token used by `pub-stats.php`/`monthly-stats.php`/`earthbox-stats.php` |
+| Monthly stats token    | `auto-updater/.headline-lab-config.ini`                             | Token used by `pub-stats.php`                                          |
 | Usage log              | `/home/bradwu/headline-lab-usage.log`                               | Headline Lab usage (not auto-updater — stays in home dir)             |
 | Air heartbeat          | `auto-updater/air-heartbeat.txt`                                    | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
 
@@ -93,7 +93,7 @@ All auto-updater files (credentials, caches, daily update records, heartbeat, on
 - `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files in `auto-updater/`: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
 - `earthbox-posts.php` — Earthbox/Skybox post recommendations: accepts `?pub={pub_key}&mode=ga4|recent_staff`, reads per-pub config from Google Sheet, queries GA4 or RSS depending on mode, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub+mode cache files in `auto-updater/`: `earthbox-cache-{pubkey}-{mode}.json`, `earthbox-title-cache-{pubkey}.json`
 - `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `auto-updater/pub-config-cache.json`. Can be `require_once`'d by other PHP files (define `PUB_CONFIG_INCLUDED` first) to use `get_pub_configs()` / `find_pub($pubKey)` directly without an HTTP round-trip
-- `pub-stats.php` — Returns one month's click counts for any pub; accepts `?pub={pubkey}&type=topics|earthbox&token=...` plus optional `?start=`/`?end=`. Replaces the old D1-only `monthly-stats.php` and `earthbox-stats.php`
+- `pub-stats.php` — Returns one month's click counts for any pub; accepts `?pub={pubkey}&type=topics|earthbox&token=...` plus optional `?start=`/`?end=`. Replaced the old D1-only `monthly-stats.php`/`earthbox-stats.php` (deleted 2026-06-25 — their only caller, the one-off `earthbox-baseline.js`, had already run and was not scheduled anywhere)
 - `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `auto-updater/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
 

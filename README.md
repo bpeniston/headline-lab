@@ -25,7 +25,6 @@ PHP endpoints on DreamHost shared hosting:
 | `earthbox-posts.php` | Earthbox: queries GA4 pageviews, returns top articles JSON |
 | `pub-config.php` | Reads per-pub config from Google Sheet; 1-hour server-side cache |
 | `pub-stats.php` | Monthly GA4 stats per pub (topics + earthbox click orefs) |
-| `monthly-stats.php` | Aggregated monthly usage report |
 | `save-update.php` | Receives nightly script results (authenticated POST); writes to daily JSON |
 
 ### 4. Daily Updates Page — `server/updates/`
