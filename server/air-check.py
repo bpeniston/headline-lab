@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # air-check.py — runs on DreamHost at 4:50am via cron.
-# Checks ~/air-heartbeat.txt; if stale, sends a Slack alert before
+# Checks auto-updater/air-heartbeat.txt; if stale, sends a Slack alert before
 # the 5:00am and 5:30am nightly jobs run on the Air.
 #
 # DreamHost cron entry:
@@ -10,7 +10,7 @@ import os
 import time
 import subprocess
 
-HEARTBEAT_FILE = os.path.expanduser('~/air-heartbeat.txt')
+HEARTBEAT_FILE = os.path.expanduser('~/navybook.com/D1/auto-updater/air-heartbeat.txt')
 SLACK_EMAIL    = 'u5q8h4r0o7x8o9l7@govexec.slack.com'
 FROM_EMAIL     = 'submissions@navybook.com'
 MAX_AGE_SEC    = 20 * 60   # alert if no ping in 20 minutes

@@ -1,6 +1,6 @@
 <?php
 // heartbeat.php — receives a ping from the Air every 10 minutes.
-// Writes the current Unix timestamp to ~/air-heartbeat.txt.
+// Writes the current Unix timestamp to auto-updater/air-heartbeat.txt.
 // Protected by a shared key so the endpoint isn't hit accidentally.
 // Checked at 4:50am by air-check.py before nightly jobs run.
 
@@ -11,6 +11,6 @@ if (($_GET['key'] ?? '') !== $expected_key) {
     exit('forbidden');
 }
 
-$file = '/home/bradwu/air-heartbeat.txt';
+$file = '/home/bradwu/navybook.com/D1/auto-updater/air-heartbeat.txt';
 file_put_contents($file, time() . "\n");
 echo 'ok';

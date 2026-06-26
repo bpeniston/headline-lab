@@ -127,7 +127,7 @@ function loadGA4Creds() {
   const candidates = [
     process.env.GA4_OAUTH_PATH,
     path.join(process.env.HOME, 'ga4-oauth.json'),
-    '/home/bradwu/ga4-oauth.json'
+    '/home/bradwu/navybook.com/D1/auto-updater/ga4-oauth.json'
   ];
   for (let i = 0; i < candidates.length; i++) {
     const p = candidates[i];

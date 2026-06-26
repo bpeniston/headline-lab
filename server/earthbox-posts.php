@@ -35,7 +35,7 @@ if (!$pub) {
 }
 
 // ── Config ────────────────────────────────────────────────────
-$CREDS_FILE   = '/home/bradwu/ga4-oauth.json';
+$CREDS_FILE   = '/home/bradwu/navybook.com/D1/auto-updater/ga4-oauth.json';
 $GA4_PROPERTY = (string) $pub['ga4_property_id'];
 $BASE_URL     = rtrim($pub['base_url'], '/');
 $CACHE_TTL    = 3600;    // 1 hour
@@ -53,8 +53,8 @@ $post_mode  = in_array($mode_param, ['ga4', 'recent_staff'], true)
     : ($pub['earthbox_post_mode'] ?? 'ga4');
 
 // Cache is keyed on pub + mode so GA4 and RECENT_STAFF results never collide.
-$CACHE_FILE  = "/home/bradwu/earthbox-cache-{$pub_key}-{$post_mode}.json";
-$TITLE_CACHE = "/home/bradwu/earthbox-title-cache-{$pub_key}.json";
+$CACHE_FILE  = "/home/bradwu/navybook.com/D1/auto-updater/earthbox-cache-{$pub_key}-{$post_mode}.json";
+$TITLE_CACHE = "/home/bradwu/navybook.com/D1/auto-updater/earthbox-title-cache-{$pub_key}.json";
 
 // ── 1. Main cache check ───────────────────────────────────────
 if (!isset($_GET['nocache']) && file_exists($CACHE_FILE)) {

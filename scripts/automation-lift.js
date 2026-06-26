@@ -76,7 +76,7 @@ function loadGA4Creds() {
   if (env.GA4_CLIENT_ID && env.GA4_CLIENT_SECRET && env.GA4_REFRESH_TOKEN) {
     return { client_id: env.GA4_CLIENT_ID, client_secret: env.GA4_CLIENT_SECRET, refresh_token: env.GA4_REFRESH_TOKEN };
   }
-  const cands = [process.env.GA4_OAUTH_PATH, path.join(process.env.HOME, 'ga4-oauth.json'), '/home/bradwu/ga4-oauth.json'];
+  const cands = [process.env.GA4_OAUTH_PATH, path.join(process.env.HOME, 'ga4-oauth.json'), '/home/bradwu/navybook.com/D1/auto-updater/ga4-oauth.json'];
   for (let i = 0; i < cands.length; i++) {
     if (!cands[i]) continue;
     try { const j = JSON.parse(fs.readFileSync(cands[i], 'utf8'));

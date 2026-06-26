@@ -10,7 +10,7 @@ header('Access-Control-Allow-Origin: *');
 
 // Called server-to-server from the Air — restrict by secret token.
 $token = $_GET['token'] ?? '';
-$config = parse_ini_file('/home/bradwu/.headline-lab-config.ini');
+$config = parse_ini_file('/home/bradwu/navybook.com/D1/auto-updater/.headline-lab-config.ini');
 if ($token !== ($config['monthly_stats_token'] ?? '')) {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden']);
@@ -18,7 +18,7 @@ if ($token !== ($config['monthly_stats_token'] ?? '')) {
 }
 
 // ── OAuth: refresh access token ───────────────────────────────
-$creds = json_decode(file_get_contents('/home/bradwu/ga4-oauth.json'), true);
+$creds = json_decode(file_get_contents('/home/bradwu/navybook.com/D1/auto-updater/ga4-oauth.json'), true);
 $ch = curl_init('https://oauth2.googleapis.com/token');
 curl_setopt_array($ch, [
     CURLOPT_POST           => true,

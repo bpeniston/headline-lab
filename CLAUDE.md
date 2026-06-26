@@ -180,7 +180,7 @@ Key technical details
 
 **CMS / Grappelli** - Athena is Django + Grappelli admin - Grappelli autocomplete URL: `GET /grappelli/lookup/autocomplete/?term={name}&app_label={grappelli_app_label}&model_name={grappelli_topic_model}&query_string=t=id` — returns `[{"value": 32, "label": "Iran (Defense One)"}]` - `app_label` and `model_name` vary per pub (see table above) — always confirm via Network tab before adding a new pub - D1-Trending edit form fields: `content_type` (382), `object_id`, `status`, `live_date`, `expiration_date`, `url`, `title_override` - Earthbox edit form: `content_type` (22 = Post, same for all pubs), `object_id` (post ID), `status`, `live_date_0/1`, override fields, `_is_sponsored_content` checkbox (use this — not `title_override` — to detect sponsored wall slots). `image_override` deleted on save so post's featured image is used.
 
-**GA4** - Auth: OAuth refresh token at `/home/bradwu/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs (stored in sheet columns `topic_oref` / `earthbox_oref` / `skybox_oref`, confirmed all 5 pubs): topics `{prefix}-article-topics`, earthbox `{prefix}-earthbox-post`, **skybox `{prefix}-skybox-hp`** (homepage — NOT `-skybox-post`; the natural guess from the earthbox pattern is wrong). `{prefix}` = d1/wt/ge/ng/rf. - **Pre-automation baselines (12-mo avg, Apr 2025–Mar 2026, measured via `scripts/pull-impact-report.js` as screenPageViews where fullPageUrl CONTAINS oref= — the same metric `pub-stats.php`/`monthly-report.js` use).** These replace the older 6-mo Oct–Mar estimates and now live in the sheet's `topics_baseline`/`earthbox_baseline`/`skybox_baseline` columns:
+**GA4** - Auth: OAuth refresh token at `auto-updater/ga4-oauth.json` on server - Scoring: `score = month_views + week_views + day_views` - Click tracking orefs (stored in sheet columns `topic_oref` / `earthbox_oref` / `skybox_oref`, confirmed all 5 pubs): topics `{prefix}-article-topics`, earthbox `{prefix}-earthbox-post`, **skybox `{prefix}-skybox-hp`** (homepage — NOT `-skybox-post`; the natural guess from the earthbox pattern is wrong). `{prefix}` = d1/wt/ge/ng/rf. - **Pre-automation baselines (12-mo avg, Apr 2025–Mar 2026, measured via `scripts/pull-impact-report.js` as screenPageViews where fullPageUrl CONTAINS oref= — the same metric `pub-stats.php`/`monthly-report.js` use).** These replace the older 6-mo Oct–Mar estimates and now live in the sheet's `topics_baseline`/`earthbox_baseline`/`skybox_baseline` columns:
 
   | Pub | topics/mo | earthbox/mo | skybox/mo |
   | --- | --- | --- | --- |
@@ -192,7 +192,7 @@ Key technical details
 
   The old sheet skybox figures (22,369, 5,038) were non-reproducible by any standard GA4 metric and were misattributed across rows; `customEvent:oref` is not a registered GA4 dimension. Baselines must use the same oref+metric `pub-stats.php` queries or the monthly "vs baseline" deltas are corrupt. (Monthly report now leads with traffic **share** ‰ + YoY; click-vs-baseline is secondary — see `monthly-report.js`.)
 
-**Impact analysis scripts (one-offs, run on the server where `ga4-oauth.json` lives):**
+**Impact analysis scripts (one-offs, live and run from `auto-updater/` on the server, alongside `ga4-oauth.json`):**
 
 - `scripts/pull-impact-report.js` — per-pub × per-feature report: clicks + traffic **share** (‰ of total site pageviews) + YoY, against the 12-mo baseline band. Use to compare a feature's performance before/after launch.
 - `scripts/automation-lift.js` — the aggregate "what did automation do overall" answer. Counterfactual = `baseline_share × actual_pageviews` (normalizes out traffic swings); incremental = actual − counterfactual, summed across all automated pub×feature, counting only **full** months under automation (per `automation_start_date`). Reports incremental clicks as a % of total site traffic, with a YoY cross-check.
@@ -234,11 +234,12 @@ Repo & deploy
 
 - Server: `bradwu@pdx1-shared-a1-08.dreamhost.com`
 
-- Server paths (three distinct directories under `~/navybook.com/D1/`):
+- Server paths (under `~/navybook.com/D1/`):
   
   - `seo/` — API endpoints + Headline Lab homepage (`index.php`); **git-tracked**
   - `updates/` — daily auto-update digest page (`index.php`); NOT git-tracked
   - `index.html` — tools landing page listing all D1 tools; NOT git-tracked
+  - `auto-updater/` — all nightly-automation credentials, caches, and daily update data (moved out of `/home/bradwu/` 2026-06-25 to stop home-dir clutter); blocked from public web access via `.htaccess`. **All future auto-updater files (new caches, one-off analysis scripts, credentials) belong here, never loose in `/home/bradwu/`.**
   - **Do not scp updates/ files into seo/ or vice versa — both have an `index.php`**
 
 - Deploy: `git push` then run `deploy` alias
@@ -257,9 +258,13 @@ Secrets & credentials
 
 - CMS credentials: `~/headline-lab/.env` on the Air (never in GitHub)
 
-- GA4 OAuth: `/home/bradwu/ga4-oauth.json` on DreamHost
+- GA4 OAuth: `auto-updater/ga4-oauth.json` on DreamHost
 
-- Monthly stats token: `/home/bradwu/.headline-lab-config.ini`
+- Monthly stats token: `auto-updater/.headline-lab-config.ini`
+
+- Sheets service account: `auto-updater/sheets-service-account.json`
+
+- Updates shared secret: `auto-updater/.update-secret`
 
 Extension manifest
 ------------------

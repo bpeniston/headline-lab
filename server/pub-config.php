@@ -7,10 +7,10 @@
 // Can be required by other PHP scripts; define PUB_CONFIG_INCLUDED before
 // require_once to suppress JSON output and use get_pub_configs() directly.
 
-define('KEY_FILE',    '/home/bradwu/sheets-service-account.json');
+define('KEY_FILE',    '/home/bradwu/navybook.com/D1/auto-updater/sheets-service-account.json');
 define('SHEET_ID',    '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
 define('SHEET_RANGE', 'Pubs!A:Z');
-define('CACHE_FILE',  '/home/bradwu/pub-config-cache.json');
+define('CACHE_FILE',  '/home/bradwu/navybook.com/D1/auto-updater/pub-config-cache.json');
 define('CACHE_TTL',   3600);  // 1 hour
 
 // ── Cache ──────────────────────────────────────────────────────────────────

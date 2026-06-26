@@ -69,25 +69,32 @@ This document describes the physical machines, services, and configurations that
 
 ### Key files on DreamHost
 
-| File                   | Path                                                  | Purpose                                                               |
-| ---------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- |
-| GA4 OAuth credentials  | `/home/bradwu/ga4-oauth.json`                         | Defense One GA4 API access                                            |
-| Trending main cache    | `/home/bradwu/trending-main-cache-{pubkey}.json`      | 1hr scored topic results (one file per pub)                           |
-| Trending article cache | `/home/bradwu/trending-article-cache-{pubkey}.json`   | 24hr per-article topic cache (one file per pub)                       |
-| Trending name cache    | `/home/bradwu/trending-topicname-cache-{pubkey}.json` | 7-day slug→display name cache (one file per pub)                      |
-| Earthbox main cache    | `/home/bradwu/earthbox-cache-{pubkey}.json`           | 1hr scored post results (one file per pub)                            |
-| Earthbox title cache   | `/home/bradwu/earthbox-title-cache-{pubkey}.json`     | 24hr per-article title/sponsored cache (one file per pub)             |
-| Usage log              | `/home/bradwu/headline-lab-usage.log`                 | Headline Lab usage                                                    |
-| Air heartbeat          | `/home/bradwu/air-heartbeat.txt`                      | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
+All auto-updater files (credentials, caches, daily update records, heartbeat, one-off analysis scripts) live under `~/navybook.com/D1/auto-updater/`, blocked from public web access via `.htaccess` (`Require all denied`, plus a rewrite stop so the docroot's WordPress catch-all doesn't cascade in first). The Headline Lab usage log is the one exception — it's a Headline Lab feature artifact, not auto-updater, and stays at `/home/bradwu/`.
+
+| File                   | Path                                                              | Purpose                                                               |
+| ---------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| GA4 OAuth credentials  | `auto-updater/ga4-oauth.json`                                       | GA4 API access for all 5 pubs                                         |
+| Sheets service account | `auto-updater/sheets-service-account.json`                          | Google Sheets API access for pub-config.php                           |
+| Pub config cache       | `auto-updater/pub-config-cache.json`                                | 1hr cache of Google Sheet pub config                                  |
+| Trending main cache    | `auto-updater/trending-main-cache-{pubkey}.json`                    | 1hr scored topic results (one file per pub)                           |
+| Trending article cache | `auto-updater/trending-article-cache-{pubkey}.json`                 | 24hr per-article topic cache (one file per pub)                       |
+| Trending name cache    | `auto-updater/trending-topicname-cache-{pubkey}.json`               | 7-day slug→display name cache (one file per pub)                      |
+| Earthbox main cache    | `auto-updater/earthbox-cache-{pubkey}-{mode}.json`                  | 1hr scored post results (one file per pub+mode — GA4/RECENT_STAFF kept separate) |
+| Earthbox title cache   | `auto-updater/earthbox-title-cache-{pubkey}.json`                   | 24hr per-article title/sponsored cache (one file per pub)             |
+| Updates shared secret  | `auto-updater/.update-secret`                                       | Single-line `UPDATE_SECRET=<hex>`; authenticates POSTs from apply scripts |
+| Daily updates data     | `auto-updater/ge360-updates-YYYY-MM-DD.json`                        | Written by `save-update.php`; read by `updates/index.php`             |
+| Monthly stats token    | `auto-updater/.headline-lab-config.ini`                             | Token used by `pub-stats.php`/`monthly-stats.php`/`earthbox-stats.php` |
+| Usage log              | `/home/bradwu/headline-lab-usage.log`                               | Headline Lab usage (not auto-updater — stays in home dir)             |
+| Air heartbeat          | `auto-updater/air-heartbeat.txt`                                    | Unix timestamp written by Air every 10 min; checked by `air-check.py` |
 
 ### PHP endpoints (navybook.com/D1/seo/)
 
 - `seo-api.php` — Headline Lab: takes article text, calls Anthropic API, returns headlines
-- `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
-- `earthbox-posts.php` — Earthbox: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub cache files: `earthbox-cache-{pubkey}.json`, `earthbox-title-cache-{pubkey}.json`
-- `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `/home/bradwu/pub-config-cache.json`. Can be `require_once`'d by other PHP files (define `PUB_CONFIG_INCLUDED` first) to use `get_pub_configs()` / `find_pub($pubKey)` directly without an HTTP round-trip
+- `trending-topics.php` — Trending Topics: accepts `?pub={pub_key}` (defaults to `defenseone`), reads per-pub config from Google Sheet, queries GA4, scrapes articles, scores topics, returns top 7 JSON. Per-pub cache files in `auto-updater/`: `trending-main-cache-{pubkey}.json`, `trending-article-cache-{pubkey}.json`, `trending-topicname-cache-{pubkey}.json`
+- `earthbox-posts.php` — Earthbox/Skybox post recommendations: accepts `?pub={pub_key}&mode=ga4|recent_staff`, reads per-pub config from Google Sheet, queries GA4 or RSS depending on mode, scrapes article titles, filters sponsored, returns top 6 posts JSON. Per-pub+mode cache files in `auto-updater/`: `earthbox-cache-{pubkey}-{mode}.json`, `earthbox-title-cache-{pubkey}.json`
+- `pub-config.php` — Publication config: reads GE360 pub settings from Google Sheet, validates, returns JSON. Cached 1 hour to `auto-updater/pub-config-cache.json`. Can be `require_once`'d by other PHP files (define `PUB_CONFIG_INCLUDED` first) to use `get_pub_configs()` / `find_pub($pubKey)` directly without an HTTP round-trip
 - `pub-stats.php` — Returns one month's click counts for any pub; accepts `?pub={pubkey}&type=topics|earthbox&token=...` plus optional `?start=`/`?end=`. Replaces the old D1-only `monthly-stats.php` and `earthbox-stats.php`
-- `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `~/air-heartbeat.txt`
+- `heartbeat.php` — receives Air ping (`?key=hl-heartbeat-2026`), writes timestamp to `auto-updater/air-heartbeat.txt`
 - `stats.php` — Returns usage log counts
 
 ### Publication config Google Sheet
@@ -157,7 +164,7 @@ Row 1 = column headers, row 2 = human-readable descriptions (skipped by script),
 5. **Upload the key to DreamHost:**
    
    ```
-   scp sheets-service-account.json bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/sheets-service-account.json
+   scp sheets-service-account.json bradwu@pdx1-shared-a1-08.dreamhost.com:/home/bradwu/navybook.com/D1/auto-updater/sheets-service-account.json
    ```
 
 6. **Set the Sheet ID in `pub-config.php`:** Replace `REPLACE_WITH_SHEET_ID` with the ID from the sheet URL (`docs.google.com/spreadsheets/d/SHEET_ID/edit`). Deploy with `git push && deploy`.
@@ -342,7 +349,7 @@ Runs 6:00am on the 1st of each month. Fetches Topics and Earthbox click counts f
 - A pub appears in the report when `trending_enabled` OR `earthbox_enabled` is TRUE and the row is valid
 - If baseline is 0/blank, report shows "baseline not yet established" instead of a comparison
 
-**Secret:** `monthly_stats_token` in `/home/bradwu/.headline-lab-config.ini` on DreamHost (not in GitHub).
+**Secret:** `monthly_stats_token` in `auto-updater/.headline-lab-config.ini` on DreamHost (not in GitHub).
 
 ---
 

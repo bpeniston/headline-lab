@@ -18,10 +18,10 @@
 //   php update-baselines.php --apply   writes the cells
 // =============================================================
 
-define('KEY_FILE',   '/home/bradwu/sheets-service-account.json');
+define('KEY_FILE',   '/home/bradwu/navybook.com/D1/auto-updater/sheets-service-account.json');
 define('SHEET_ID',   '1wLKVepPr8w6sZgiIa4dcgEDwmpQvHQqDE7yv3btvRp0');
 define('TAB',        'Pubs');
-define('CACHE_FILE', '/home/bradwu/pub-config-cache.json');
+define('CACHE_FILE', '/home/bradwu/navybook.com/D1/auto-updater/pub-config-cache.json');
 
 $APPLY = in_array('--apply', $argv, true);
 

@@ -16,7 +16,7 @@
 header('Content-Type: application/json');
 
 // Secret lives outside the web root (never in git)
-$secretFile = '/home/bradwu/.update-secret';
+$secretFile = '/home/bradwu/navybook.com/D1/auto-updater/.update-secret';
 $expected   = trim(@file_get_contents($secretFile) ?: '');
 if (!$expected || ($_POST['secret'] ?? '') !== $expected) {
     http_response_code(403);
@@ -38,7 +38,7 @@ if (!$pubKey || !$type) {
 }
 
 $date     = date('Y-m-d');
-$dataFile = "/home/bradwu/ge360-updates-{$date}.json";
+$dataFile = "/home/bradwu/navybook.com/D1/auto-updater/ge360-updates-{$date}.json";
 
 $fp = fopen($dataFile, 'c+');
 if (!$fp) {

@@ -1,0 +1,15 @@
+# Deny all public web access — this directory holds credentials, caches,
+# and data files for the GE360 nightly automation, not public endpoints.
+
+# Stop the docroot's WordPress catch-all rewrite from cascading into this
+# subdirectory, so the Deny below is what actually governs access here.
+RewriteEngine On
+RewriteRule .* - [L]
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

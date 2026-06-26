@@ -27,13 +27,13 @@ if (!$pub) {
 }
 
 // ── Config ────────────────────────────────────────────────────
-$CREDS_FILE       = '/home/bradwu/ga4-oauth.json';
+$CREDS_FILE       = '/home/bradwu/navybook.com/D1/auto-updater/ga4-oauth.json';
 $GA4_PROPERTY     = (string) $pub['ga4_property_id'];
 $BASE_URL         = rtrim($pub['base_url'], '/');
 $TOPIC_OREF       = $pub['topic_oref'];
-$MAIN_CACHE       = "/home/bradwu/trending-main-cache-{$pub_key}.json";
-$ARTICLE_CACHE    = "/home/bradwu/trending-article-cache-{$pub_key}.json";
-$TOPIC_NAME_CACHE = "/home/bradwu/trending-topicname-cache-{$pub_key}.json";
+$MAIN_CACHE       = "/home/bradwu/navybook.com/D1/auto-updater/trending-main-cache-{$pub_key}.json";
+$ARTICLE_CACHE    = "/home/bradwu/navybook.com/D1/auto-updater/trending-article-cache-{$pub_key}.json";
+$TOPIC_NAME_CACHE = "/home/bradwu/navybook.com/D1/auto-updater/trending-topicname-cache-{$pub_key}.json";
 $MAIN_CACHE_TTL   = 3600;    // 1 hour  — re-run GA4 + scrape
 $ARTICLE_TTL      = 86400;   // 24 hours — article→topics mapping
 $TOPICNAME_TTL    = 604800;  // 7 days  — slug→display name mapping
