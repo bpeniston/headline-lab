@@ -54,7 +54,29 @@ a cleaner bar.
 
 On the CMS post editor: reads article body → calls
 `navybook.com/D1/seo/seo-api.php` → Anthropic API → returns 6 SEO
-headline/subhed/slug options.
+headline/subhed/slug options. Also backs the email-subject-lines and
+social-post generator actions in the same file.
+
+**Model:** `claude-sonnet-5`, called via `call_claude()` with `thinking`
+explicitly set to `disabled` and no `temperature` param. Sonnet 5 runs
+adaptive thinking by default when `thinking` is omitted (unlike Sonnet 4),
+which puts a `thinking` block at `content[0]` — `call_claude()` reads
+`content[0]['text']` directly rather than scanning block types, so thinking
+must stay disabled or that lookup silently fails. Sonnet 5 also 400s on any
+non-default `temperature`/`top_p`/`top_k`, so the param is omitted entirely
+rather than tuned per call.
+
+**Config:** reads `anthropic_key`/`brave_key` from
+`auto-updater/.headline-lab-config.ini` (shared with the monthly-stats
+script — see Secrets & credentials below). **This path is hardcoded in
+`seo-api.php` and is easy to miss during infra moves** — the 2026-06-25
+credentials migration ([3a76776](https://github.com/bpeniston/headline-lab/commit/3a76776dc152e86ff4e97bdc1f919733eab6eacf))
+relocated this file but only updated the scripts it enumerated as
+"auto-updater," missing `seo-api.php` since Headline Lab isn't part of the
+nightly automation family. Broke Headline Lab silently for ~2 weeks
+(generic "Anthropic API error," empty key → 401) until diagnosed
+2026-07-08. **When moving credential files again, grep the whole repo for
+the filename, not just the auto-updater script list.**
 
 ### Skybox Push (`content/skybox.js`, `styles/skybox.css`)
 
@@ -260,7 +282,11 @@ Secrets & credentials
 
 - GA4 OAuth: `auto-updater/ga4-oauth.json` on DreamHost
 
-- Monthly stats token: `auto-updater/.headline-lab-config.ini`
+- Monthly stats token + Headline Lab API keys (`anthropic_key`, `brave_key`):
+  `auto-updater/.headline-lab-config.ini` — shared by `server/monthly-stats.php`
+  (auto-updater) **and** `seo-api.php` (Headline Lab, not auto-updater). Keep
+  this in mind if it moves again — it isn't exclusively an auto-updater file
+  despite the directory it lives in.
 
 - Sheets service account: `auto-updater/sheets-service-account.json`
 
