@@ -91,7 +91,7 @@ Return ONLY a valid JSON array with no extra text or markdown fences:
 ]
 PROMPT;
 
-    $raw  = call_claude($prompt, 600, 0.4);
+    $raw  = call_claude($prompt, 600);
     $raw  = preg_replace('/^```(?:json)?\s*/m', '', $raw);
     $raw  = preg_replace('/```\s*$/m', '', $raw);
     $subjects = json_decode(trim($raw), true);
@@ -126,7 +126,7 @@ $article
 ---
 PROMPT;
 
-    $facts_raw = call_claude($facts_prompt, 300, 0.2);
+    $facts_raw = call_claude($facts_prompt, 300);
     $facts_raw = preg_replace('/^```(?:json)?\s*/m', '', $facts_raw);
     $facts_raw = preg_replace('/```\s*$/m', '', $facts_raw);
     $key_facts = json_decode(trim($facts_raw), true);
@@ -185,7 +185,7 @@ Format your response as a JSON object with this exact structure (no extra text, 
 }
 PROMPT;
 
-    $raw_text = call_claude($prompt, 1400, 0.3);
+    $raw_text = call_claude($prompt, 1400);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
     $social   = json_decode(trim($raw_text), true);
@@ -231,7 +231,7 @@ $article
 ---
 PROMPT;
 
-    $facts_raw  = call_claude($facts_prompt, 400, 0.2);
+    $facts_raw  = call_claude($facts_prompt, 400);
     $facts_raw  = preg_replace('/^```(?:json)?\s*/m', '', $facts_raw);
     $facts_raw  = preg_replace('/```\s*$/m', '', $facts_raw);
     $facts_data = json_decode(trim($facts_raw), true);
@@ -249,7 +249,7 @@ ARTICLE:
 $article
 ---
 PROMPT;
-        $search_query = trim(strip_tags(call_claude($query_prompt, 50, 0.2)));
+        $search_query = trim(strip_tags(call_claude($query_prompt, 50)));
     }
 
     $facts_block = '';
@@ -387,7 +387,7 @@ Format your response as a JSON array with this exact structure (no extra text, n
 PROMPT;
 
     // STEP 4: Generate headlines
-    $raw_text = call_claude($prompt, 1400, 0.55);
+    $raw_text = call_claude($prompt, 1400);
     $raw_text = preg_replace('/^```(?:json)?\s*/m', '', $raw_text);
     $raw_text = preg_replace('/```\s*$/m', '', $raw_text);
     $headlines = json_decode(trim($raw_text), true);
@@ -462,11 +462,10 @@ function score_headline(array $h, string $focus_kw): float {
 // HELPERS
 // ============================================================
 
-function call_claude(string $prompt, int $max_tokens, float $temperature = 1.0): string {
+function call_claude(string $prompt, int $max_tokens): string {
     $payload = json_encode([
         'model'       => 'claude-sonnet-5',
         'max_tokens'  => $max_tokens,
-        'temperature' => $temperature,
         'messages'    => [['role' => 'user', 'content' => $prompt]]
     ]);
 
