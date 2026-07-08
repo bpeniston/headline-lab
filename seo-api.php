@@ -3,7 +3,7 @@
 // seo-api.php  —  Private SEO Headline & Social Generator
 // ============================================================
 
-$config = parse_ini_file('/home/bradwu/.headline-lab-config.ini');
+$config = parse_ini_file('/home/bradwu/navybook.com/D1/auto-updater/.headline-lab-config.ini');
 define('ANTHROPIC_API_KEY', $config['anthropic_key']);
 define('BRAVE_API_KEY',     $config['brave_key']);
 define('ALLOWED_ORIGIN',    'https://admin.govexec.com');
