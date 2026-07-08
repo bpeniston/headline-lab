@@ -466,6 +466,7 @@ function call_claude(string $prompt, int $max_tokens): string {
     $payload = json_encode([
         'model'       => 'claude-sonnet-5',
         'max_tokens'  => $max_tokens,
+        'thinking'    => ['type' => 'disabled'],
         'messages'    => [['role' => 'user', 'content' => $prompt]]
     ]);
 
