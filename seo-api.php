@@ -464,7 +464,7 @@ function score_headline(array $h, string $focus_kw): float {
 
 function call_claude(string $prompt, int $max_tokens, float $temperature = 1.0): string {
     $payload = json_encode([
-        'model'       => 'claude-sonnet-4-20250514',
+        'model'       => 'claude-sonnet-5',
         'max_tokens'  => $max_tokens,
         'temperature' => $temperature,
         'messages'    => [['role' => 'user', 'content' => $prompt]]
